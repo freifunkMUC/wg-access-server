@@ -1,5 +1,5 @@
 ### Build stage for the website frontend
-FROM node:16 as website
+FROM node:17 as website
 RUN apt-get update
 RUN apt-get install -y protobuf-compiler libprotobuf-dev
 WORKDIR /code
