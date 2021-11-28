@@ -50,7 +50,8 @@ fullnameOverride: ""
 imagePullSecrets: []
 
 image:
-  repository: place1/wg-access-server
+  repository: ghcr.io/freifunkmuc/wg-access-server
+  tag: latest
   pullPolicy: IfNotPresent
 
 # multiple replicas is only supported when using
