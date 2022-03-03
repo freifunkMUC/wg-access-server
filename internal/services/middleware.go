@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"runtime/debug"
 
@@ -19,7 +20,13 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				ctxlogrus.Extract(r.Context()).
+				logger := ctxlogrus.Extract(r.Context())
+
+				if logger.Logger.Out == ioutil.Discard {
+					logger = traces.Logger(r.Context())
+				}
+
+				logger.
 					WithField("stack", string(debug.Stack())).
 					Error(err)
 				w.WriteHeader(500)
