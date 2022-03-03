@@ -60,7 +60,7 @@ export declare namespace InfoReq {
 export class InfoReq extends jspb.Message {
 
 	private static repeatedFields_ = [
-		
+
 	];
 
 	constructor(data?: jspb.Message.MessageArray) {
@@ -117,6 +117,7 @@ export declare namespace InfoRes {
 		allowedIps: string,
 		dnsEnabled: boolean,
 		dnsAddress: string,
+		mtu: number,
 		filename: string,
 		inactiveEnabled: boolean,
 		inactiveDuration?: googleProtobufDuration.Duration.AsObject,
@@ -128,7 +129,7 @@ export declare namespace InfoRes {
 export class InfoRes extends jspb.Message {
 
 	private static repeatedFields_ = [
-		
+
 	];
 
 	constructor(data?: jspb.Message.MessageArray) {
@@ -201,6 +202,14 @@ export class InfoRes extends jspb.Message {
 		(jspb.Message as any).setProto3StringField(this, 9, value);
 	}
 
+	getMtu(): number {
+		return jspb.Message.getFieldWithDefault(this, 10, 0);
+	}
+
+	setMtu(value: string): void {
+		(jspb.Message as any).setProto3IntField(this, 10, value);
+	}
+
 	getFilename(): string {return jspb.Message.getFieldWithDefault(this, 10, "");
 	}
 
@@ -255,6 +264,7 @@ export class InfoRes extends jspb.Message {
 			allowedIps: this.getAllowedIps(),
 			dnsEnabled: this.getDnsEnabled(),
 			dnsAddress: this.getDnsAddress(),
+			mtu: this.getMtu(),
 			filename: this.getFilename(),
 			inactiveEnabled: this.getInactiveEnabled(),
 			inactiveDuration: (f = this.getInactiveDuration()) && f.toObject(),

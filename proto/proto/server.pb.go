@@ -74,6 +74,7 @@ type InfoRes struct {
 	AllowedIps                  string                  `protobuf:"bytes,7,opt,name=allowed_ips,json=allowedIps,proto3" json:"allowed_ips,omitempty"`
 	DnsEnabled                  bool                    `protobuf:"varint,8,opt,name=dns_enabled,json=dnsEnabled,proto3" json:"dns_enabled,omitempty"`
 	DnsAddress                  string                  `protobuf:"bytes,9,opt,name=dns_address,json=dnsAddress,proto3" json:"dns_address,omitempty"`
+	Mtu                         string                  `protobuf:"varint,10,opt,name=mtu,json=mtu,proto3" json:"mtu,omitempty"`
 	Filename                    string                  `protobuf:"bytes,10,opt,name=filename,proto3" json:"filename,omitempty"`
 	InactiveEnabled             bool                    `protobuf:"varint,11,opt,name=inactive_enabled,json=inactiveEnabled,proto3" json:"inactive_enabled,omitempty"`
 	InactiveDuration            *durationpb.Duration    `protobuf:"bytes,12,opt,name=inactive_duration,json=inactiveDuration,proto3" json:"inactive_duration,omitempty"`

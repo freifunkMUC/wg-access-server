@@ -25,6 +25,7 @@ message InfoRes {
   string allowed_ips = 7;
   bool dns_enabled = 8;
   string dns_address = 9;
+  int32 mtu = 10;
   string filename = 10;
   bool inactive_enabled = 11;
   google.protobuf.Duration inactive_duration = 12;
