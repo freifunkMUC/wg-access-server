@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/freifunkMUC/wg-access-server/internal/traces"
 )
 

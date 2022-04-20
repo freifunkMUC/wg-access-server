@@ -14,6 +14,11 @@ func (c *AuthConfig) IsEnabled() bool {
 	return c.OIDC != nil || c.Gitlab != nil || c.Basic != nil
 }
 
+func (c *AuthConfig) DesiresSigninPage() bool {
+	// Basic auth is the only that truly needs the signin button
+	return c.Basic != nil
+}
+
 func (c *AuthConfig) Providers() []*authruntime.Provider {
 	providers := []*authruntime.Provider{}
 

@@ -49,12 +49,13 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("wireguard-interface", "Set the wireguard interface name").Default("wg0").Envar("WG_WIREGUARD_INTERFACE").StringVar(&cmd.AppConfig.WireGuard.Interface)
 	cli.Flag("wireguard-private-key", "Wireguard private key").Envar("WG_WIREGUARD_PRIVATE_KEY").StringVar(&cmd.AppConfig.WireGuard.PrivateKey)
 	cli.Flag("wireguard-port", "The port that the Wireguard server will listen on").Envar("WG_WIREGUARD_PORT").Default("51820").IntVar(&cmd.AppConfig.WireGuard.Port)
+	cli.Flag("vpn-allowed-ips", "A list of networks that VPN clients will be allowed to connect to via the VPN").Envar("WG_VPN_ALLOWED_IPS").Default("0.0.0.0/0", "::/0").StringsVar(&cmd.AppConfig.VPN.AllowedIPs)
 	cli.Flag("vpn-cidr", "The network CIDR for the VPN").Envar("WG_VPN_CIDR").Default("10.44.0.0/24").StringVar(&cmd.AppConfig.VPN.CIDR)
 	cli.Flag("vpn-cidrv6", "The IPv6 network CIDR for the VPN").Envar("WG_VPN_CIDRV6").Default("fd48:4c4:7aa9::/64").StringVar(&cmd.AppConfig.VPN.CIDRv6)
+	cli.Flag("vpn-gateway-interface", "The gateway network interface (i.e. eth0)").Envar("WG_VPN_GATEWAY_INTERFACE").Default(detectDefaultInterface()).StringVar(&cmd.AppConfig.VPN.GatewayInterface)
 	cli.Flag("vpn-nat44-enabled", "Enable or disable NAT of IPv6 traffic leaving through the gateway").Envar("WG_IPV4_NAT_ENABLED").Default("true").BoolVar(&cmd.AppConfig.VPN.NAT44)
 	cli.Flag("vpn-nat66-enabled", "Enable or disable NAT of IPv6 traffic leaving through the gateway").Envar("WG_IPV6_NAT_ENABLED").Default("true").BoolVar(&cmd.AppConfig.VPN.NAT66)
-	cli.Flag("vpn-gateway-interface", "The gateway network interface (i.e. eth0)").Envar("WG_VPN_GATEWAY_INTERFACE").Default(detectDefaultInterface()).StringVar(&cmd.AppConfig.VPN.GatewayInterface)
-	cli.Flag("vpn-allowed-ips", "A list of networks that VPN clients will be allowed to connect to via the VPN").Envar("WG_VPN_ALLOWED_IPS").Default("0.0.0.0/0", "::/0").StringsVar(&cmd.AppConfig.VPN.AllowedIPs)
+	cli.Flag("vpn-client-isolation", "Block or allow traffic between client devices").Envar("WG_VPN_CLIENT_ISOLATION").Default("false").BoolVar(&cmd.AppConfig.VPN.ClientIsolation)
 	cli.Flag("dns-enabled", "Enable or disable the embedded dns proxy server (useful for development)").Envar("WG_DNS_ENABLED").Default("true").BoolVar(&cmd.AppConfig.DNS.Enabled)
 	cli.Flag("dns-upstream", "An upstream DNS server to proxy DNS traffic to. Defaults to resolvconf with Cloudflare DNS as fallback").Envar("WG_DNS_UPSTREAM").StringsVar(&cmd.AppConfig.DNS.Upstream)
 	cli.Flag("dns-domain", "A domain to serve configured device names authoritatively").Envar("WG_DNS_DOMAIN").StringVar(&cmd.AppConfig.DNS.Domain)
@@ -72,16 +73,6 @@ func (cmd *servecmd) Name() string {
 
 func (cmd *servecmd) Run() {
 	conf := cmd.ReadConfig()
-
-	if conf.VPN.CIDR == "0" {
-		conf.VPN.CIDR = ""
-	}
-	if conf.VPN.CIDRv6 == "0" {
-		conf.VPN.CIDRv6 = ""
-	}
-	if conf.DNS.Domain == "0" {
-		conf.DNS.Domain = ""
-	}
 
 	// Get the server's IP addresses within the VPN
 	var vpnip, vpnipv6 *net.IPNet
@@ -117,7 +108,11 @@ func (cmd *servecmd) Run() {
 	// WireGuard Server
 	wg := wgembed.NewNoOpInterface()
 	if conf.WireGuard.Enabled {
-		wgimpl, err := wgembed.New(conf.WireGuard.Interface)
+		wgOpts := wgembed.Options{
+			InterfaceName:     conf.WireGuard.Interface,
+			AllowKernelModule: true,
+		}
+		wgimpl, err := wgembed.NewWithOpts(wgOpts)
 		if err != nil {
 			logrus.Fatal(errors.Wrap(err, "failed to create wireguard interface"))
 		}
@@ -141,7 +136,17 @@ func (cmd *servecmd) Run() {
 
 		logrus.Infof("wireguard VPN network is %s", network.StringJoinIPNets(vpnip, vpnipv6))
 
-		if err := network.ConfigureForwarding(conf.VPN.GatewayInterface, conf.VPN.CIDR, conf.VPN.CIDRv6, conf.VPN.NAT44, conf.VPN.NAT66, conf.VPN.AllowedIPs); err != nil {
+		options := network.ForwardingOptions{
+			GatewayIface:    conf.VPN.GatewayInterface,
+			CIDR:            conf.VPN.CIDR,
+			CIDRv6:          conf.VPN.CIDRv6,
+			NAT44:           conf.VPN.NAT44,
+			NAT66:           conf.VPN.NAT66,
+			ClientIsolation: conf.VPN.ClientIsolation,
+			AllowedIPs:      conf.VPN.AllowedIPs,
+		}
+
+		if err := network.ConfigureForwarding(options); err != nil {
 			logrus.Error(err)
 			return
 		}
@@ -215,25 +220,12 @@ func (cmd *servecmd) Run() {
 	router.PathPrefix("/health").Handler(services.HealthEndpoint())
 
 	// Authentication middleware
-	if conf.Auth.IsEnabled() {
-		middleware, err := authnz.NewMiddleware(conf.Auth, claimsMiddleware(conf))
-		if err != nil {
-			logrus.Error(errors.Wrap(err, "failed to set up authnz middleware"))
-			return
-		}
-		router.Use(middleware)
-	} else {
-		logrus.Warn("[DEPRECATION NOTICE] using wg-access-server without an admin user is deprecated and will be removed in an upcoming minor release.")
-		router.Use(func(next http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				next.ServeHTTP(w, r.WithContext(authsession.SetIdentityCtx(r.Context(), &authsession.AuthSession{
-					Identity: &authsession.Identity{
-						Subject: "",
-					},
-				})))
-			})
-		})
+	middleware, err := authnz.NewMiddleware(conf.Auth, claimsMiddleware(conf))
+	if err != nil {
+		logrus.Error(errors.Wrap(err, "failed to set up authnz middleware"))
+		return
 	}
+	router.Use(middleware)
 
 	// Subrouter for our site (web + api)
 	site := router.PathPrefix("/").Subrouter()
@@ -286,6 +278,7 @@ func (cmd *servecmd) Run() {
 	}
 }
 
+// ReadConfig reads the config file from disk if specified and overrides any env vars or cmdline options
 func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	if cmd.ConfigFilePath != "" {
 		if b, err := ioutil.ReadFile(cmd.ConfigFilePath); err == nil {
@@ -301,23 +294,28 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		}
 	}
 
-	if cmd.AppConfig.AdminPassword == "" {
-		logrus.Fatal("missing admin password: please set via environment variable, flag or config file")
-	}
-
 	if cmd.AppConfig.DisableMetadata {
 		logrus.Info("Metadata collection has been disabled. No metrics or device connectivity information will be recorded or shown")
 	}
 
-	// set a basic auth entry for the admin user
-	if cmd.AppConfig.Auth.Basic == nil {
-		cmd.AppConfig.Auth.Basic = &authconfig.BasicAuthConfig{}
+	if !cmd.AppConfig.Auth.IsEnabled() {
+		if cmd.AppConfig.AdminPassword == "" {
+			logrus.Fatal("missing admin password: please set via environment variable, flag or config file")
+		}
 	}
-	pw, err := bcrypt.GenerateFromPassword([]byte(cmd.AppConfig.AdminPassword), bcrypt.DefaultCost)
-	if err != nil {
-		logrus.Fatal(errors.Wrap(err, "failed to generate a bcrypt hash for the provided admin password"))
+
+	if cmd.AppConfig.AdminPassword != "" {
+		// set a basic auth entry for the admin user
+		if cmd.AppConfig.Auth.Basic == nil {
+			// one of them has to be enabled
+			cmd.AppConfig.Auth.Basic = &authconfig.BasicAuthConfig{}
+		}
+		pw, err := bcrypt.GenerateFromPassword([]byte(cmd.AppConfig.AdminPassword), bcrypt.DefaultCost)
+		if err != nil {
+			logrus.Fatal(errors.Wrap(err, "failed to generate a bcrypt hash for the provided admin password"))
+		}
+		cmd.AppConfig.Auth.Basic.Users = append(cmd.AppConfig.Auth.Basic.Users, fmt.Sprintf("%s:%s", cmd.AppConfig.AdminUsername, string(pw)))
 	}
-	cmd.AppConfig.Auth.Basic.Users = append(cmd.AppConfig.Auth.Basic.Users, fmt.Sprintf("%s:%s", cmd.AppConfig.AdminUsername, string(pw)))
 
 	// we'll generate a private key when using memory://
 	// storage only.
@@ -332,11 +330,32 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		cmd.AppConfig.WireGuard.PrivateKey = key.String()
 	}
 
+	// The empty string can be hard to pass through an env var, so we accept '0' too
+	if cmd.AppConfig.VPN.CIDR == "0" {
+		cmd.AppConfig.VPN.CIDR = ""
+	}
+	if cmd.AppConfig.VPN.CIDRv6 == "0" {
+		cmd.AppConfig.VPN.CIDRv6 = ""
+	}
+	if cmd.AppConfig.DNS.Domain == "0" {
+		cmd.AppConfig.DNS.Domain = ""
+	}
+	// kingpin only splits env vars by \n, let's split at commas as well
+	if len(cmd.AppConfig.VPN.AllowedIPs) == 1 {
+		cmd.AppConfig.VPN.AllowedIPs = strings.Split(cmd.AppConfig.VPN.AllowedIPs[0], ",")
+	}
+	if len(cmd.AppConfig.DNS.Upstream) == 1 {
+		cmd.AppConfig.DNS.Upstream = strings.Split(cmd.AppConfig.DNS.Upstream[0], ",")
+	}
+
 	return &cmd.AppConfig
 }
 
 func claimsMiddleware(conf *config.AppConfig) authsession.ClaimsMiddleware {
 	return func(user *authsession.Identity) error {
+		if user == nil {
+			return errors.New("User is not logged in")
+		}
 		if user.Subject == conf.AdminUsername {
 			user.Claims.Add("admin", "true")
 		}

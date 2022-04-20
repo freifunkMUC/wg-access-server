@@ -22,10 +22,13 @@ NAT can be disabled separately for IPv4 and IPv6.
 
 - Pluggable authentication using OpenID Connect
 - Authentication using GitLab
+- PostgreSQL, MySQL or SQLite3 storage backend
+- WireGuard client configuration QR codes
 - IPv6 support in tunnel
 - Caching DNS proxy (stub resolver)
-- WireGuard client configuration QR codes
-- PostgreSQL, MySQL or SQLite3 storage backend
+- Client isolation (optional)
+- WireGuard kernel module for improved performance and latency
+- Automatic fallback to embedded userspace implementation for easy container deployment
 
 ## Documentation
 
@@ -91,18 +94,10 @@ to connect your phone using the UI and QR code!
 
 ## Running on Kubernetes via Helm
 
-wg-access-server ships a Helm chart to make it easy to get started on
-Kubernetes.
-
-Here's a quick start, but you can read more at the [Helm Chart Deployment Docs](https://freifunkMUC.github.io/wg-access-server/deployment/3-kubernetes/)
-
-```bash
-# deploy
-helm install my-release --repo https://freifunkMUC.github.io/wg-access-server wg-access-server
-
-# cleanup
-helm delete my-release
-```
+The Helm chart included in this repository has been removed due to lack of expertise on our side and nobody answering
+our call for aid.  
+If you are a Kubernetes/Helm user, please consider stepping up and taking over maintenance of the chart at
+https://github.com/freifunkMUC/wg-access-server-chart.
 
 ## Screenshots
 
@@ -116,7 +111,7 @@ helm delete my-release
 
 ## Changelog
 
-See the [CHANGELOG.md](https://github.com/freifunkMUC/wg-access-server/blob/master/CHANGELOG.md) file
+See the [Releases section](https://github.com/freifunkMUC/wg-access-server/releases)
 
 ## Development
 
