@@ -16,6 +16,8 @@ jobs: # Docs: <https://git.io/JvxXE>
         with: {fetch-depth: 0}
 
       - uses: gacts/gitleaks@v1 # Action page: <https://github.com/zricethezav/gitleaks-action>
+        with:
+          config-path: .gitleaks.toml
 
   golangci-lint:
     name: Golang-CI (lint)
