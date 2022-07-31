@@ -14,6 +14,6 @@ title = "Gitleaks configuration"
 # https://github.com/zricethezav/gitleaks/blob/master/config/gitleaks.toml
 useDefault = true
 
-[rules.allowlist]
+[allowlist]
 description = "ignore commit 04a37c7014c951bdf6bc3c8bbc802c9a772bf96a"
 commits = [ "04a37c7014c951bdf6bc3c8bbc802c9a772bf96a", "3effed4e2c73249b9cb35718efdadbda9614a6b3"]
