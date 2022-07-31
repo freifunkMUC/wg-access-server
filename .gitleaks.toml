@@ -17,7 +17,3 @@ useDefault = true
 [rules.allowlist]
 description = "ignore commit 04a37c7014c951bdf6bc3c8bbc802c9a772bf96a"
 commits = [ "04a37c7014c951bdf6bc3c8bbc802c9a772bf96a", "3effed4e2c73249b9cb35718efdadbda9614a6b3"]
-paths = [
-  '''deploy/k8s/quickstart\.yaml''',
-  '''config\.yaml'''
-]
