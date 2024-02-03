@@ -7,7 +7,7 @@ toolchain go1.21.6
 require (
 	github.com/coreos/go-iptables v0.7.0
 	github.com/coreos/go-oidc v2.2.1+incompatible
-	github.com/docker/libnetwork v0.8.0-dev.2.0.20200217033114-6659f7f4d8c1
+	github.com/docker/libnetwork v0.8.0-dev.2.0.20231020213125-3797618f9a38
 	github.com/freifunkMUC/pg-events v0.4.2
 	github.com/freifunkMUC/wg-embed v0.10.1
 	github.com/google/uuid v1.6.0
@@ -70,6 +70,6 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gotest.tools v2.2.0+incompatible // indirect
+	gotest.tools/v3 v3.5.1 // indirect
 	nhooyr.io/websocket v1.8.10 // indirect
 )
