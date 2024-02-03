@@ -5,7 +5,6 @@ go 1.21
 require (
 	github.com/coreos/go-iptables v0.7.0
 	github.com/coreos/go-oidc v2.2.1+incompatible
-	github.com/docker/libnetwork v0.8.0-dev.2.0.20231020213125-3797618f9a38
 	github.com/freifunkMUC/pg-events v0.4.2
 	github.com/freifunkMUC/wg-embed v0.10.1
 	github.com/google/uuid v1.6.0
@@ -15,6 +14,7 @@ require (
 	github.com/improbable-eng/grpc-web v0.15.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/miekg/dns v1.1.58
+	github.com/moby/libnetwork v0.8.0-dev.2.0.20231020213125-3797618f9a38
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -33,12 +33,14 @@ require (
 
 require (
 	github.com/GehirnInc/crypt v0.0.0-20230320061759-8cc1b52080c5 // indirect
+	github.com/Sirupsen/logrus v1.0.6 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20231202071711-9a357b53e9c9 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
 	github.com/docker/docker v25.0.2+incompatible // indirect
+	github.com/docker/libnetwork v0.5.6 // indirect
 	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
@@ -59,6 +61,7 @@ require (
 	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/term v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
