@@ -164,7 +164,7 @@ func (d *DeviceManager) sync() error {
 
 	// Add peers for all devices in storage
 	for _, device := range devices {
-		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address)); err != nil {
+		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address), device.Endpoint, device.PersistentKeepalive); err != nil {
 			logrus.Warn(errors.Wrapf(err, "failed to add device during sync: %s", device.Name))
 		}
 	}
