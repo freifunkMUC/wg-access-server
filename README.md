@@ -69,9 +69,9 @@ docker run \
 
 **Note:** This command includes the `SYS_MODULE` capability which essentially gives the container root privileges over the host system and an attacker could easily break out of the container. See the [Docker instructions](https://www.freie-netze.org/wg-access-server/deployment/1-docker/) for the recommended way to run the container.
 
-If the wg-access-server is accessible via LAN or a network you are in, you can directly connect your phone to the VPN. You have to call the webfrontent of the project for this. Normally, this is done via the IP address of the device or server on which the wg-access-server is running followed by the standard port 8000, via which the web interface can be reached. For most deployments something like this should work: http://192.168.0.XX:8000
+If the wg-access-server is accessible via LAN or a network you are in, you can directly connect your phone to the VPN. You have to call the webfrontent of the project for this. Normally, this is done via the IP address of the device or server on which the wg-access-server is running followed by the standard port 8000, via which the web interface can be reached. For most deployments something like this should work: <http://192.168.0.XX:8000>
 
-If the project is running locally on the computer, you can easily connect to the web interface by connecting to http://localhost:8000 in the browser.
+If the project is running locally on the computer, you can easily connect to the web interface by connecting to <http://localhost:8000> in the browser.
 
 ## Running with Docker-Compose
 
@@ -87,7 +87,7 @@ echo "Your automatically generated admin password for the wg-access-server's web
 docker-compose up
 ```
 
-You can connect to the web server on the local machine browser at http://localhost:8000
+You can connect to the web server on the local machine browser at <http://localhost:8000>
 
 If you open your browser to your machine's LAN IP address you'll be able
 to connect your phone using the UI and QR code!
@@ -97,7 +97,7 @@ to connect your phone using the UI and QR code!
 The Helm chart included in this repository has been removed due to lack of expertise on our side and nobody answering
 our call for aid.  
 If you are a Kubernetes/Helm user, please consider stepping up and taking over maintenance of the chart at
-https://github.com/freifunkMUC/wg-access-server-chart.
+<https://github.com/freifunkMUC/wg-access-server-chart>.
 
 ## Screenshots
 
@@ -122,13 +122,15 @@ If you want to make changes to the project locally, you can do so relatively eas
 1. Run `cd website && npm install && npm start` to get the frontend running on `:3000`.
 2. Run `sudo go run ./main.go` to get the server running on `:8000`.
 
+or `make dev`
+
 Here are some notes on development configuration:
 
 - sudo is required because the server uses iptables/ip to configure the VPN network
 - access to the website is on `:3000` and API requests are redirected to `:8000` thanks to webpack
 - in-memory storage and generated WireGuard keys are used
 
-### gRPC code generation:
+### gRPC code generation
 
 The client communicates with the server via gRPC web. You can edit the API specification in `./proto/*.proto`.
 
@@ -147,3 +149,7 @@ docker build -f proto/Dockerfile --target proto-go -t wg-access-server-proto:go 
 docker run --rm -v `pwd`/proto:/proto -v `pwd`/website/src/sdk:/code/src/sdk wg-access-server-proto:js
 docker run --rm -v `pwd`/proto:/code/proto wg-access-server-proto:go
 ```
+
+or
+
+`make generate`
