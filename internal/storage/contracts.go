@@ -36,15 +36,16 @@ type Pingable interface {
 type Callback func(device *Device)
 
 type Device struct {
-	Owner         string    `json:"owner" gorm:"type:varchar(100);unique_index:key;primary_key"`
-	OwnerName     string    `json:"owner_name"`
-	OwnerEmail    string    `json:"owner_email"`
-	OwnerProvider string    `json:"owner_provider"`
-	Name          string    `json:"name" gorm:"type:varchar(100);unique_index:key;primary_key"`
-	PublicKey     string    `json:"public_key" gorm:"unique_index"`
-	PresharedKey  string    `json:"preshared_key" gorm:"type:varchar(100)"`
-	Address       string    `json:"address"`
-	CreatedAt     time.Time `json:"created_at" gorm:"column:created_at"`
+	Owner               string    `json:"owner" gorm:"type:varchar(100);unique_index:key;primary_key"`
+	OwnerName           string    `json:"owner_name"`
+	OwnerEmail          string    `json:"owner_email"`
+	OwnerProvider       string    `json:"owner_provider"`
+	Name                string    `json:"name" gorm:"type:varchar(100);unique_index:key;primary_key"`
+	PublicKey           string    `json:"public_key" gorm:"unique_index"`
+	PresharedKey        string    `json:"preshared_key" gorm:"type:varchar(100)"`
+	Address             string    `json:"address"`
+	PersistentKeepalive int32     `json:"persistent_keepalive"`
+	CreatedAt           time.Time `json:"created_at" gorm:"column:created_at"`
 
 	/**
 	 * Metadata fields below.

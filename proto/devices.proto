@@ -32,12 +32,15 @@ message Device {
   string owner_email = 12;
   string owner_provider = 13;
   string preshared_key = 14;
+  int32 persistent_keepalive = 15;
 }
 
 message AddDeviceReq {
   string name = 1;
   string public_key = 2;
   string preshared_key = 3;
+  string endpoint = 4;
+  int32 persistent_keepalive = 5;
 }
 
 message ListDevicesReq {

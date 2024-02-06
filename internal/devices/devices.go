@@ -81,7 +81,7 @@ func (d *DeviceManager) StartSync(disableMetadataCollection, enableInactiveDevic
 	return nil
 }
 
-func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, publicKey string, presharedKey string) (*storage.Device, error) {
+func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, publicKey string, presharedKey string, endpoint string, persistentKeepalive int32) (*storage.Device, error) {
 	if name == "" {
 		return nil, errors.New("Device name must not be empty.")
 	}
@@ -118,15 +118,17 @@ func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, p
 	}
 
 	device := &storage.Device{
-		Owner:         identity.Subject,
-		OwnerName:     identity.Name,
-		OwnerEmail:    identity.Email,
-		OwnerProvider: identity.Provider,
-		Name:          name,
-		PublicKey:     publicKey,
-		PresharedKey:  presharedKey,
-		Address:       clientAddr,
-		CreatedAt:     time.Now(),
+		Owner:               identity.Subject,
+		OwnerName:           identity.Name,
+		OwnerEmail:          identity.Email,
+		OwnerProvider:       identity.Provider,
+		Name:                name,
+		PublicKey:           publicKey,
+		PresharedKey:        presharedKey,
+		Endpoint:            endpoint,
+		PersistentKeepalive: persistentKeepalive,
+		Address:             clientAddr,
+		CreatedAt:           time.Now(),
 	}
 
 	if err := d.SaveDevice(device); err != nil {

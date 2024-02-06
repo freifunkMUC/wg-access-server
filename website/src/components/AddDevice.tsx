@@ -45,6 +45,10 @@ export const AddDevice = observer(
 
     devicePublickey = '';
 
+    deviceEndpoint = '';
+
+    devicePersistentKeepalive = 0;
+
     useDevicePresharekey = false;
 
     showAdvancedOptions = false;
@@ -78,6 +82,8 @@ export const AddDevice = observer(
           name: this.deviceName,
           publicKey,
           presharedKey,
+          endpoint: this.deviceEndpoint,
+          persistentKeepalive: this.devicePersistentKeepalive,
         });
         this.props.onAdd();
 
@@ -107,7 +113,8 @@ export const AddDevice = observer(
         [Peer]
         PublicKey = ${info.publicKey}
         AllowedIPs = ${info.allowedIps}
-        Endpoint = ${`${info.host?.value || window.location.hostname}:${info.port || '51820'}`}
+        Endpoint = ${info.endpoint || `${info.host?.value || window.location.hostname}:${info.port || '51820'}`}
+        ${this.devicePersistentKeepalive > 0 ? `PersistentKeepalive = ${this.devicePersistentKeepalive}` : ``}
         ${this.useDevicePresharekey ? `PresharedKey = ${presharedKey}` : ``}
       `;
 
@@ -123,6 +130,8 @@ export const AddDevice = observer(
     reset = () => {
       this.deviceName = '';
       this.devicePublickey = '';
+      this.deviceEndpoint = '';
+      this.devicePersistentKeepalive = 0;
       this.useDevicePresharekey = false;
       this.showAdvancedOptions = false;
       this.error = '';
@@ -136,6 +145,8 @@ export const AddDevice = observer(
         error: observable,
         deviceName: observable,
         devicePublickey: observable,
+        deviceEndpoint: observable,
+        devicePersistentKeepalive: observable,
         useDevicePresharekey: observable,
         configFile: observable,
         showMobile: observable,
@@ -191,6 +202,33 @@ export const AddDevice = observer(
                         <FormHelperText id="device-publickey-text">
                           Put your public key to a pre-generated private key here. Replace the private key in the config
                           file after downloading it.
+                        </FormHelperText>
+                      </FormControl>
+                      <FormControl fullWidth>
+                        <InputLabel htmlFor="device-endpoint">Device Endpoint (Optional)</InputLabel>
+                        <Input
+                          id="device-endpoint"
+                          value={this.deviceEndpoint}
+                          onChange={(event) => (this.deviceEndpoint = event.currentTarget.value)}
+                          aria-describedby="device-endpoint-text"
+                        />
+                        <FormHelperText id="device-endpoint-text">
+                          Put your custom endpoint here. i.e configuring point to point wireguard connections
+                        </FormHelperText>
+                      </FormControl>
+                      <FormControl fullWidth>
+                        <InputLabel htmlFor="device-persistent-keepalive">
+                          Device Persistent Keepalive (Optional)
+                        </InputLabel>
+                        <Input
+                          type="number"
+                          id="device-persistent-keepalive"
+                          value={this.devicePersistentKeepalive}
+                          onChange={(event) => (this.devicePersistentKeepalive = parseInt(event.currentTarget.value))}
+                          aria-describedby="device-persistent-keepalive-number"
+                        />
+                        <FormHelperText id="device-persistent-keepalive-number">
+                          Put in a persistent keep alive value here, in seconds
                         </FormHelperText>
                       </FormControl>
                       <FormControlLabel

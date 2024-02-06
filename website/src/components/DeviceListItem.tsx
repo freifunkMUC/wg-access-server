@@ -87,12 +87,26 @@ export const DeviceListItem = observer(
                     <PopoverDisplay label="show">{device.publicKey}</PopoverDisplay>
                   </td>
                 </tr>
-                <tr>
-                  <td>Pre-shared key</td>
-                  <td>
-                    {device.presharedKey ? <PopoverDisplay label="show">{device.presharedKey}</PopoverDisplay> : 'None'}
-                  </td>
-                </tr>
+                {device.endpoint ? (
+                  <tr>
+                    <td>Endpoint</td>
+                    <td>{device.endpoint}</td>
+                  </tr>
+                ) : null}
+                {device.presharedKey ? (
+                  <tr>
+                    <td>Pre-shared key</td>
+                    <td>
+                      <PopoverDisplay label="show">{device.presharedKey}</PopoverDisplay>
+                    </td>
+                  </tr>
+                ) : null}
+                {device.persistentKeepalive ? (
+                  <tr>
+                    <td>Persistent Keepalive</td>
+                    <td>{device.persistentKeepalive}</td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </CardContent>
