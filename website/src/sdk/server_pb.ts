@@ -127,7 +127,7 @@ export declare namespace InfoRes {
 		buildInfo?: buildinfo.BuildInfo.AsObject,
 		mtu: number,
 		endpoint: string,
-		persistentKeepalive: number,
+		persistentKeepaliveInterval: number,
 	}
 }
 
@@ -272,10 +272,10 @@ export class InfoRes extends jspb.Message {
 		(jspb.Message as any).setProto3StringField(this, 18, value);
 	}
 
-	getPersistentKeepalive(): number {return jspb.Message.getFieldWithDefault(this, 19, 0);
+	getPersistentKeepaliveInterval(): number {return jspb.Message.getFieldWithDefault(this, 19, 0);
 	}
 
-	setPersistentKeepalive(value: number): void {
+	setPersistentKeepaliveInterval(value: number): void {
 		(jspb.Message as any).setProto3IntField(this, 19, value);
 	}
 
@@ -306,7 +306,7 @@ export class InfoRes extends jspb.Message {
 			buildInfo: (f = this.getBuildInfo()) && f.toObject(),
 			mtu: this.getMtu(),
 			endpoint: this.getEndpoint(),
-			persistentKeepalive: this.getPersistentKeepalive(),
+			persistentKeepaliveInterval: this.getPersistentKeepaliveInterval(),
 		};
 	}
 
@@ -383,7 +383,7 @@ export class InfoRes extends jspb.Message {
 		if (field18.length > 0) {
 			writer.writeString(18, field18);
 		}
-		const field19 = message.getPersistentKeepalive();
+		const field19 = message.getPersistentKeepaliveInterval();
 		if (field19 != 0) {
 			writer.writeInt32(19, field19);
 		}
@@ -479,7 +479,7 @@ export class InfoRes extends jspb.Message {
 				break;
 			case 19:
 				const field19 = reader.readInt32()
-				message.setPersistentKeepalive(field19);
+				message.setPersistentKeepaliveInterval(field19);
 				break;
 			default:
 				reader.skipField();
@@ -523,7 +523,7 @@ function InfoResFromObject(obj: InfoRes.AsObject | undefined): InfoRes | undefin
 	message.setBuildInfo(BuildInfoFromObject(obj.buildInfo));
 	message.setMtu(obj.mtu);
 	message.setEndpoint(obj.endpoint);
-	message.setPersistentKeepalive(obj.persistentKeepalive);
+	message.setPersistentKeepaliveInterval(obj.persistentKeepaliveInterval);
 	return message;
 }
 

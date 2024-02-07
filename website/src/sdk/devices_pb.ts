@@ -153,7 +153,7 @@ export declare namespace Device {
 		ownerEmail: string,
 		ownerProvider: string,
 		presharedKey: string,
-		persistentKeepalive: number,
+		persistentKeepaliveInterval: number,
 	}
 }
 
@@ -269,10 +269,10 @@ export class Device extends jspb.Message {
 		(jspb.Message as any).setProto3StringField(this, 14, value);
 	}
 
-	getPersistentKeepalive(): number {return jspb.Message.getFieldWithDefault(this, 15, 0);
+	getPersistentKeepaliveInterval(): number {return jspb.Message.getFieldWithDefault(this, 15, 0);
 	}
 
-	setPersistentKeepalive(value: number): void {
+	setPersistentKeepaliveInterval(value: number): void {
 		(jspb.Message as any).setProto3IntField(this, 15, value);
 	}
 
@@ -299,7 +299,7 @@ export class Device extends jspb.Message {
 			ownerEmail: this.getOwnerEmail(),
 			ownerProvider: this.getOwnerProvider(),
 			presharedKey: this.getPresharedKey(),
-			persistentKeepalive: this.getPersistentKeepalive(),
+			persistentKeepaliveInterval: this.getPersistentKeepaliveInterval(),
 		};
 	}
 
@@ -360,7 +360,7 @@ export class Device extends jspb.Message {
 		if (field14.length > 0) {
 			writer.writeString(14, field14);
 		}
-		const field15 = message.getPersistentKeepalive();
+		const field15 = message.getPersistentKeepaliveInterval();
 		if (field15 != 0) {
 			writer.writeInt32(15, field15);
 		}
@@ -439,7 +439,7 @@ export class Device extends jspb.Message {
 				break;
 			case 15:
 				const field15 = reader.readInt32()
-				message.setPersistentKeepalive(field15);
+				message.setPersistentKeepaliveInterval(field15);
 				break;
 			default:
 				reader.skipField();
@@ -456,7 +456,7 @@ export declare namespace AddDeviceReq {
 		publicKey: string,
 		presharedKey: string,
 		endpoint: string,
-		persistentKeepalive: number,
+		persistentKeepaliveInterval: number,
 	}
 }
 
@@ -500,10 +500,10 @@ export class AddDeviceReq extends jspb.Message {
 		(jspb.Message as any).setProto3StringField(this, 4, value);
 	}
 
-	getPersistentKeepalive(): number {return jspb.Message.getFieldWithDefault(this, 5, 0);
+	getPersistentKeepaliveInterval(): number {return jspb.Message.getFieldWithDefault(this, 5, 0);
 	}
 
-	setPersistentKeepalive(value: number): void {
+	setPersistentKeepaliveInterval(value: number): void {
 		(jspb.Message as any).setProto3IntField(this, 5, value);
 	}
 
@@ -520,7 +520,7 @@ export class AddDeviceReq extends jspb.Message {
 			publicKey: this.getPublicKey(),
 			presharedKey: this.getPresharedKey(),
 			endpoint: this.getEndpoint(),
-			persistentKeepalive: this.getPersistentKeepalive(),
+			persistentKeepaliveInterval: this.getPersistentKeepaliveInterval(),
 		};
 	}
 
@@ -541,7 +541,7 @@ export class AddDeviceReq extends jspb.Message {
 		if (field4.length > 0) {
 			writer.writeString(4, field4);
 		}
-		const field5 = message.getPersistentKeepalive();
+		const field5 = message.getPersistentKeepaliveInterval();
 		if (field5 != 0) {
 			writer.writeInt32(5, field5);
 		}
@@ -578,7 +578,7 @@ export class AddDeviceReq extends jspb.Message {
 				break;
 			case 5:
 				const field5 = reader.readInt32()
-				message.setPersistentKeepalive(field5);
+				message.setPersistentKeepaliveInterval(field5);
 				break;
 			default:
 				reader.skipField();
@@ -962,7 +962,7 @@ function DeviceFromObject(obj: Device.AsObject | undefined): Device | undefined 
 	message.setOwnerEmail(obj.ownerEmail);
 	message.setOwnerProvider(obj.ownerProvider);
 	message.setPresharedKey(obj.presharedKey);
-	message.setPersistentKeepalive(obj.persistentKeepalive);
+	message.setPersistentKeepaliveInterval(obj.persistentKeepaliveInterval);
 	return message;
 }
 
@@ -985,7 +985,7 @@ function AddDeviceReqFromObject(obj: AddDeviceReq.AsObject | undefined): AddDevi
 	message.setPublicKey(obj.publicKey);
 	message.setPresharedKey(obj.presharedKey);
 	message.setEndpoint(obj.endpoint);
-	message.setPersistentKeepalive(obj.persistentKeepalive);
+	message.setPersistentKeepaliveInterval(obj.persistentKeepaliveInterval);
 	return message;
 }
 
