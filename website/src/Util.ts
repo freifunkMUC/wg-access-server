@@ -13,7 +13,9 @@ export function sleep(seconds: number) {
 }
 
 export function lastSeen(timestamp: timestamp_pb.Timestamp.AsObject | undefined): string {
-  if (timestamp === undefined) {
+  // This just avoids the edgecase that results from a manually set endpoint without a connection yet
+  const hundredYears = 60 * 60 * 24 * 365 * 100;
+  if (timestamp === undefined || timestamp.seconds < hundredYears) {
     return 'Never';
   }
   return formatDistance(toDate(timestamp), new Date(), {
@@ -83,8 +85,8 @@ export function setClipboard(text: string) {
 }
 
 export interface DownloadOpts {
-  filename: string,
-  content: string,
+  filename: string;
+  content: string;
 }
 
 export function download(opts: DownloadOpts) {
