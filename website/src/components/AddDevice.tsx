@@ -218,7 +218,7 @@ export const AddDevice = observer(
                       </FormControl>
                       <FormControl fullWidth>
                         <InputLabel htmlFor="device-persistent-keepalive">
-                          Device Persistent Keepalive Interval Interval Interval Interval Interval (Optional)
+                          Device Persistent Keepalive Interval (Optional)
                         </InputLabel>
                         <Input
                           type="number"

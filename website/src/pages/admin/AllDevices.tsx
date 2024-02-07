@@ -90,7 +90,7 @@ export const AllDevices = observer(
                   <TableCell>Connected</TableCell>
                   <TableCell>Local Address</TableCell>
                   <TableCell>Last Endpoint</TableCell>
-                  <TableCell>Persistent Keepalive Interval Interval</TableCell>
+                  <TableCell>Persistent Keepalive Interval</TableCell>
                   <TableCell>Download / Upload</TableCell>
                   <TableCell>Last Seen</TableCell>
                   <TableCell>Actions</TableCell>

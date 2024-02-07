@@ -103,7 +103,7 @@ export const DeviceListItem = observer(
                 ) : null}
                 {device.persistentKeepaliveInterval ? (
                   <tr>
-                    <td>Persistent Keepalive Interval Interval</td>
+                    <td>Persistent Keepalive Interval</td>
                     <td>{device.persistentKeepaliveInterval}</td>
                   </tr>
                 ) : null}

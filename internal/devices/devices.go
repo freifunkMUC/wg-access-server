@@ -38,7 +38,7 @@ func New(wg wgembed.WireGuardInterface, s storage.Storage, cidr, cidrv6 string) 
 func (d *DeviceManager) StartSync(disableMetadataCollection, enableInactiveDeviceDeletion bool, inactiveDeviceGracePeriod time.Duration) error {
 	// Start listening to the device add/remove events
 	d.storage.OnAdd(func(device *storage.Device) {
-		logrus.Infof("Storage event: add device '%s' (public key: '%s') %s %s for user: %s %s", device.Name, device.PublicKey, device.Endpoint, fmt.Sprint(device.PersistentKeepaliveInterval), device.OwnerName, device.Owner)
+		logrus.Infof("Storage event: add device '%s' (public key: '%s') for user: %s %s", device.Name, device.PublicKey, device.OwnerName, device.Owner)
 		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address), device.Endpoint, device.PersistentKeepaliveInterval); err != nil {
 			logrus.Error(errors.Wrap(err, "failed to add WireGuard peer"))
 		}
