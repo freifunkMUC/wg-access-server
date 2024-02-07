@@ -90,7 +90,7 @@ export const AllDevices = observer(
                   <TableCell>Connected</TableCell>
                   <TableCell>Local Address</TableCell>
                   <TableCell>Last Endpoint</TableCell>
-                  <TableCell>Persistent Keepalive</TableCell>
+                  <TableCell>Persistent Keepalive Interval Interval</TableCell>
                   <TableCell>Download / Upload</TableCell>
                   <TableCell>Last Seen</TableCell>
                   <TableCell>Actions</TableCell>
@@ -113,7 +113,7 @@ export const AllDevices = observer(
                     <TableCell>{device.connected ? 'yes' : 'no'}</TableCell>
                     <TableCell>{device.address}</TableCell>
                     <TableCell>{device.endpoint}</TableCell>
-                    <TableCell>{device.persistentKeepalive}</TableCell>
+                    <TableCell>{device.persistentKeepaliveInterval}</TableCell>
                     <TableCell>
                       {numeral(device.transmitBytes).format('0b')} / {numeral(device.receiveBytes).format('0b')}
                     </TableCell>

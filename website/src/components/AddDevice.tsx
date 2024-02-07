@@ -83,7 +83,7 @@ export const AddDevice = observer(
           publicKey,
           presharedKey,
           endpoint: this.deviceEndpoint,
-          persistentKeepalive: this.devicePersistentKeepalive,
+          persistentKeepaliveInterval: this.devicePersistentKeepalive,
         });
         this.props.onAdd();
 
@@ -114,7 +114,7 @@ export const AddDevice = observer(
         PublicKey = ${info.publicKey}
         AllowedIPs = ${info.allowedIps}
         Endpoint = ${info.endpoint || `${info.host?.value || window.location.hostname}:${info.port || '51820'}`}
-        ${this.devicePersistentKeepalive > 0 ? `PersistentKeepalive = ${this.devicePersistentKeepalive}` : ``}
+        ${this.devicePersistentKeepalive > 0 ? `PersistentKeepaliveInterval = ${this.devicePersistentKeepalive}` : ``}
         ${this.useDevicePresharekey ? `PresharedKey = ${presharedKey}` : ``}
       `;
 
@@ -218,7 +218,7 @@ export const AddDevice = observer(
                       </FormControl>
                       <FormControl fullWidth>
                         <InputLabel htmlFor="device-persistent-keepalive">
-                          Device Persistent Keepalive (Optional)
+                          Device Persistent Keepalive Interval Interval Interval Interval Interval (Optional)
                         </InputLabel>
                         <Input
                           type="number"

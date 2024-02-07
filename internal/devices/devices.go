@@ -38,8 +38,8 @@ func New(wg wgembed.WireGuardInterface, s storage.Storage, cidr, cidrv6 string) 
 func (d *DeviceManager) StartSync(disableMetadataCollection, enableInactiveDeviceDeletion bool, inactiveDeviceGracePeriod time.Duration) error {
 	// Start listening to the device add/remove events
 	d.storage.OnAdd(func(device *storage.Device) {
-		logrus.Infof("Storage event: add device '%s' (public key: '%s') for user: %s %s", device.Name, device.PublicKey, device.OwnerName, device.Owner)
-		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address)); err != nil {
+		logrus.Infof("Storage event: add device '%s' (public key: '%s') %s %s for user: %s %s", device.Name, device.PublicKey, device.Endpoint, fmt.Sprint(device.PersistentKeepaliveInterval), device.OwnerName, device.Owner)
+		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address), device.Endpoint, device.PersistentKeepaliveInterval); err != nil {
 			logrus.Error(errors.Wrap(err, "failed to add WireGuard peer"))
 		}
 	})
@@ -81,7 +81,7 @@ func (d *DeviceManager) StartSync(disableMetadataCollection, enableInactiveDevic
 	return nil
 }
 
-func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, publicKey string, presharedKey string, endpoint string, persistentKeepalive int32) (*storage.Device, error) {
+func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, publicKey string, presharedKey string, endpoint string, persistentKeepaliveInterval int32) (*storage.Device, error) {
 	if name == "" {
 		return nil, errors.New("Device name must not be empty.")
 	}
@@ -118,17 +118,17 @@ func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, p
 	}
 
 	device := &storage.Device{
-		Owner:               identity.Subject,
-		OwnerName:           identity.Name,
-		OwnerEmail:          identity.Email,
-		OwnerProvider:       identity.Provider,
-		Name:                name,
-		PublicKey:           publicKey,
-		PresharedKey:        presharedKey,
-		Endpoint:            endpoint,
-		PersistentKeepalive: persistentKeepalive,
-		Address:             clientAddr,
-		CreatedAt:           time.Now(),
+		Owner:                       identity.Subject,
+		OwnerName:                   identity.Name,
+		OwnerEmail:                  identity.Email,
+		OwnerProvider:               identity.Provider,
+		Name:                        name,
+		PublicKey:                   publicKey,
+		PresharedKey:                presharedKey,
+		Endpoint:                    endpoint,
+		PersistentKeepaliveInterval: persistentKeepaliveInterval,
+		Address:                     clientAddr,
+		CreatedAt:                   time.Now(),
 	}
 
 	if err := d.SaveDevice(device); err != nil {
@@ -164,7 +164,7 @@ func (d *DeviceManager) sync() error {
 
 	// Add peers for all devices in storage
 	for _, device := range devices {
-		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address), device.Endpoint, device.PersistentKeepalive); err != nil {
+		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address), device.Endpoint, device.PersistentKeepaliveInterval); err != nil {
 			logrus.Warn(errors.Wrapf(err, "failed to add device during sync: %s", device.Name))
 		}
 	}
