@@ -153,3 +153,13 @@ docker run --rm -v `pwd`/proto:/code/proto wg-access-server-proto:go
 or
 
 `make generate`
+
+### Modifying mods
+
+i.e for the wg-embed mod repo
+
+- Clone the repo to ./wg-embed
+- Add temporary to the docker file `COPY ./wg-embed/ ./wg-embed/` before mod download
+- Add to the main go.mod `replace github.com/freifunkMUC/wg-embed => ./wg-embed`
+
+don't forget to remove before posting pr
