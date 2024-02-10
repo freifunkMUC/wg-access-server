@@ -33,7 +33,7 @@ export const AllDevices = observer(class AllDevices extends React.Component {
   });
 
   deleteUser = async (user: User.AsObject) => {
-    if (await confirm('Are you sure?')) {
+    if (await confirm('Delete ' + user.name + ' are you sure? ')) {
       await grpc.users.deleteUser({
         name: user.name,
       });
@@ -43,7 +43,7 @@ export const AllDevices = observer(class AllDevices extends React.Component {
   }
 
   deleteDevice = async (device: Device.AsObject) => {
-    if (await confirm('Are you sure?')) {
+    if (await confirm('Delete ' + device.name + ' from ' + device.ownerName + ' are you sure?')) {
       await grpc.devices.deleteDevice({
         name: device.name,
         owner: { value: device.owner },
