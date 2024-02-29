@@ -33,7 +33,7 @@ export const AllDevices = observer(class AllDevices extends React.Component {
   });
 
   deleteUser = async (user: User.AsObject) => {
-    if (await confirm('Are you sure you want to delete ' + user.name + '?')) {
+    if (await confirm('Are you sure you want to delete all devices from ' + user.name + '?')) {
       await grpc.users.deleteUser({
         name: user.name,
       });
