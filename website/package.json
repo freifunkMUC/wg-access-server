@@ -11,7 +11,7 @@
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.11",
-    "@mui/lab": "^5.0.0-alpha.164",
+    "@mui/lab": "^5.0.0-alpha.166",
     "@mui/material": "^5.15.11",
     "@mui/styles": "^5.15.11",
     "common-tags": "^1.8.2",
