@@ -21,7 +21,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tg123/go-htpasswd v1.2.2
 	github.com/vishvananda/netlink v1.1.0
-	golang.org/x/crypto v0.18.0
+	golang.org/x/crypto v0.20.0
 	golang.org/x/oauth2 v0.16.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
 	google.golang.org/grpc v1.61.0
@@ -58,9 +58,9 @@ require (
 	github.com/rs/cors v1.8.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/net v0.20.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
