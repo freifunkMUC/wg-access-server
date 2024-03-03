@@ -5,15 +5,15 @@ import CardContent from '@mui/material/CardContent';
 import Avatar from '@mui/material/Avatar';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
-import MenuItem from '@mui/material/MenuItem';
+import DeleteIcon from '@mui/icons-material/Delete';
 import numeral from 'numeral';
 import { lastSeen } from '../Util';
 import { AppState } from '../AppState';
-import { IconMenu } from './IconMenu';
 import { PopoverDisplay } from './PopoverDisplay';
 import { Device } from '../sdk/devices_pb';
 import { grpc } from '../Api';
 import { observer } from 'mobx-react';
+import { confirm } from './Present';
 
 interface Props {
   device: Device.AsObject;
@@ -23,14 +23,17 @@ interface Props {
 export const DeviceListItem = observer(
   class DeviceListItem extends React.Component<Props> {
     removeDevice = async () => {
-      try {
-        await grpc.devices.deleteDevice({
-          name: this.props.device.name,
-        });
-        this.props.onRemove();
-      } catch {
-        window.alert('api request failed');
+      if (await confirm('Are you sure you want to delete ' + this.props.device.name + '?')) {
+        try {
+          await grpc.devices.deleteDevice({
+            name: this.props.device.name,
+          });
+          this.props.onRemove();
+        } catch {
+          window.alert('api request failed');
+        }
       }
+
     };
 
     render() {
@@ -46,11 +49,10 @@ export const DeviceListItem = observer(
               </Avatar>
             }
             action={
-              <IconMenu>
-                <MenuItem style={{ color: 'red' }} onClick={this.removeDevice}>
-                  Delete
-                </MenuItem>
-              </IconMenu>
+              
+              <DeleteIcon onClick={this.removeDevice}/>
+
+
             }
           />
           <CardContent>
