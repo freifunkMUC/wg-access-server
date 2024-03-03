@@ -14,6 +14,7 @@ import { Device } from '../sdk/devices_pb';
 import { grpc } from '../Api';
 import { observer } from 'mobx-react';
 import { confirm } from './Present';
+import { IconButton } from '@mui/material';
 
 interface Props {
   device: Device.AsObject;
@@ -49,10 +50,9 @@ export const DeviceListItem = observer(
               </Avatar>
             }
             action={
-              
-              <DeleteIcon onClick={this.removeDevice}/>
-
-
+              <IconButton sx={{ "&:hover": { color: "red" } }} onClick={this.removeDevice}>
+                <DeleteIcon />
+              </IconButton>       
             }
           />
           <CardContent>
