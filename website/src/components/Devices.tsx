@@ -57,7 +57,7 @@ export const Devices = observer(
                 <Grid key={i} item xs={12} sm={6} md={4} lg={3}>
                   <DeviceListItem device={device} onRemove={() => this.devices.refresh()} />
                 </Grid>
-              ))}              
+              ))}
             </Grid>
           </Grid>
           <Grid item xs={12} sm={10} md={10} lg={6}>
