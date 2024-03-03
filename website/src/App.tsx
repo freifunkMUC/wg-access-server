@@ -24,7 +24,20 @@ export const App = observer(class App extends React.Component {
     }
   }
   
-
+  pageContent(){  
+    if(AppState.loadingError){
+      return <Error message={AppState.loadingError} />
+    }else if(!AppState.info){
+      return <Loading />
+    }else{
+      return ( 
+        <Routes>
+          <Route path="/" element={<YourDevices />} />
+          {AppState.info.isAdmin && <Route path="/admin/all-devices" element={<AllDevices />} />}
+        </Routes>
+      );
+    }
+  }
 
   render() {
     const darkLightTheme = createTheme({
@@ -39,18 +52,7 @@ export const App = observer(class App extends React.Component {
           <CssBaseline />
           <Navigation />
           <Box component="div" m={2}>
-            {AppState.loadingError ? (
-              <Error message={AppState.loadingError} />
-            ) : (
-              !AppState.info ? (
-                <Loading />
-              ) : (
-                <Routes>
-                  <Route path="/" element={<YourDevices />} />
-                  {AppState.info.isAdmin && <Route path="/admin/all-devices" element={<AllDevices />} />}
-                </Routes>
-              )
-            )}
+            { this.pageContent() }
           </Box>
         </ThemeProvider>
       </Router>
