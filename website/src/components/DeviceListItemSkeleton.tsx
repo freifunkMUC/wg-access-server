@@ -43,6 +43,3 @@ export function DeviceListItemSkeleton() {
     )
 
 }
-
-
-
