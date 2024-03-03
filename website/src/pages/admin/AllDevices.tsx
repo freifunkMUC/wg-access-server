@@ -23,30 +23,27 @@ import { Error } from '../../components/Error';
 
 export const AllDevices = observer(class AllDevices extends React.Component {
   users = lazy(async () => {
-    var res;
-    try{
-      res = await grpc.users.listUsers({});
+    try {
+      const result = await grpc.users.listUsers({});
+      return result.items;
     } catch (error: any) {
       console.error('An error occurred:', error);
-      AppState.loadingError = error.message
-      return null
-    }
-    return res.items;
+      AppState.loadingError = error.message;
+      return null;
+    }    
   });
 
   devices = lazy(async () => {
-
-    var res;
     try {
-      res = await grpc.devices.listAllDevices({});
+      const res = await grpc.devices.listAllDevices({});
+      let deviceList = res.items;
+      deviceList.sort((d1, d2) => (d2.lastHandshakeTime ? d2.lastHandshakeTime.seconds : 0) - (d1.lastHandshakeTime ? d1.lastHandshakeTime.seconds : 0));
+      return deviceList;
     }catch (error: any) {
       console.error('An error occurred:', error);
       AppState.loadingError = error.message
       return null
     }
-    let deviceList = res.items;
-    deviceList.sort((d1, d2) => (d2.lastHandshakeTime ? d2.lastHandshakeTime.seconds : 0) - (d1.lastHandshakeTime ? d1.lastHandshakeTime.seconds : 0));
-    return deviceList;
   });
 
   deleteUser = async (user: User.AsObject) => {
