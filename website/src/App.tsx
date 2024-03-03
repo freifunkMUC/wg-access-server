@@ -33,49 +33,24 @@ export const App = observer(class App extends React.Component {
       },
     });
 
-    if(AppState.loadingError){
-      return (
-        <Router>
-            <ThemeProvider theme={darkLightTheme}>
-              <CssBaseline />
-              <Navigation />
-              <Box component="div" m={2}>
-              <Error message={ AppState.loadingError } />
-              </Box>
-            </ThemeProvider>
-          </Router>
-      )
-    }
-
-    if (!AppState.info) {
-      return (
-          <Router>
-            <ThemeProvider theme={darkLightTheme}>
-              <CssBaseline />
-              <Navigation />
-              <Box component="div" m={2}>
-                <Loading />
-              </Box>
-            </ThemeProvider>
-          </Router>
-      );
-    }
-
-
     return (
       <Router>
         <ThemeProvider theme={darkLightTheme}>
           <CssBaseline />
           <Navigation />
           <Box component="div" m={2}>
-            <Routes>
-              <Route path="/" element={<YourDevices />} />
-              {AppState.info.isAdmin && (
-                <>
-                  <Route path="/admin/all-devices" element={<AllDevices />} />
-                </>
-              )}
-            </Routes>
+            {AppState.loadingError ? (
+              <Error message={AppState.loadingError} />
+            ) : (
+              !AppState.info ? (
+                <Loading />
+              ) : (
+                <Routes>
+                  <Route path="/" element={<YourDevices />} />
+                  {AppState.info.isAdmin && <Route path="/admin/all-devices" element={<AllDevices />} />}
+                </Routes>
+              )
+            )}
           </Box>
         </ThemeProvider>
       </Router>
