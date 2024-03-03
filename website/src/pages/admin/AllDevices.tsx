@@ -19,15 +19,31 @@ import { User } from '../../sdk/users_pb';
 import { lastSeen, lazy } from '../../Util';
 import numeral from "numeral";
 import { Loading } from '../../components/Loading';
+import { Error } from '../../components/Error';
 
 export const AllDevices = observer(class AllDevices extends React.Component {
   users = lazy(async () => {
-    const res = await grpc.users.listUsers({});
+    var res;
+    try{
+      res = await grpc.users.listUsers({});
+    } catch (error: any) {
+      console.error('An error occurred:', error);
+      AppState.loadingError = error.message
+      return null
+    }
     return res.items;
   });
 
   devices = lazy(async () => {
-    const res = await grpc.devices.listAllDevices({});
+
+    var res;
+    try {
+      res = await grpc.devices.listAllDevices({});
+    }catch (error: any) {
+      console.error('An error occurred:', error);
+      AppState.loadingError = error.message
+      return null
+    }
     let deviceList = res.items;
     deviceList.sort((d1, d2) => (d2.lastHandshakeTime ? d2.lastHandshakeTime.seconds : 0) - (d1.lastHandshakeTime ? d1.lastHandshakeTime.seconds : 0));
     return deviceList;
@@ -53,11 +69,13 @@ export const AllDevices = observer(class AllDevices extends React.Component {
     }
   };
 
-  render() {
+  render() { 
     if (!this.devices.current || !this.users.current) {
-      return <Loading />;
+        return <Loading />;
     }
-
+    if(AppState.loadingError){
+      return <Error message={AppState.loadingError} />
+    }
     const users = this.users.current;
     const devices = this.devices.current;
 
