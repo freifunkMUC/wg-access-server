@@ -37,8 +37,11 @@ export default function Navigation() {
               color="secondary"
               variant="outlined"
               size="small"
-              style={{ marginLeft: 20, background: 'white' }}
-            />
+              style={{
+                marginLeft: 20,
+                background: AppState.darkMode ? 'transparent' : 'white'
+              }}            
+              />
           )}
         </Typography>
 
