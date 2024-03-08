@@ -9,6 +9,9 @@ import { AddDevice } from './AddDevice';
 import { Loading } from './Loading';
 import { AppState } from '../AppState';
 import { Error } from './Error';
+import { Card, CardContent, CardHeader, Skeleton } from '@mui/material';
+import { DeviceListItemSkeleton } from './DeviceListItemSkeleton';
+import { AddDeviceSkeleton } from './AddDeviceSkeleton';
 
 export const Devices = observer(
   class Devices extends React.Component {
@@ -39,7 +42,22 @@ export const Devices = observer(
 
     render() {
       if (!this.devices.current) {
-        return <Loading />;
+        return (
+          <Grid container spacing={3} justifyContent="center">
+            <Grid item xs={12}>
+              <Grid container spacing={3}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Grid key={i} item xs={12} sm={6} md={4} lg={3}>
+                      <DeviceListItemSkeleton />
+                  </Grid>
+                ))} 
+              </Grid>
+            </Grid>  
+            <Grid item xs={12} sm={10} md={10} lg={6}>
+              <AddDeviceSkeleton />
+            </Grid>
+          </Grid>    
+        );
       }
       if(AppState.loadingError){
         return <Error message={AppState.loadingError} />
