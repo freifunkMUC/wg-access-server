@@ -20,7 +20,7 @@ export const Devices = observer(
        const res =  await grpc.devices.listDevices({});
        return res.items
       } catch (error: any){
-        console.log('An error occured:', error)
+        console.log('An error occurred:', error)
         AppState.loadingError = error.message
         return null
       }
