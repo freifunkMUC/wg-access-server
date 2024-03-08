@@ -16,16 +16,14 @@ import { AddDeviceSkeleton } from './AddDeviceSkeleton';
 export const Devices = observer(
   class Devices extends React.Component {
     devices = autorefresh(30, async () => {
-
-      var res
-      try{
-       res =  await grpc.devices.listDevices({});
+    try{
+       const res =  await grpc.devices.listDevices({});
+       return res.items
       } catch (error: any){
         console.log('An error occured:', error)
         AppState.loadingError = error.message
         return null
       }
-      return res.items
     });
 
     constructor(props: {}) {
@@ -41,6 +39,9 @@ export const Devices = observer(
     }
 
     render() {
+      if(AppState.loadingError){
+        return <Error message={AppState.loadingError} />
+      }
       if (!this.devices.current) {
         return (
           <Grid container spacing={3} justifyContent="center">
@@ -58,9 +59,6 @@ export const Devices = observer(
             </Grid>
           </Grid>    
         );
-      }
-      if(AppState.loadingError){
-        return <Error message={AppState.loadingError} />
       }
       return (
         <Grid container spacing={3} justifyContent="center">
