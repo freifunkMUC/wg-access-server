@@ -13,6 +13,7 @@ import VpnKey from '@mui/icons-material/VpnKey';
 import IconButton from "@mui/material/IconButton";
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import LogoutIcon from '@mui/icons-material/Logout';
 import {useMediaQuery} from "@mui/material";
 
 const useStyles = makeStyles((theme) => ({
@@ -55,7 +56,9 @@ export default function Navigation() {
 
         {hasAuthCookie && (
           <Link href="/signout" color="inherit">
-            <Button color="inherit">Logout</Button>
+            <IconButton sx={{ ml: 1 }}  color="inherit" title="Logout">
+              <LogoutIcon /> 
+            </IconButton>
           </Link>
         )}
       </Toolbar>
