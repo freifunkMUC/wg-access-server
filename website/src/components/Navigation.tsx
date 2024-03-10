@@ -14,6 +14,7 @@ import IconButton from "@mui/material/IconButton";
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import LogoutIcon from '@mui/icons-material/Logout';
+import DevicesIcon from '@mui/icons-material/Devices';
 import {useMediaQuery} from "@mui/material";
 
 const useStyles = makeStyles((theme) => ({
@@ -50,7 +51,9 @@ export default function Navigation() {
 
         {AppState.info?.isAdmin && (
           <Link to="/admin/all-devices" color="inherit" component={NavLink}>
-            <Button color="inherit">All Devices</Button>
+             <IconButton sx={{ ml: 1 }}  color="inherit" title="All Devices">
+              <DevicesIcon /> 
+            </IconButton>
           </Link>
         )}
 
