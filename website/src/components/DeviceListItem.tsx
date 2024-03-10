@@ -43,7 +43,7 @@ export const DeviceListItem = observer(
         <Card>
           <CardHeader
             title={device.name}
-            subheader={"Last Seen: " + lastSeen(device.lastHandshakeTime)}
+            subheader={"Last seen: " + lastSeen(device.lastHandshakeTime)}
             avatar={
               <Avatar style={{ backgroundColor: device.connected ? '#76de8a' : '#bdbdbd' }}>
                 {/* <DonutSmallIcon /> */}
