@@ -14,6 +14,7 @@ import IconButton from "@mui/material/IconButton";
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import LogoutIcon from '@mui/icons-material/Logout';
+import LoginIcon from '@mui/icons-material/Login';
 import {useMediaQuery} from "@mui/material";
 
 const useStyles = makeStyles((theme) => ({
@@ -54,10 +55,16 @@ export default function Navigation() {
           </Link>
         )}
 
-        {hasAuthCookie && (
+        {hasAuthCookie ? (
           <Link href="/signout" color="inherit">
-            <IconButton sx={{ ml: 1 }}  color="inherit" title="Logout">
+            <IconButton sx={{ ml: 1 }} color="inherit" title="Logout">
               <LogoutIcon /> 
+            </IconButton>
+          </Link>
+        ) : (
+          <Link href="/signin" color="inherit">
+            <IconButton sx={{ ml: 1 }} color="inherit" title="Login">
+              <LoginIcon /> 
             </IconButton>
           </Link>
         )}
