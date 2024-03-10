@@ -1,0 +1,26 @@
+{
+    "short_name": "WireGuard Access Portal",
+    "name": "WireGuard Access Portal",
+    "description": "WireGuard Access Portal is a web user interface for device management.",
+    "icons": [
+      {
+        "src": "favicon.ico",
+        "sizes": "16x16",
+        "type": "image/x-icon"
+      },
+      {
+        "src": "logo-192.png",
+        "type": "image/png",
+        "sizes": "192x192"
+      },
+      {
+        "src": "logo-310.png",
+        "type": "image/png",
+        "sizes": "310x310"
+      }
+    ],
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#3d76cd",
+    "background_color": "#ffffff"
+  }
