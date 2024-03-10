@@ -14,7 +14,7 @@ import { Device } from '../sdk/devices_pb';
 import { grpc } from '../Api';
 import { observer } from 'mobx-react';
 import { confirm } from './Present';
-import { IconButton } from '@mui/material';
+import { IconButton, Typography } from '@mui/material';
 
 interface Props {
   device: Device.AsObject;
@@ -41,8 +41,12 @@ export const DeviceListItem = observer(
       const device = this.props.device;
       return (
         <Card>
-          <CardHeader
-            title={device.name}
+          <CardHeader 
+            title={
+              <Typography style={{ wordBreak: "break-word" }}>
+                {device.name}
+              </Typography>
+              }
             avatar={
               <Avatar style={{ backgroundColor: device.connected ? '#76de8a' : '#bdbdbd' }}>
                 {/* <DonutSmallIcon /> */}
