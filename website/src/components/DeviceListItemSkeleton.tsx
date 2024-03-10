@@ -6,6 +6,7 @@ export function DeviceListItemSkeleton() {
         <Card>
         <CardHeader
         title={<Skeleton variant="text" width={100} />}
+        subheader={<Skeleton variant="text" width={50} />}
         avatar={<Skeleton variant="circular" width={40} height={40} />}
         action={<Skeleton variant="text" width={50} />}
         />
@@ -22,10 +23,6 @@ export function DeviceListItemSkeleton() {
             </tr>
             <tr>
                 <td>Upload</td>
-                <td><Skeleton variant="text" width={100} /></td>
-            </tr>
-            <tr>
-                <td>Last Seen</td>
                 <td><Skeleton variant="text" width={100} /></td>
             </tr>
             <tr>
