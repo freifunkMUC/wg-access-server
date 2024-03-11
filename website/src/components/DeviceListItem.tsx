@@ -47,6 +47,7 @@ export const DeviceListItem = observer(
                 {device.name}
               </Typography>
               }
+            subheader={"Last seen: " + lastSeen(device.lastHandshakeTime)}
             avatar={
               <Avatar style={{ backgroundColor: device.connected ? '#76de8a' : '#bdbdbd' }}>
                 {/* <DonutSmallIcon /> */}
@@ -83,10 +84,6 @@ export const DeviceListItem = observer(
                     <td>Disconnected</td>
                   </tr>
                 )}
-                <tr>
-                  <td>Last Seen</td>
-                  <td>{lastSeen(device.lastHandshakeTime)}</td>
-                </tr>
                 <tr>
                   <td>Public key</td>
                   <td>

@@ -7,13 +7,13 @@ import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Link from '@mui/material/Link';
-import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import VpnKey from '@mui/icons-material/VpnKey';
 import IconButton from "@mui/material/IconButton";
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import LogoutIcon from '@mui/icons-material/Logout';
+import LoginIcon from '@mui/icons-material/Login';
 import DevicesIcon from '@mui/icons-material/Devices';
 import {useMediaQuery} from "@mui/material";
 
@@ -57,10 +57,16 @@ export default function Navigation() {
           </Link>
         )}
 
-        {hasAuthCookie && (
+        {hasAuthCookie ? (
           <Link href="/signout" color="inherit">
-            <IconButton sx={{ ml: 1 }}  color="inherit" title="Logout">
+            <IconButton sx={{ ml: 1 }} color="inherit" title="Logout">
               <LogoutIcon /> 
+            </IconButton>
+          </Link>
+        ) : (
+          <Link href="/signin" color="inherit">
+            <IconButton sx={{ ml: 1 }} color="inherit" title="Login">
+              <LoginIcon /> 
             </IconButton>
           </Link>
         )}

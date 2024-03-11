@@ -15,6 +15,16 @@ export default defineConfig({
                 target: 'http://localhost:8000',
                 changeOrigin: true,
                 secure: false
+            },
+            '/signin': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+                secure: false
+            },
+            '/signout': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+                secure: false
             }
         }
     }
