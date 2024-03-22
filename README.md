@@ -29,6 +29,7 @@ NAT can be disabled separately for IPv4 and IPv6.
 - Client isolation (optional)
 - WireGuard kernel module for improved performance and latency
 - Automatic fallback to embedded userspace implementation for easy container deployment
+- Dark Mode and Light Mode for user preference
 
 ## Documentation
 
