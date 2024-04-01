@@ -1,4 +1,4 @@
-FROM node:21.6.2-bullseye as proto-js
+FROM node:21.7.1-bullseye as proto-js
 RUN apt-get update && apt-get install -y protobuf-compiler libprotobuf-dev
 WORKDIR /code
 COPY ./website/package.json ./
