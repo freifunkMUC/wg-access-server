@@ -41,7 +41,7 @@
     "grpc-ts-web": "^0.2.0",
     "prettier": "^3.2.5",
     "typescript": "^5.3.3",
-    "vite": "^5.1.4",
+    "vite": "^5.1.7",
     "vite-plugin-svgr": "^4.2.0"
   },
   "overrides": {
