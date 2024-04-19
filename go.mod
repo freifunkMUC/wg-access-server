@@ -22,7 +22,7 @@ require (
 	github.com/tg123/go-htpasswd v1.2.2
 	github.com/vishvananda/netlink v1.1.0
 	golang.org/x/crypto v0.21.0
-	golang.org/x/oauth2 v0.17.0
+	golang.org/x/oauth2 v0.19.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
 	google.golang.org/grpc v1.62.0
 	google.golang.org/protobuf v1.32.0
@@ -65,7 +65,6 @@ require (
 	golang.org/x/tools v0.17.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
-	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240123012728-ef4313101c80 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
