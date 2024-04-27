@@ -30,20 +30,20 @@ export function confirm(msg: string): Promise<boolean> {
 
   return present<boolean>((close) => (
     <ThemeProvider theme={darkLightTheme}>
-    <Dialog open={true} onClose={() => close(false)}>
-      <DialogTitle>Confirm</DialogTitle>
-      <DialogContent>
-        <DialogContentText>{msg}</DialogContentText>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => close(false)} variant="contained" color="primary" autoFocus>
-          Cancel
-        </Button>
-        <Button onClick={() => close(true)} variant="outlined" color="secondary">
-          Ok
-        </Button>
-      </DialogActions>
-    </Dialog>
+      <Dialog open={true} onClose={() => close(false)}>
+        <DialogTitle>Confirm</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{msg}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => close(false)} variant="contained" color="primary" autoFocus>
+            Cancel
+          </Button>
+          <Button onClick={() => close(true)} variant="outlined" color="secondary">
+            Ok
+          </Button>
+        </DialogActions>
+      </Dialog>
     </ThemeProvider>
   ));
 }

@@ -34,20 +34,15 @@ export const DeviceListItem = observer(
           window.alert('api request failed');
         }
       }
-
     };
 
     render() {
       const device = this.props.device;
       return (
         <Card>
-          <CardHeader 
-            title={
-              <Typography style={{ wordBreak: "break-word" }}>
-                {device.name}
-              </Typography>
-              }
-            subheader={"Last seen: " + lastSeen(device.lastHandshakeTime)}
+          <CardHeader
+            title={<Typography style={{ wordBreak: 'break-word' }}>{device.name}</Typography>}
+            subheader={'Last seen: ' + lastSeen(device.lastHandshakeTime)}
             avatar={
               <Avatar style={{ backgroundColor: device.connected ? '#76de8a' : '#bdbdbd' }}>
                 {/* <DonutSmallIcon /> */}
@@ -55,9 +50,9 @@ export const DeviceListItem = observer(
               </Avatar>
             }
             action={
-              <IconButton sx={{ "&:hover": { color: "red" } }} onClick={this.removeDevice}>
+              <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={this.removeDevice}>
                 <DeleteIcon />
-              </IconButton>       
+              </IconButton>
             }
           />
           <CardContent>
