@@ -1,5 +1,5 @@
 ### Build stage for the website frontend
-FROM --platform=$BUILDPLATFORM node:21.6.2-bullseye as website
+FROM --platform=$BUILDPLATFORM node:22.0.0-bookworm as website
 WORKDIR /code
 COPY ./website/package.json ./
 COPY ./website/package-lock.json ./
@@ -8,7 +8,7 @@ COPY ./website/ ./
 RUN npm run build
 
 ### Build stage for the website backend server
-FROM golang:1.22.0-alpine as server
+FROM golang:1.22.2-alpine as server
 RUN apk add --no-cache gcc musl-dev
 WORKDIR /code
 ENV CGO_ENABLED=1
