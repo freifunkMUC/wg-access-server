@@ -8,6 +8,7 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/coreos/go-iptables v0.7.0
 	github.com/coreos/go-oidc/v3 v3.10.0
+	github.com/docker/docker v26.1.0+incompatible
 	github.com/freifunkMUC/pg-events v0.4.4
 	github.com/freifunkMUC/wg-embed v0.10.3
 	github.com/google/uuid v1.6.0
@@ -17,7 +18,6 @@ require (
 	github.com/improbable-eng/grpc-web v0.15.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/miekg/dns v1.1.59
-	github.com/moby/moby v26.1.0+incompatible
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -41,7 +41,6 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
-	github.com/docker/docker v26.1.0+incompatible // indirect
 	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect

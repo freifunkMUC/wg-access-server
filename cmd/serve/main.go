@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/moby/moby/libnetwork/resolvconf"
-	"github.com/moby/moby/libnetwork/types"
+	"github.com/docker/docker/libnetwork/resolvconf"
+	"github.com/docker/docker/libnetwork/types"
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
