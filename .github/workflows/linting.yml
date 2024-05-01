@@ -31,7 +31,7 @@ jobs: # Docs: <https://git.io/JvxXE>
           cache: false
 
       - name: Run linter
-        uses: golangci/golangci-lint-action@v4 # Action page: <https://github.com/golangci/golangci-lint-action>
+        uses: golangci/golangci-lint-action@v5 # Action page: <https://github.com/golangci/golangci-lint-action>
         with:
           version: v1.56 # without patch version
           only-new-issues: false # show only new issues if it's a pull request
