@@ -28,7 +28,7 @@ require (
 	golang.org/x/oauth2 v0.21.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
 	google.golang.org/grpc v1.64.1
-	google.golang.org/protobuf v1.34.1
+	google.golang.org/protobuf v1.34.2
 	gopkg.in/Knetic/govaluate.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
