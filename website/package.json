@@ -12,7 +12,7 @@
     "@emotion/styled": "^11.11.5",
     "@mui/icons-material": "^5.15.21",
     "@mui/lab": "^5.0.0-alpha.166",
-    "@mui/material": "^5.15.19",
+    "@mui/material": "^5.15.21",
     "@mui/styles": "^5.15.21",
     "common-tags": "^1.8.2",
     "date-fns": "^3.6.0",
