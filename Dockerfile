@@ -1,5 +1,5 @@
 ### Build stage for the website frontend
-FROM --platform=$BUILDPLATFORM node:22.3.0-bookworm as website
+FROM --platform=$BUILDPLATFORM node:22.5.1-bookworm as website
 WORKDIR /code
 COPY ./website/package.json ./
 COPY ./website/package-lock.json ./
@@ -8,7 +8,7 @@ COPY ./website/ ./
 RUN npm run build
 
 ### Build stage for the website backend server
-FROM golang:1.22.4-alpine as server
+FROM golang:1.22.5-alpine as server
 RUN apk add --no-cache gcc musl-dev
 WORKDIR /code
 ENV CGO_ENABLED=1
@@ -29,7 +29,7 @@ RUN go generate buildinfo/buildinfo.go
 RUN go build -o wg-access-server
 
 ### Server
-FROM alpine:3.20.1
+FROM alpine:3.20.2
 RUN apk add --no-cache iptables ip6tables wireguard-tools curl
 ENV WG_CONFIG="/config.yaml"
 ENV WG_STORAGE="sqlite3:///data/db.sqlite3"
