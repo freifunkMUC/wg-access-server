@@ -33,7 +33,7 @@ jobs:
           labels: |
             org.opencontainers.image.authors=${{ env.AUTHOR }}
       - name: Build Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64
