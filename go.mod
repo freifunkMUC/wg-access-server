@@ -7,7 +7,7 @@ toolchain go1.22.2
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/coreos/go-iptables v0.7.0
-	github.com/coreos/go-oidc/v3 v3.10.0
+	github.com/coreos/go-oidc/v3 v3.11.0
 	github.com/docker/docker v27.0.3+incompatible
 	github.com/freifunkMUC/pg-events v0.4.4
 	github.com/freifunkMUC/wg-embed v0.10.3
@@ -24,7 +24,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/tg123/go-htpasswd v1.2.2
 	github.com/vishvananda/netlink v1.2.1-beta.2
-	golang.org/x/crypto v0.24.0
+	golang.org/x/crypto v0.25.0
 	golang.org/x/oauth2 v0.21.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
 	google.golang.org/grpc v1.64.1
@@ -61,9 +61,9 @@ require (
 	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	golang.org/x/mod v0.18.0 // indirect
-	golang.org/x/net v0.26.0 // indirect
+	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
