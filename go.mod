@@ -1,8 +1,7 @@
 module github.com/freifunkMUC/wg-access-server
 
 go 1.21
-
-toolchain go1.22.2
+toolchain go1.23.0
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
@@ -13,7 +12,7 @@ require (
 	github.com/freifunkMUC/wg-embed v0.10.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/gorilla/sessions v1.3.0
+	github.com/gorilla/sessions v1.4.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/improbable-eng/grpc-web v0.15.0
 	github.com/jinzhu/gorm v1.9.16
