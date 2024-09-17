@@ -42,7 +42,7 @@
     "grpc-web": "^1.2.1",
     "prettier": "^3.3.3",
     "typescript": "^5.5.4",
-    "vite": "^5.3.5",
+    "vite": "^5.4.6",
     "vite-plugin-svgr": "^4.2.0"
   },
   "overrides": {
