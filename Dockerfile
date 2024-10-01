@@ -1,5 +1,5 @@
 ### Build stage for the website frontend
-FROM --platform=$BUILDPLATFORM node:22.5.1-bookworm as website
+FROM --platform=$BUILDPLATFORM node:22.9.0-bookworm as website
 WORKDIR /code
 COPY ./website/package.json ./
 COPY ./website/package-lock.json ./
