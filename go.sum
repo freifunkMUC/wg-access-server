@@ -87,8 +87,8 @@ github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5/go.mod h1:a
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
 github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8/go.mod h1:ZhphrRTfi2rbfLwlschooIH4+wKKDR4Pdxhh+TRoA20=
-github.com/freifunkMUC/pg-events v0.4.4 h1:Zawv4MsAU1cH3Xd9ckH531fdCVoaiQ8vbM8z7C959yI=
-github.com/freifunkMUC/pg-events v0.4.4/go.mod h1:vSXTUe05Ze9KanrBp+ohSMW8sdWVPK/M83plTW1d40k=
+github.com/freifunkMUC/pg-events v0.4.5 h1:W0S0jnMq6AR8DcYbSL96JtSABuUogVDPB7A0T/M/wVs=
+github.com/freifunkMUC/pg-events v0.4.5/go.mod h1:LdjJx0nBFEO+gmnwtV6MB5CKKPLEyt4dlyvj/Ggjg/4=
 github.com/freifunkMUC/wg-embed v0.10.3 h1:MpeCjJiMiGqaWWVrTOka+BNZB8KGAxy1i2fRDbyBg/c=
 github.com/freifunkMUC/wg-embed v0.10.3/go.mod h1:RtkfJVgBZAHVsw5U00iWwkfhDtRfpICpGm1q0JpoliA=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
