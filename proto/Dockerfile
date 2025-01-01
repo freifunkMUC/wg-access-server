@@ -8,7 +8,7 @@ RUN npm ci --no-audit --prefer-offline
 # Mount ./website/src/sdk to /code/src/sdk
 CMD ["npm", "run", "codegen"]
 
-FROM golang:1.23.3-alpine AS proto-go
+FROM golang:1.23.4-alpine AS proto-go
 RUN apk add --no-cache protobuf protobuf-dev
 WORKDIR /code
 RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
