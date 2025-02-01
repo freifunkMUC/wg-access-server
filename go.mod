@@ -8,7 +8,7 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/coreos/go-iptables v0.7.0
 	github.com/coreos/go-oidc/v3 v3.12.0
-	github.com/docker/docker v27.5.0+incompatible
+	github.com/docker/docker v27.5.1+incompatible
 	github.com/freifunkMUC/pg-events v0.4.5
 	github.com/freifunkMUC/wg-embed v0.10.4
 	github.com/google/uuid v1.6.0
