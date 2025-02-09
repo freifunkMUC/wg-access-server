@@ -1,5 +1,5 @@
 markdown-include~=0.8.1
 mkdocs~=1.6.1
 mkdocs-material~=9.6.1
-pygments~=2.18.0
+pygments~=2.19.1
 pymdown-extensions~=10.14
