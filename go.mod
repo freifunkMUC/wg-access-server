@@ -6,7 +6,7 @@ toolchain go1.23.3
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
-	github.com/coreos/go-iptables v0.7.0
+	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-oidc/v3 v3.12.0
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/freifunkMUC/pg-events v0.4.5
