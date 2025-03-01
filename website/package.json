@@ -12,7 +12,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.3",
     "@mui/lab": "^6.0.0-beta.25",
-    "@mui/material": "^6.4.3",
+    "@mui/material": "^6.4.6",
     "common-tags": "^1.8.2",
     "date-fns": "^4.1.0",
     "google-protobuf": "^4.0.0-rc.2",
