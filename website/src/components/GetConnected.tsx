@@ -14,7 +14,9 @@ import React, { Component, PropsWithChildren } from 'react';
 import { AppState } from '../AppState';
 import { isMobile } from '../Platform';
 import { download } from '../Util';
-import { LinuxIcon, MacOSIcon, WindowsIcon } from './Icons';
+import { LinuxIcon } from './Icons';
+import AppleIcon from '@mui/icons-material/Apple';
+import MicrosoftIcon from '@mui/icons-material/Microsoft';
 import { QRCode } from './QRCode';
 import { TabPanel } from './TabPanel';
 
@@ -70,10 +72,10 @@ export class GetConnected extends Component<PropsWithChildren<Props>, any> {
                     <LinuxIcon />
                   </Button>
                   <Button onClick={() => this.go('https://www.wireguard.com/install/')}>
-                    <WindowsIcon />
+                    <MicrosoftIcon />
                   </Button>
                   <Button onClick={() => this.go('https://www.wireguard.com/install/#macos-app-store')}>
-                    <MacOSIcon />
+                    <AppleIcon />
                   </Button>
                 </ButtonGroup>
               </ListItem>
