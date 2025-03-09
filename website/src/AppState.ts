@@ -13,7 +13,10 @@ class GlobalAppState {
       loadingError: observable,
     });
 
-    this.darkMode = false;
+    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const storedDarkMode = localStorage.getItem('customDarkMode');
+    
+    this.darkMode = storedDarkMode !== null ? JSON.parse(storedDarkMode) : prefersDarkMode;
   }
 
   setDarkMode(darkMode: boolean) {
