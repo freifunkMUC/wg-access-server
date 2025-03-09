@@ -7,17 +7,19 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { AppState } from '../AppState';
 import React from 'react';
-import { render, unmountComponentAtNode } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 export function present<T>(content: (close: (result: T) => void) => React.ReactNode) {
-  const root = document.createElement('div');
-  document.body.appendChild(root);
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container!); 
+
   return new Promise<T>((resolve) => {
     const close = (result: T) => {
-      unmountComponentAtNode(root);
+      root.unmount();
       resolve(result);
     };
-    render(<>{content(close)}</>, root);
+    root.render(<>{content(close)}</>);
   });
 }
 
