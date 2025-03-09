@@ -21,6 +21,12 @@ class GlobalAppState {
       this.darkMode = darkMode;
     });
   }
+
+  setInfo(info: InfoRes.AsObject){
+    runInAction(() => {
+      this.info = info;
+    });
+  }
 }
 
 export const AppState = new GlobalAppState();

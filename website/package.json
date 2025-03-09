@@ -1,5 +1,6 @@
 {
   "name": "wg-access-server-website",
+  "type": "module",
   "scripts": {
     "codegen": "npx grpc-ts-web -o src/sdk ../proto/*.proto",
     "start": "vite --port 3000",
