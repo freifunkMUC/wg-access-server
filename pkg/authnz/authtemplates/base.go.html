@@ -1,149 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<title>Sign In</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<style>
-	* {
-		font-family: monospace;
-		font-size: 16px;
-		-webkit-font-smoothing: antialiased;
-		-moz-osx-font-smoothing: grayscale;
-	}
+    <meta charset="UTF-8">
+    <title>Sign In</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+    * {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        box-sizing: border-box;
+    }
 
-	body {
-		background-color: #3899c9;
-	}
+    body {
+        background: linear-gradient(135deg, #3899c9 0%, #165a7d 100%);
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-	.form {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		background-color: #fff;
-		width: 285px;
-		padding: 40px;
-		box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
-	}
+    .form {
+        background-color: #ffffff;
+        width: 100%;
+        max-width: 400px;
+        padding: 2.5rem;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        margin: 1rem;
+    }
 
-	.form h2 {
-		margin: 0 0 35px;
-		text-align: center;
-		line-height: 1;
-		color: black;
-		font-size: 22px;
-		font-weight: 400;
-	}
+    .form h2 {
+        margin: 0 0 1.5rem;
+        text-align: center;
+        color: #1a1a1a;
+        font-size: 1.75rem;
+        font-weight: 600;
+    }
 
-	.form input {
-		outline: none;
-		display: block;
-		width: 100%;
-		padding: 10px 15px;
-		border: 1px solid #ccc;
-		color: #666;
-		box-sizing: border-box;
-	}
+    .form input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        margin: 0.5rem 0 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
 
-	.form label {
-		margin: 10px 0 0;
-		display: block;
-	}
+    .form label {
+        color: #666;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
 
-	.form a {
-		display: block;
-	}
+    .form button {
+        width: 100%;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 8px;
+        background: #3899c9;
+        color: white;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin: 0.5rem 0;
+    }
 
-	.form > * {
-		margin: 0 0 20px;
-	}
+    .form button:hover {
+        background: #2d7aa3;
+        transform: translateY(-1px);
+    }
 
-	.form > *:last-child {
-		margin-bottom: 0;
-	}
+    .form .error {
+        color: #dc3545;
+        font-size: 0.9rem;
+        margin-top: 1rem;
+        text-align: center;
+    }
 
-	.form input:focus {
-		color: #333;
-		border: 1px solid #44c4e7;
-	}
+    @media (prefers-color-scheme: dark) {
+        .form {
+            background-color: #1a1a1a;
+        }
 
-	.form button {
-		cursor: pointer;
-		background: #44c4e7;
-		width: 100%;
-		padding: 10px 15px;
-		border: 0;
-		color: #fff;
-		text-transform: capitalize;
-	}
+        .form h2 {
+            color: #ffffff;
+        }
 
-	.form #submit {
-		margin: 20px 0 0;
-	}
+        .form input {
+            background-color: #333;
+            border-color: #444;
+            color: #ffffff;
+        }
 
-	.form button:hover {
-		background: #369cb8;
-	}
+        .form input:focus {
+            border-color: #3899c9;
+            background-color: #2a2a2a;
+        }
 
-	.form hr {
-		position: relative;
-		width: 55%;
-		margin-left: auto;
-		margin-right: auto;
-		overflow: visible;
-		background-color: #4d4d4d;
-	}
+        .form label {
+            color: #e0e0e0;
+        }
 
-	.form hr:after {
-		content: "";
-		position: absolute;
-		left: 50%;
-		top: 50%;
-		transform: translate(-50%, -50%);
-		width: 4px;
-		height: 4px;
-		background-color: #4d4d4d;
-		border-radius: 50%;
-	}
+        .form button {
+            background: #3899c9;
+        }
 
-	.form .error {
-		color: red;
-	}
-
-	@media (prefers-color-scheme: dark) {
-		body {
-			background-color: #165a7d;
-		}
-
-		.form {
-			background-color: #121212;
-		}
-
-		.form h2 {
-			color: #fff;
-		}
-
-		.form button{
-			background: #1B6C8F;
-		}
-		
-		.form input {
-			background: #333;
-			color: #fff;
-		}
-
-		.form input:focus {
-			color: #fff;
-			border: 1px solid #44c4e7;
-		}
-
-		.form label {
-			color: #fff
-		} 
-
-	}
-	</style>
+        .form button:hover {
+            background: #2d7aa3;
+        }
+    }
+    </style>
 </head>
 <body>
 {{block "body" .}}{{end}}
