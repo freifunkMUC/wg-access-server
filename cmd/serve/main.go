@@ -422,7 +422,7 @@ func detectDefaultInterface() string {
 				return ""
 			}
 			for _, route := range routes {
-				if route.Dst == nil {
+				if route.Dst != nil && route.Dst.IP.IsUnspecified() {
 					return link.Attrs().Name
 				}
 			}
