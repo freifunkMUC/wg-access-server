@@ -30,6 +30,12 @@ class GlobalAppState {
       this.info = info;
     });
   }
+
+  setLoadingError(error: String){
+    runInAction(() => {
+      this.loadingError = error;
+    });
+  }
 }
 
 export const AppState = new GlobalAppState();

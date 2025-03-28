@@ -18,7 +18,8 @@ export const App = observer(
       try {
         AppState.setInfo(await grpc.server.info({}));
       } catch (error: any) {
-        AppState.loadingError = error.message;
+
+        AppState.setLoadingError(error.message);
         console.error('An error occurred:', error);
       }
     }
