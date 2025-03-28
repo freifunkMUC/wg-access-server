@@ -1,10 +1,11 @@
 import React from 'react';
 import Grid from '@mui/material/Grid';
-import { observable, makeObservable } from 'mobx';
+import { observable, makeObservable, runInAction } from 'mobx';
 import { observer } from 'mobx-react';
 import { grpc } from '../Api';
 import { autorefresh } from '../Util';
 import { DeviceListItem } from './DeviceListItem';
+import { Device } from '../sdk/devices_pb';
 import { AddDevice } from './AddDevice';
 import { Loading } from './Loading';
 import { AppState } from '../AppState';
@@ -15,34 +16,44 @@ import { AddDeviceSkeleton } from './AddDeviceSkeleton';
 
 export const Devices = observer(
   class Devices extends React.Component {
-    devices = autorefresh(30, async () => {
-      try {
-        const res = await grpc.devices.listDevices({});
-        return res.items;
-      } catch (error: any) {
-        console.log('An error occurred:', error);
-        AppState.loadingError = error.message;
-        return null;
-      }
-    });
+    devices: any = null;
 
     constructor(props: {}) {
       super(props);
 
       makeObservable(this, {
         devices: observable,
-      });
+      });   
+    }
+
+    setDevices(devices: any) {
+      runInAction(() => {
+        this.devices = devices;
+      })
+    }
+
+    componentDidMount() {
+      this.setDevices(autorefresh(30, async () => {
+        try {
+          const res = await grpc.devices.listDevices({});
+          return res.items;
+        } catch (error: any) {
+          console.log('An error occurred:', error);
+          AppState.loadingError = error.message;
+          return null;
+        }
+      }));    
     }
 
     componentWillUnmount() {
-//        this.devices.dispose(); //ToDo Fix: "subscribingObservable has already been disposed" https://react.dev/blog/2022/03/08/react-18-upgrade-guide#updates-to-strict-mode 
-    }
+        this.devices.dispose(); //ToDo Fix: "subscribingObservable has already been disposed" https://react.dev/blog/2022/03/08/react-18-upgrade-guide#updates-to-strict-mode 
+      }
 
     render() {
       if (AppState.loadingError) {
         return <Error message={AppState.loadingError} />;
       }
-      if (!this.devices.current) {
+      if (!this.devices || !this.devices.current) {
         return (
           <Grid container spacing={3} justifyContent="center">
             <Grid item xs={12}>
@@ -64,7 +75,7 @@ export const Devices = observer(
         <Grid container spacing={3} justifyContent="center">
           <Grid item xs={12}>
             <Grid container spacing={3}>
-              {this.devices.current.map((device, i) => (
+              {this.devices.current.map((device: Device.AsObject, i: React.Key) => (
                 <Grid key={i} item xs={12} sm={6} md={4} lg={3}>
                   <DeviceListItem device={device} onRemove={() => this.devices.refresh()} />
                 </Grid>
