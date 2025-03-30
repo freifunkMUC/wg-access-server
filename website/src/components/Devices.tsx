@@ -46,7 +46,7 @@ export const Devices = observer(
     }
 
     componentWillUnmount() {
-        this.devices.dispose(); //ToDo Fix: "subscribingObservable has already been disposed" https://react.dev/blog/2022/03/08/react-18-upgrade-guide#updates-to-strict-mode 
+        this.devices.dispose();
       }
 
     render() {
