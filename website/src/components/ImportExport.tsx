@@ -11,8 +11,8 @@ import { toast } from './Toast';
 export function ImportExport() {
   const handleExport = async () => {
     try {
-      const response = await grpc.devices.list({});
-      const devices = response.getDevicesList();
+      const response = await grpc.devices.listDevices({});
+      const devices = response.items;
       const jsonStr = JSON.stringify(devices, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -44,10 +44,10 @@ export function ImportExport() {
 
       // Import each device
       for (const device of devices) {
-        await grpc.devices.add({
+        await grpc.devices.addDevice({
           name: device.name,
           publicKey: device.publicKey,
-          address: device.address,
+          presharedKey: device.presharedKey || '',
         });
       }
 
