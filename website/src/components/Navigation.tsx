@@ -16,6 +16,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import LoginIcon from '@mui/icons-material/Login';
 import DevicesIcon from '@mui/icons-material/Devices';
 import { useMediaQuery } from '@mui/material';
+import { ImportExport } from './ImportExport';
 
 // Stile mit `styled` definieren
 const Title = styled(Typography)`
@@ -49,11 +50,14 @@ export default function Navigation() {
         <DarkModeToggle />
 
         {AppState.info?.isAdmin && (
-          <Link to="/admin/all-devices" color="inherit" component={NavLink}>
-            <IconButton sx={{ ml: 1 }} color="inherit" title="All Devices">
-              <DevicesIcon />
-            </IconButton>
-          </Link>
+          <>
+            <Link to="/admin/all-devices" color="inherit" component={NavLink}>
+              <IconButton sx={{ ml: 1 }} color="inherit" title="All Devices">
+                <DevicesIcon />
+              </IconButton>
+            </Link>
+            <ImportExport />
+          </>
         )}
 
         {hasAuthCookie ? (
