@@ -109,6 +109,9 @@ type AppConfig struct {
 		// ClientIsolation configures whether traffic between client devices will be blocked or allowed
 		// defaults to false
 		ClientIsolation bool `yaml:"clientIsolation"`
+		// DisableIPTables configures whether to disable iptables configuration completely
+		// defaults to false
+		DisableIPTables bool `yaml:"disableIPTables"`
 	} `yaml:"vpn"`
 	// Configure the embedded DNS server
 	DNS struct {
