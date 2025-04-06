@@ -63,7 +63,7 @@ export function ImportExportDelete() {
   const handleDeleteAll = async () => {
     if (await confirm('Are you sure you want to delete ALL your devices? This action cannot be undone!')) {
       try {
-        const response = await grpc.devices.listAllDevices({});
+        const response = await grpc.devices.listDevices({});
         const devices = response.items;
         
         for (const device of devices) {
