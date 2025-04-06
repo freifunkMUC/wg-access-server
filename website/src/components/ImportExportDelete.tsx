@@ -5,10 +5,11 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { grpc } from '../Api';
 import { toast } from './Toast';
 
-export function ImportExport() {
+export function ImportExportDelete() {
   const handleExport = async () => {
     try {
       const response = await grpc.devices.listDevices({});
@@ -57,6 +58,28 @@ export function ImportExport() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL devices? This action cannot be undone!')) {
+      return;
+    }
+
+    try {
+      const response = await grpc.devices.listAllDevices({});
+      const devices = response.items;
+      
+      for (const device of devices) {
+        await grpc.devices.deleteDevice({
+          name: device.name,
+          owner: { value: device.owner },
+        });
+      }
+
+      toast({ text: 'All devices deleted successfully', intent: 'success' });
+    } catch (error) {
+      toast({ text: 'Failed to delete devices: ' + (error as Error).message, intent: 'error' });
+    }
+  };
+
   return (
     <IconMenu>
       <MenuItem onClick={handleExport}>
@@ -76,6 +99,12 @@ export function ImportExport() {
           accept=".json"
           onChange={handleImport}
         />
+      </MenuItem>
+      <MenuItem onClick={handleDeleteAll}>
+        <ListItemIcon>
+          <DeleteIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Delete All Devices</ListItemText>
       </MenuItem>
     </IconMenu>
   );

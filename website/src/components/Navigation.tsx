@@ -16,7 +16,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import LoginIcon from '@mui/icons-material/Login';
 import DevicesIcon from '@mui/icons-material/Devices';
 import { useMediaQuery } from '@mui/material';
-import { ImportExport } from './ImportExport';
+import { ImportExportDelete } from './ImportExportDelete';
 
 // Stile mit `styled` definieren
 const Title = styled(Typography)`
@@ -61,12 +61,12 @@ export default function Navigation() {
 
         {hasAuthCookie ? (
           <>
-            <Link href="/signout" color="inherit">
-              <IconButton sx={{ ml: 1 }} color="inherit" title="Logout">
-                <LogoutIcon />
-              </IconButton>
-            </Link>
-            <ImportExport />
+          <Link href="/signout" color="inherit">
+            <IconButton sx={{ ml: 1 }} color="inherit" title="Logout">
+              <LogoutIcon />
+            </IconButton>
+          </Link>
+          <ImportExportDelete />
           </>
         ) : (
           <Link href="/signin" color="inherit">
