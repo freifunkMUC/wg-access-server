@@ -59,25 +59,21 @@ export function ImportExportDelete() {
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm('Are you sure you want to delete ALL devices? This action cannot be undone!')) {
-      return;
-    }
-
-    try {
-      const response = await grpc.devices.listAllDevices({});
-      const devices = response.items;
-      
-      for (const device of devices) {
-        await grpc.devices.deleteDevice({
-          name: device.name,
-          owner: { value: device.owner },
-        });
+    if (await confirm('Are you sure you want to delete ALL your devices? This action cannot be undone!')) {
+      try {
+        const response = await grpc.devices.listAllDevices({});
+        const devices = response.items;
+        
+        for (const device of devices) {
+          await grpc.devices.deleteDevice({
+            name: device.name,
+          });
+        }
+  
+        toast({ text: 'All devices deleted successfully', intent: 'success' });
+      } catch (error) {
+        toast({ text: 'Failed to delete devices: ' + (error as Error).message, intent: 'error' });
       }
-
-      toast({ text: 'All devices deleted successfully', intent: 'success' });
-    } catch (error) {
-      toast({ text: 'Failed to delete devices: ' + (error as Error).message, intent: 'error' });
-    }
   };
 
   return (
