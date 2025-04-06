@@ -74,6 +74,7 @@ export function ImportExportDelete() {
       } catch (error) {
         toast({ text: 'Failed to delete devices: ' + (error as Error).message, intent: 'error' });
       }
+    }
   };
 
   return (
