@@ -61,7 +61,7 @@ export default function Navigation() {
 
         {hasAuthCookie ? (
           <>
-          <ImportExportDelete />
+          <ImportExportDelete onRefresh={AppState.refreshDevices} />
           <Link href="/signout" color="inherit">
             <IconButton sx={{ ml: 1 }} color="inherit" title="Logout">
               <LogoutIcon />

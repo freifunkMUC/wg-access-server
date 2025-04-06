@@ -5,12 +5,14 @@ class GlobalAppState {
   info?: InfoRes.AsObject;
   loadingError?: String;
   darkMode: boolean;
+  refreshDevices?: () => void;
 
   constructor() {
     makeObservable(this, {
       info: observable,
       darkMode: observable,
       loadingError: observable,
+      refreshDevices: observable,
     });
 
     const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -22,6 +24,12 @@ class GlobalAppState {
   setDarkMode(darkMode: boolean) {
     runInAction(() => {
       this.darkMode = darkMode;
+    });
+  }
+
+  setRefreshDevices(refreshFn: () => void) {
+    runInAction(() => {
+      this.refreshDevices = refreshFn;
     });
   }
 }

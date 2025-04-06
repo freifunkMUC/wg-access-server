@@ -34,6 +34,11 @@ export const Devices = observer(
       });
     }
 
+    componentDidMount() {
+      // Register the refresh function with the AppState
+      AppState.setRefreshDevices(() => this.devices.refresh());
+    }
+
     componentWillUnmount() {
       this.devices.dispose();
     }
