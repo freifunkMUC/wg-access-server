@@ -56,16 +56,18 @@ export default function Navigation() {
                 <DevicesIcon />
               </IconButton>
             </Link>
-            <ImportExport />
           </>
         )}
 
         {hasAuthCookie ? (
-          <Link href="/signout" color="inherit">
-            <IconButton sx={{ ml: 1 }} color="inherit" title="Logout">
-              <LogoutIcon />
-            </IconButton>
-          </Link>
+          <>
+            <Link href="/signout" color="inherit">
+              <IconButton sx={{ ml: 1 }} color="inherit" title="Logout">
+                <LogoutIcon />
+              </IconButton>
+            </Link>
+            <ImportExport />
+          </>
         ) : (
           <Link href="/signin" color="inherit">
             <IconButton sx={{ ml: 1 }} color="inherit" title="Login">
