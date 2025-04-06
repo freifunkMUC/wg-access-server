@@ -10,11 +10,8 @@ import { grpc } from '../Api';
 import { toast } from './Toast';
 import { confirm } from './Present';
 
-interface Props {
-  onRefresh?: () => void;
-}
 
-export function ImportExportDelete({ onRefresh }: Props) {
+export function ImportExportDelete() {
   const handleExport = async () => {
     try {
       const response = await grpc.devices.listDevices({});
@@ -58,11 +55,6 @@ export function ImportExportDelete({ onRefresh }: Props) {
       }
 
       toast({ text: 'Devices imported successfully', intent: 'success' });
-      
-      // Trigger refresh after successful import
-      if (onRefresh) {
-        onRefresh();
-      }
     } catch (error) {
       toast({ text: 'Failed to import devices: ' + (error as Error).message, intent: 'error' });
     }
@@ -81,11 +73,6 @@ export function ImportExportDelete({ onRefresh }: Props) {
         }
   
         toast({ text: 'All devices deleted successfully', intent: 'success' });
-        
-        // Trigger refresh after successful deletion
-        if (onRefresh) {
-          onRefresh();
-        }
       } catch (error) {
         toast({ text: 'Failed to delete devices: ' + (error as Error).message, intent: 'error' });
       }
