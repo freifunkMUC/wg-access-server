@@ -30,7 +30,7 @@ RUN go build -o wg-access-server
 
 ### Server
 FROM alpine:3.21.3
-RUN apk add --no-cache iptables ip6tables wireguard-tools curl
+RUN apk add --no-cache iptables ip6tables wireguard-tools curl openssl
 ENV WG_CONFIG="/config.yaml"
 ENV WG_STORAGE="sqlite3:///data/db.sqlite3"
 COPY --from=server /code/wg-access-server /usr/local/bin/wg-access-server

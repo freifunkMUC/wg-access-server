@@ -48,6 +48,10 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("enable-inactive-device-deletion", "Enable inactive device deletion").Envar("WG_ENABLE_INACTIVE_DEVICE_DELETION").Default("false").BoolVar(&cmd.AppConfig.EnableInactiveDeviceDeletion)
 	cli.Flag("inactive-device-grace-period", "Duration after inactive device are deleted").Envar("WG_INACTIVE_DEVICE_GRACE_PERIOD").Default((1 * config.Year).String()).DurationVar(&cmd.AppConfig.InactiveDeviceGracePeriod)
 	cli.Flag("filename", "The configuration filename (e.g. WireGuard-Home)").Envar("WG_FILENAME").StringVar(&cmd.AppConfig.Filename)
+	cli.Flag("https-enabled", "Enable HTTPS for the web UI").Envar("WG_HTTPS_ENABLED").Default("true").BoolVar(&cmd.AppConfig.HTTPS.Enabled)
+	cli.Flag("https-cert-file", "Path to the TLS certificate file").Envar("WG_HTTPS_CERT_FILE").StringVar(&cmd.AppConfig.HTTPS.CertFile)
+	cli.Flag("https-key-file", "Path to the TLS private key file").Envar("WG_HTTPS_KEY_FILE").StringVar(&cmd.AppConfig.HTTPS.KeyFile)
+	cli.Flag("https-port", "Port for HTTPS server").Envar("WG_HTTPS_PORT").Default("8443").IntVar(&cmd.AppConfig.HTTPS.Port)
 	cli.Flag("wireguard-enabled", "Enable or disable the embedded wireguard server (useful for development)").Envar("WG_WIREGUARD_ENABLED").Default("true").BoolVar(&cmd.AppConfig.WireGuard.Enabled)
 	cli.Flag("wireguard-interface", "Set the wireguard interface name").Default("wg0").Envar("WG_WIREGUARD_INTERFACE").StringVar(&cmd.AppConfig.WireGuard.Interface)
 	cli.Flag("wireguard-private-key", "Wireguard private key").Envar("WG_WIREGUARD_PRIVATE_KEY").StringVar(&cmd.AppConfig.WireGuard.PrivateKey)
@@ -269,32 +273,75 @@ func (cmd *servecmd) Run() {
 
 	// Listen
 	address := fmt.Sprintf(":%d", conf.Port)
-	srv := &http.Server{
+
+	// Create a new HTTP server
+	httpSrv := &http.Server{
 		Addr:    address,
 		Handler: publicRouter,
 	}
 
+	// Start HTTP server
 	go func() {
-		// Start Web server
-		logrus.Infof("Web UI listening on %v", address)
-		err := srv.ListenAndServe()
+		logrus.Infof("Web UI listening on http://%v", address)
+		err := httpSrv.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errChan <- errors.Wrap(err, "unable to start http server")
 		}
 	}()
 
+	// Start HTTPS server if enabled
+	var httpsSrv *http.Server
+	if conf.HTTPS.Enabled {
+		// Determine HTTPS port
+		httpsAddress := fmt.Sprintf(":%d", conf.HTTPS.Port)
+
+		// Determine certificate paths
+		certPath := conf.HTTPS.CertFile
+		keyPath := conf.HTTPS.KeyFile
+		if certPath == "" || keyPath == "" {
+			certPath, keyPath = services.GetDefaultCertPaths()
+		}
+
+		// Load TLS certificate
+		tlsConfig, err := services.LoadTLSCert(certPath, keyPath)
+		if err != nil {
+			logrus.Error(errors.Wrap(err, "failed to load TLS certificate"))
+			return
+		}
+
+		// Create HTTPS server
+		httpsSrv = &http.Server{
+			Addr:      httpsAddress,
+			Handler:   publicRouter,
+			TLSConfig: tlsConfig,
+		}
+
+		// Start HTTPS server
+		go func() {
+			logrus.Infof("Web UI listening on https://%v", httpsAddress)
+			err := httpsSrv.ListenAndServeTLS("", "") // Cert and key are already in TLSConfig
+			if err != nil && !errors.Is(err, http.ErrServerClosed) {
+				errChan <- errors.Wrap(err, "unable to start https server")
+			}
+		}()
+	}
+
 	select {
 	case <-signalChan:
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		err = srv.Shutdown(ctx)
-		if err != nil {
-			logrus.Error(err)
+		// Shutdown logic
+		logrus.Info("shutting down server...")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := httpSrv.Shutdown(ctx); err != nil {
+			logrus.Error(errors.Wrap(err, "unable to shutdown http server"))
 		}
-		cancel() // always call cancel to clean up the context
-	case err = <-errChan:
+		if httpsSrv != nil {
+			if err := httpsSrv.Shutdown(ctx); err != nil {
+				logrus.Error(errors.Wrap(err, "unable to shutdown https server"))
+			}
+		}
+	case err := <-errChan:
 		logrus.Error(err)
-		return
 	}
 }
 

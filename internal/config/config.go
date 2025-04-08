@@ -153,4 +153,19 @@ type AppConfig struct {
 	// If no authentication backends are configured then
 	// the server will not require any authentication.
 	Auth authconfig.AuthConfig `yaml:"auth"`
+	// HTTPS configuration
+	HTTPS struct {
+		// Enable HTTPS for the web UI
+		// Defaults to true
+		Enabled bool `yaml:"enabled"`
+		// Path to the TLS certificate file
+		// If not provided, a self-signed certificate will be generated
+		CertFile string `yaml:"certFile"`
+		// Path to the TLS private key file
+		// If not provided, a self-signed certificate will be generated
+		KeyFile string `yaml:"keyFile"`
+		// Port for HTTPS server
+		// Defaults to 8443
+		Port int `yaml:"port"`
+	} `yaml:"https"`
 }

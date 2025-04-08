@@ -21,6 +21,7 @@ services:
     #  - "WG_VPN_CIDRV6=0" # to disable IPv6
     ports:
       - "8000:8000/tcp"
+      - "8443:8443/tcp"
       - "51820:51820/udp"
     devices:
       - "/dev/net/tun:/dev/net/tun"

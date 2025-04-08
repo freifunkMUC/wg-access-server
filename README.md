@@ -63,16 +63,16 @@ docker run \
   -v /lib/modules:/lib/modules:ro \
   -e "WG_ADMIN_PASSWORD=$WG_ADMIN_PASSWORD" \
   -e "WG_WIREGUARD_PRIVATE_KEY=$WG_WIREGUARD_PRIVATE_KEY" \
-  -p 8000:8000/tcp \
+  -p 8443:8443/tcp \
   -p 51820:51820/udp \
   ghcr.io/freifunkmuc/wg-access-server:latest
 ```
 
 **Note:** This command includes the `SYS_MODULE` capability which essentially gives the container root privileges over the host system and an attacker could easily break out of the container. See the [Docker instructions](https://www.freie-netze.org/wg-access-server/deployment/1-docker/) for the recommended way to run the container.
 
-If the wg-access-server is accessible via LAN or a network you are in, you can directly connect your phone to the VPN. You have to call the webfrontent of the project for this. Normally, this is done via the IP address of the device or server on which the wg-access-server is running followed by the standard port 8000, via which the web interface can be reached. For most deployments something like this should work: http://192.168.0.XX:8000
+If the wg-access-server is accessible via LAN or a network you are in, you can directly connect your phone to the VPN. You have to call the webfrontent of the project for this. Normally, this is done via the IP address of the device or server on which the wg-access-server is running followed by the standard port 8443, via which the web interface can be reached. For most deployments something like this should work: https://192.168.0.XX:8443
 
-If the project is running locally on the computer, you can easily connect to the web interface by connecting to http://localhost:8000 in the browser.
+If the project is running locally on the computer, you can easily connect to the web interface by connecting to https://localhost:8443 in the browser.
 
 ## Running with Docker-Compose
 
@@ -88,7 +88,7 @@ echo "Your automatically generated admin password for the wg-access-server's web
 docker-compose up
 ```
 
-You can connect to the web server on the local machine browser at http://localhost:8000
+You can connect to the web server on the local machine browser at https://localhost:8443
 
 If you open your browser to your machine's LAN IP address you'll be able
 to connect your phone using the UI and QR code!
@@ -130,7 +130,7 @@ The software consists of a Golang server and a React app.
 If you want to make changes to the project locally, you can do so relatively easily with the following steps.
 
 1. Run `cd website && npm install && npm start` to get the frontend running on `:3000`.
-2. Run `sudo go run ./main.go` to get the server running on `:8000`.
+2. Run `sudo go run ./main.go serve` to get the server running on http: `:8000` and https: `:8443`.
 
 Here are some notes on development configuration:
 
