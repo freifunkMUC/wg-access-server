@@ -92,6 +92,7 @@ services:
     environment:
       - "WG_ADMIN_PASSWORD=${WG_ADMIN_PASSWORD:?\n\nplease set the WG_ADMIN_PASSWORD environment variable:\n    export WG_ADMIN_PASSWORD=example\n}"
       - "WG_WIREGUARD_PRIVATE_KEY=${WG_WIREGUARD_PRIVATE_KEY:?\n\nplease set the WG_WIREGUARD_PRIVATE_KEY environment variable:\n    export WG_WIREGUARD_PRIVATE_KEY=$(wg genkey)\n}"
+      - "WG_HTTPS_ENABLED=false"
     #  - "WG_VPN_CIDRV6=0" # to disable IPv6
     expose:
       - "8000/tcp"
