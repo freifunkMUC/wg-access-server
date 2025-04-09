@@ -15,13 +15,25 @@ class GlobalAppState {
 
     const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const storedDarkMode = localStorage.getItem('customDarkMode');
-    
+
     this.darkMode = storedDarkMode !== null ? JSON.parse(storedDarkMode) : prefersDarkMode;
   }
 
   setDarkMode(darkMode: boolean) {
     runInAction(() => {
       this.darkMode = darkMode;
+    });
+  }
+
+  setInfo(info: InfoRes.AsObject){
+    runInAction(() => {
+      this.info = info;
+    });
+  }
+
+  setLoadingError(error: String){
+    runInAction(() => {
+      this.loadingError = error;
     });
   }
 }

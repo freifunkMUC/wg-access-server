@@ -15,7 +15,7 @@ import InputLabel from '@mui/material/InputLabel';
 import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import { codeBlock } from 'common-tags';
-import { makeObservable, observable } from 'mobx';
+import { makeObservable, observable, runInAction } from 'mobx';
 import { observer } from 'mobx-react';
 import React from 'react';
 import { box_keyPair, randomBytes } from 'tweetnacl-ts';
@@ -55,6 +55,50 @@ export const AddDevice = observer(
 
     showMobile = true;
 
+    setDialogOpen(dialogOpen: boolean){
+      runInAction(() => {
+        this.dialogOpen = dialogOpen;
+      });
+    }
+
+    setError(error: string){
+      runInAction(() => {
+        this.error = error;
+      });
+    }
+
+    setDeviceName(deviceName: string){
+      runInAction(() => {
+        this.deviceName = deviceName;
+      });
+    }
+
+    setDevicePublickey(devicePublickey: string){
+      runInAction(() => {
+        this.devicePublickey = devicePublickey;
+      });
+    }
+
+    setUseDevicePresharekey(useDevicePresharekey: boolean){
+      runInAction(() => {
+        this.useDevicePresharekey = useDevicePresharekey;
+      });
+    }
+
+    setConfigFile(configFile: string){
+      runInAction(() => {
+        this.configFile = configFile;
+      });
+    }
+
+    setShowMobile(showMobile: boolean){
+      runInAction(() => {
+        this.showMobile = showMobile;
+      });
+    }
+
+
+
     submit = async (event: React.FormEvent) => {
       event.preventDefault();
 
@@ -64,11 +108,11 @@ export const AddDevice = observer(
       if (this.devicePublickey) {
         publicKey = this.devicePublickey;
         privateKey = 'pleaseReplaceThisPrivatekey';
-        this.showMobile = false;
+        this.setShowMobile(false)
       } else {
         publicKey = window.btoa(String.fromCharCode(...(new Uint8Array(keypair.publicKey) as any)));
         privateKey = window.btoa(String.fromCharCode(...(new Uint8Array(keypair.secretKey) as any)));
-        this.showMobile = true;
+        this.setShowMobile(true)
       }
 
       const presharedKey = this.useDevicePresharekey
@@ -114,8 +158,8 @@ export const AddDevice = observer(
         ${this.persistentKeepalive > 0 ? `PersistentKeepalive = ${this.persistentKeepalive}` : ``}
       `;
 
-        this.configFile = configFile;
-        this.dialogOpen = true;
+        this.setConfigFile(configFile)
+        this.setDialogOpen(true)
         this.reset();
       } catch (error: any) {
         console.log(error);
@@ -124,13 +168,14 @@ export const AddDevice = observer(
     };
 
     reset = () => {
-      this.deviceName = '';
-      this.devicePublickey = '';
-      this.useDevicePresharekey = false;
+      this.setDeviceName('')
+      this.setDevicePublickey('')
+      this.setUseDevicePresharekey(false)
       this.persistentKeepalive = 0;
       this.showAdvancedOptions = false;
-      this.error = '';
+      this.setError('')
     };
+
 
     constructor(props: Props) {
       super(props);
@@ -171,7 +216,7 @@ export const AddDevice = observer(
                   <Input
                     id="device-name"
                     value={this.deviceName}
-                    onChange={(event) => (this.deviceName = event.currentTarget.value)}
+                    onChange={(event) => (this.setDeviceName(event.currentTarget.value) )}
                     aria-describedby="device-name-text"
                   />
                 </FormControl>
@@ -190,7 +235,7 @@ export const AddDevice = observer(
                         <Input
                           id="device-publickey"
                           value={this.devicePublickey}
-                          onChange={(event) => (this.devicePublickey = event.currentTarget.value)}
+                          onChange={(event) => (this.setDevicePublickey(event.currentTarget.value) )}
                           aria-describedby="device-publickey-text"
                         />
                         <FormHelperText id="device-publickey-text">
@@ -203,7 +248,7 @@ export const AddDevice = observer(
                           <Checkbox
                             id="device-presharedkey"
                             value={this.useDevicePresharekey}
-                            onChange={(event) => (this.useDevicePresharekey = event.currentTarget.checked)}
+                            onChange={(event) => (this.setUseDevicePresharekey(event.currentTarget.checked) )}
                           />
                         }
                         label="Use pre-shared key"
@@ -263,7 +308,7 @@ export const AddDevice = observer(
               <GetConnected configFile={this.configFile!} showMobile={this.showMobile} />
             </DialogContent>
             <DialogActions>
-              <Button color="secondary" variant="outlined" onClick={() => (this.dialogOpen = false)}>
+              <Button color="secondary" variant="outlined" onClick={() => (this.setDialogOpen(false))}>
                 Done
               </Button>
             </DialogActions>

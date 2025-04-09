@@ -1,5 +1,6 @@
 {
   "name": "wg-access-server-website",
+  "type": "module",
   "scripts": {
     "codegen": "npx grpc-ts-web -o src/sdk ../proto/*.proto",
     "start": "vite --port 3000",
@@ -10,20 +11,20 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@mui/icons-material": "^6.4.3",
+    "@mui/icons-material": "^6.4.7",
     "@mui/lab": "^6.0.0-beta.25",
-    "@mui/material": "^6.4.3",
+    "@mui/material": "^6.4.7",
     "common-tags": "^1.8.2",
     "date-fns": "^4.1.0",
     "google-protobuf": "^4.0.0-rc.2",
-    "mobx": "^6.13.6",
+    "mobx": "^6.13.7",
     "mobx-react": "^9.2.0",
     "mobx-utils": "^6.1.0",
     "numeral": "^2.0.6",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.1.5",
+    "react-router-dom": "^7.3.0",
     "tweetnacl-ts": "^1.0.3",
     "vite-tsconfig-paths": "^5.1.4"
   },
@@ -35,17 +36,17 @@
     "@types/react-dom": "^18.3.5",
     "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^4.3.4",
-    "@vitejs/plugin-react-swc": "^3.7.2",
+    "@vitejs/plugin-react-swc": "^3.8.0",
     "fork-ts-checker-webpack-plugin": "^9.0.2",
     "grpc-ts-web": "^0.2.0",
     "grpc-web": "^1.2.1",
     "prettier": "^3.5.3",
-    "typescript": "^5.7.3",
-    "vite": "^6.2.1",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.5",
     "vite-plugin-svgr": "^4.3.0"
   },
   "overrides": {
-    "typescript": "^5.7.3",
+    "typescript": "^5.8.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

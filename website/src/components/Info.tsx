@@ -1,5 +1,5 @@
 import React from 'react';
-import { observable, makeObservable } from 'mobx';
+import { observable, makeObservable, runInAction } from 'mobx';
 import { observer } from 'mobx-react';
 import Popover from '@mui/material/Popover';
 import IconButton from '@mui/material/IconButton';
@@ -21,16 +21,23 @@ export const Info = observer(
       });
     }
 
+
+    setAnchor(anchor?: HTMLElement){
+      runInAction(() => {
+        this.anchor = anchor;
+      });
+    }
+
     render() {
       return (
         <>
-          <IconButton onClick={(event) => (this.anchor = event.currentTarget)} size="large">
+          <IconButton onClick={(event) => (this.setAnchor(event.currentTarget))} size="large">
             <InfoIcon />
           </IconButton>
           <Popover
             open={!!this.anchor}
             anchorEl={this.anchor}
-            onClose={() => (this.anchor = undefined)}
+            onClose={() => (this.setAnchor(undefined))}
             anchorOrigin={{
               vertical: 'bottom',
               horizontal: 'center',
