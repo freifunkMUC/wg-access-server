@@ -97,7 +97,17 @@ export const AddDevice = observer(
       });
     }
 
+    setPersistentKeepalive(persistentKeepalive: number){
+      runInAction(() => {
+        this.persistentKeepalive = persistentKeepalive;
+      });
+    }
 
+    setShowAdvancedOptions(showAdvancedOptions: boolean){
+      runInAction(() => {
+        this.showAdvancedOptions = showAdvancedOptions;
+      });
+    }
 
     submit = async (event: React.FormEvent) => {
       event.preventDefault();
@@ -171,8 +181,8 @@ export const AddDevice = observer(
       this.setDeviceName('')
       this.setDevicePublickey('')
       this.setUseDevicePresharekey(false)
-      this.persistentKeepalive = 0;
-      this.showAdvancedOptions = false;
+      this.setPersistentKeepalive(0);
+      this.setShowAdvancedOptions(false);
       this.setError('')
     };
 
