@@ -46,6 +46,8 @@ export const AddDevice = observer(
     devicePublickey = '';
 
     useDevicePresharekey = false;
+    
+    persistentKeepalive = 0;
 
     showAdvancedOptions = false;
 
@@ -95,7 +97,17 @@ export const AddDevice = observer(
       });
     }
 
+    setPersistentKeepalive(persistentKeepalive: number){
+      runInAction(() => {
+        this.persistentKeepalive = persistentKeepalive;
+      });
+    }
 
+    setShowAdvancedOptions(showAdvancedOptions: boolean){
+      runInAction(() => {
+        this.showAdvancedOptions = showAdvancedOptions;
+      });
+    }
 
     submit = async (event: React.FormEvent) => {
       event.preventDefault();
@@ -153,6 +165,7 @@ export const AddDevice = observer(
         AllowedIPs = ${info.allowedIps}
         Endpoint = ${`${info.host?.value || window.location.hostname}:${info.port || '51820'}`}
         ${this.useDevicePresharekey ? `PresharedKey = ${presharedKey}` : ``}
+        ${this.persistentKeepalive > 0 ? `PersistentKeepalive = ${this.persistentKeepalive}` : ``}
       `;
 
         this.setConfigFile(configFile)
@@ -168,7 +181,8 @@ export const AddDevice = observer(
       this.setDeviceName('')
       this.setDevicePublickey('')
       this.setUseDevicePresharekey(false)
-      this.showAdvancedOptions = false;
+      this.setPersistentKeepalive(0);
+      this.setShowAdvancedOptions(false);
       this.setError('')
     };
 
@@ -182,6 +196,7 @@ export const AddDevice = observer(
         deviceName: observable,
         devicePublickey: observable,
         useDevicePresharekey: observable,
+        persistentKeepalive: observable,
         configFile: observable,
         showMobile: observable,
       });
@@ -248,7 +263,21 @@ export const AddDevice = observer(
                         }
                         label="Use pre-shared key"
                       />
-                    </AccordionDetails>
+                      <FormControl fullWidth >
+                        <InputLabel htmlFor="persistent-keepalive">Persistent Keepalive (Optional)</InputLabel>
+                        <Input
+                          id="persistent-keepalive"
+                          type="number"
+                          placeholder="25"
+                          value={this.persistentKeepalive || ''}
+                          onChange={(event) => (this.persistentKeepalive = parseInt(event.currentTarget.value) || 0)}
+                          aria-describedby="persistent-keepalive-text"
+                        />
+                        <FormHelperText id="persistent-keepalive-text">
+                          Interval in seconds between keepalive packets (empty to disable)
+                        </FormHelperText>
+                      </FormControl>
+                      </AccordionDetails>
                   </Accordion>
                 </Box>
                 {this.error && (
