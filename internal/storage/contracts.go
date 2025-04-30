@@ -80,5 +80,5 @@ func NewStorage(uri string) (Storage, error) {
 		return NewSqlStorage(u), nil
 	}
 
-	return nil, fmt.Errorf("Unknown storage backend %s", u)
+	return nil, fmt.Errorf("unknown storage backend %s", u)
 }

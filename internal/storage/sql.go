@@ -118,15 +118,18 @@ func (s *SQLStorage) Open() error {
 	// Migrate the schema
 	s.db.AutoMigrate(&Device{})
 
-	if s.sqlType == "postgres" {
+	switch s.sqlType {
+	case "postgres":
 		watcher, err := NewPgWatcher(s.connectionString, db.NewScope(&Device{}).TableName())
 		if err != nil {
 			return errors.Wrap(err, "failed to create pg watcher")
 		}
 		s.Watcher = watcher
-	} else if s.sqlType == "mysql" || s.sqlType == "sqlite3" {
+	case "mysql":
+		fallthrough
+	case "sqlite3":
 		s.Watcher = NewGormWatcher(db, db.NewScope(&Device{}).TableName())
-	} else {
+	default:
 		s.Watcher = NewInProcessWatcher()
 	}
 
@@ -145,7 +148,7 @@ func (s *SQLStorage) Save(device *Device) error {
 	if err := s.db.Save(&device).Error; err != nil {
 		return errors.Wrapf(err, "failed to write device")
 	}
-	s.Watcher.EmitAdd(device)
+	s.EmitAdd(device)
 	return nil
 }
 
@@ -185,7 +188,7 @@ func (s *SQLStorage) Delete(device *Device) error {
 	if err := s.db.Delete(&device).Error; err != nil {
 		return errors.Wrap(err, "failed to delete device file")
 	}
-	s.Watcher.EmitDelete(device)
+	s.EmitDelete(device)
 	return nil
 }
 

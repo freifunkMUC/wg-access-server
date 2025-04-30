@@ -86,7 +86,7 @@ func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, p
 		return nil, errors.New("Device name must not be empty.")
 	}
 
-	var nameTaken bool = false
+	nameTaken := false
 	devices, err := d.ListDevices(identity.Subject)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list devices")
@@ -264,18 +264,18 @@ func (d *DeviceManager) nextClientAddress() (string, error) {
 		if ipv6 != "" {
 			return fmt.Sprintf("%s, %s", ipv4, ipv6), nil
 		} else if d.cidrv6 != "" {
-			return "", fmt.Errorf("There are no free IP addresses in the vpn subnet: '%s'", d.cidrv6)
+			return "", fmt.Errorf("there are no free IP addresses in the vpn subnet: '%s'", d.cidrv6)
 		} else {
 			return ipv4, nil
 		}
 	} else if ipv6 != "" {
 		if d.cidr != "" {
-			return "", fmt.Errorf("There are no free IP addresses in the vpn subnet: '%s'", d.cidr)
+			return "", fmt.Errorf("there are no free IP addresses in the vpn subnet: '%s'", d.cidr)
 		} else {
 			return ipv6, nil
 		}
 	} else {
-		return "", fmt.Errorf("There are no free IP addresses in the vpn subnets: '%s', '%s'", d.cidr, d.cidrv6)
+		return "", fmt.Errorf("there are no free IP addresses in the vpn subnets: '%s', '%s'", d.cidr, d.cidrv6)
 	}
 }
 

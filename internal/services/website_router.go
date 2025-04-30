@@ -80,7 +80,10 @@ func FileServerWith404(root http.FileSystem, handler404 FSHandler404) http.Handl
 
 		// close if successfully opened
 		if err == nil {
-			f.Close()
+			err = f.Close()
+			if err != nil {
+				logrus.Error(errors.Wrap(err, "failed to close file"))
+			}
 		}
 
 		// default serve

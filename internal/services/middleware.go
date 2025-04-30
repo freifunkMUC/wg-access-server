@@ -22,7 +22,7 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 					WithField("stack", string(debug.Stack())).
 					Error(err)
 				w.WriteHeader(500)
-				fmt.Fprintf(w, "server error\ntrace = %s\n", traces.TraceID(r.Context()))
+				_, _ = fmt.Fprintf(w, "server error\ntrace = %s\n", traces.TraceID(r.Context()))
 			}
 		}()
 		next.ServeHTTP(w, r)

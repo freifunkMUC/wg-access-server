@@ -70,13 +70,13 @@ func ApiRouter(deps *ApiServices) http.Handler {
 		}
 
 		w.WriteHeader(400)
-		fmt.Fprintln(w, "expected grpc request")
+		_, _ = fmt.Fprintln(w, "expected grpc request")
 	})
 }
 
 // GRPC events have the nature of DEBUG logs but are logged with INFO level. To clean up the log stream starting from INFO log level we only log WARN events.
 func grpcLoggerWith(ctx context.Context) *logrus.Entry {
-	if (logrus.GetLevel() == logrus.InfoLevel) {
+	if logrus.GetLevel() == logrus.InfoLevel {
 		return traces.WarnLogger(ctx)
 	} else {
 		return traces.Logger(ctx)
