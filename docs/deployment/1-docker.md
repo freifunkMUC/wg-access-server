@@ -33,7 +33,7 @@ If you are unable to load the `iptables` kernel modules, you can add the `SYS_MO
 This is not recommended as it essentially gives the container root privileges over the host system and an attacker could easily break out of the container.
 
 The WireGuard module should be loaded automatically, even without `SYS_MODULE` capability or `/lib/modules` mount.
-If it still fails to load, the server automatically falls back to the userspace implementation. 
+If it still fails to load, the server automatically falls back to the userspace implementation.
 
 ## IPv6-only (without IPv4)
 

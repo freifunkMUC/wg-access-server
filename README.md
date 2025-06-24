@@ -118,7 +118,6 @@ https://github.com/freifunkMUC/wg-access-server-chart.
 
 ![Sign In Darkmode](https://github.com/freifunkMUC/wg-access-server/raw/master/screenshots/signin-dark.png)
 
-
 ## Changelog
 
 See the [Releases section](https://github.com/freifunkMUC/wg-access-server/releases)

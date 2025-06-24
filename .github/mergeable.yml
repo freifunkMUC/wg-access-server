@@ -15,12 +15,12 @@ mergeable:
           regex: ^\[WIP\]
       - do: label
         must_exclude:
-          regex: 'wip'
+          regex: "wip"
       - do: description
         no_empty:
           enabled: true
           message: Description matter and should not be empty. Provide detail with **what** was changed, **why** it was changed, and **how** it was changed.
       - do: dependent
         changed:
-          file: 'package.json'  # also supports globs expressions
-          required: ['package-lock.json'] # alias: `files` for backward compatibility
+          file: "package.json" # also supports globs expressions
+          required: ["package-lock.json"] # alias: `files` for backward compatibility

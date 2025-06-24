@@ -1,4 +1,5 @@
 ## Docs
+
 - [x] mkdocs
 - [ ] about
 - [x] deploying
@@ -15,6 +16,7 @@
   - [ ] raspberry-pi + pihole dns
 
 ## Features
+
 - [x] ARM docker image for raspberry-pi
 - [x] admin
   - [x] list all devices

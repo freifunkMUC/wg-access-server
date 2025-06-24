@@ -11,6 +11,7 @@ Please also read the [Docker instructions](1-docker.md) for general information 
 ```
 
 ## With traefik as Reverse proxy (with LetsEncrypt)
+
 ```yaml
 version: "3.0"
 services:
@@ -40,7 +41,7 @@ services:
       - "51820:51820/udp"
     devices:
       - "/dev/net/tun:/dev/net/tun"
-    depends_on: 
+    depends_on:
       - reverse-proxy
     labels:
       - traefik.http.routers.vpn.rule=Host(`vpn.example.com`)
@@ -71,6 +72,7 @@ volumes:
 ```
 
 ## With traefik as Reverse proxy (with traefik self generated certificate)
+
 ```yaml
 version: "3.0"
 services:
@@ -100,7 +102,7 @@ services:
       - "51820:51820/udp"
     devices:
       - "/dev/net/tun:/dev/net/tun"
-    depends_on: 
+    depends_on:
       - reverse-proxy
     labels:
       - traefik.http.routers.vpn.rule=Host(`vpn.example.com`)
