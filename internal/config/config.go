@@ -23,6 +23,9 @@ type AppConfig struct {
 	// Port sets the port that the web UI will listen on.
 	// Defaults to 8000
 	Port int `yaml:"port"`
+	// HTTP listen host
+	// Defaults to "" (all hosts)
+	HttpHost string `yaml:"httpHost"`
 	// ExternalHost is the address that clients
 	// use to connect to the WireGuard interface
 	// By default, this will be empty and the web ui
@@ -170,5 +173,8 @@ type AppConfig struct {
 		// Port for HTTPS server
 		// Defaults to 8443
 		Port int `yaml:"port"`
+		// Listen host for HTTPS server
+		// Defaults to "" (all hosts)
+		Host string `yaml:"host"`
 	} `yaml:"https"`
 }
