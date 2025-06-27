@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/docker/docker/libnetwork/resolvconf"
 	"github.com/docker/docker/libnetwork/types"
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
@@ -21,7 +22,6 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/crypto/bcrypt"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
-	"github.com/alecthomas/kingpin/v2"
 	"gopkg.in/yaml.v2"
 
 	"github.com/freifunkMUC/wg-access-server/buildinfo"
@@ -52,6 +52,8 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("https-cert-file", "Path to the TLS certificate file").Envar("WG_HTTPS_CERT_FILE").StringVar(&cmd.AppConfig.HTTPS.CertFile)
 	cli.Flag("https-key-file", "Path to the TLS private key file").Envar("WG_HTTPS_KEY_FILE").StringVar(&cmd.AppConfig.HTTPS.KeyFile)
 	cli.Flag("https-port", "Port for HTTPS server").Envar("WG_HTTPS_PORT").Default("8443").IntVar(&cmd.AppConfig.HTTPS.Port)
+	cli.Flag("https-host", "Listen host for HTTPS server").Envar("WG_HTTPS_HOST").Default("").StringVar(&cmd.AppConfig.HTTPS.Host)
+	cli.Flag("http-host", "Listen host for HTTP server").Envar("WG_HTTP_HOST").Default("").StringVar(&cmd.AppConfig.HttpHost)
 	cli.Flag("wireguard-enabled", "Enable or disable the embedded wireguard server (useful for development)").Envar("WG_WIREGUARD_ENABLED").Default("true").BoolVar(&cmd.AppConfig.WireGuard.Enabled)
 	cli.Flag("wireguard-interface", "Set the wireguard interface name").Default("wg0").Envar("WG_WIREGUARD_INTERFACE").StringVar(&cmd.AppConfig.WireGuard.Interface)
 	cli.Flag("wireguard-private-key", "Wireguard private key").Envar("WG_WIREGUARD_PRIVATE_KEY").StringVar(&cmd.AppConfig.WireGuard.PrivateKey)
@@ -274,7 +276,7 @@ func (cmd *servecmd) Run() {
 	errChan := make(chan error)
 
 	// Listen
-	address := fmt.Sprintf(":%d", conf.Port)
+	address := fmt.Sprintf("%s:%d", conf.HttpHost, conf.Port)
 
 	// Create a new HTTP server
 	httpSrv := &http.Server{
@@ -295,7 +297,7 @@ func (cmd *servecmd) Run() {
 	var httpsSrv *http.Server
 	if conf.HTTPS.Enabled {
 		// Determine HTTPS port
-		httpsAddress := fmt.Sprintf(":%d", conf.HTTPS.Port)
+		httpsAddress := fmt.Sprintf("%s:%d", conf.HTTPS.Host, conf.HTTPS.Port)
 
 		// Determine certificate paths
 		certPath := conf.HTTPS.CertFile
