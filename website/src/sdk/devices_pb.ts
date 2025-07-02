@@ -438,6 +438,9 @@ export declare namespace AddDeviceReq {
 		name: string,
 		publicKey: string,
 		presharedKey: string,
+		manualIpAssignment: boolean,
+		manualIpv4Address: string,
+		manualIpv6Address: string,
 	}
 }
 
@@ -474,6 +477,27 @@ export class AddDeviceReq extends jspb.Message {
 		(jspb.Message as any).setProto3StringField(this, 3, value);
 	}
 
+	getManualIpAssignment(): boolean {return jspb.Message.getFieldWithDefault(this, 4, false);
+	}
+
+	setManualIpAssignment(value: boolean): void {
+		(jspb.Message as any).setProto3BooleanField(this, 4, value);
+	}
+
+	getManualIpv4Address(): string {return jspb.Message.getFieldWithDefault(this, 5, "");
+	}
+
+	setManualIpv4Address(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 5, value);
+	}
+
+	getManualIpv6Address(): string {return jspb.Message.getFieldWithDefault(this, 6, "");
+	}
+
+	setManualIpv6Address(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 6, value);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		AddDeviceReq.serializeBinaryToWriter(this, writer);
@@ -486,6 +510,9 @@ export class AddDeviceReq extends jspb.Message {
 			name: this.getName(),
 			publicKey: this.getPublicKey(),
 			presharedKey: this.getPresharedKey(),
+			manualIpAssignment: this.getManualIpAssignment(),
+			manualIpv4Address: this.getManualIpv4Address(),
+			manualIpv6Address: this.getManualIpv6Address(),
 		};
 	}
 
@@ -501,6 +528,18 @@ export class AddDeviceReq extends jspb.Message {
 		const field3 = message.getPresharedKey();
 		if (field3.length > 0) {
 			writer.writeString(3, field3);
+		}
+		const field4 = message.getManualIpAssignment();
+		if (field4 != false) {
+			writer.writeBool(4, field4);
+		}
+		const field5 = message.getManualIpv4Address();
+		if (field5.length > 0) {
+			writer.writeString(5, field5);
+		}
+		const field6 = message.getManualIpv6Address();
+		if (field6.length > 0) {
+			writer.writeString(6, field6);
 		}
 	}
 
@@ -528,6 +567,18 @@ export class AddDeviceReq extends jspb.Message {
 			case 3:
 				const field3 = reader.readString()
 				message.setPresharedKey(field3);
+				break;
+			case 4:
+				const field4 = reader.readBool()
+				message.setManualIpAssignment(field4);
+				break;
+			case 5:
+				const field5 = reader.readString()
+				message.setManualIpv4Address(field5);
+				break;
+			case 6:
+				const field6 = reader.readString()
+				message.setManualIpv6Address(field6);
 				break;
 			default:
 				reader.skipField();
@@ -932,6 +983,9 @@ function AddDeviceReqFromObject(obj: AddDeviceReq.AsObject | undefined): AddDevi
 	message.setName(obj.name);
 	message.setPublicKey(obj.publicKey);
 	message.setPresharedKey(obj.presharedKey);
+	message.setManualIpAssignment(obj.manualIpAssignment);
+	message.setManualIpv4Address(obj.manualIpv4Address);
+	message.setManualIpv6Address(obj.manualIpv6Address);
 	return message;
 }
 

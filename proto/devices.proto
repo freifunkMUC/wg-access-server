@@ -38,6 +38,9 @@ message AddDeviceReq {
   string name = 1;
   string public_key = 2;
   string preshared_key = 3;
+  bool manual_ip_assignment = 4;
+  string manual_ipv4_address = 5;
+  string manual_ipv6_address = 6;
 }
 
 message ListDevicesReq {
