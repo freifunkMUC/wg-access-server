@@ -81,7 +81,32 @@ func (d *DeviceManager) StartSync(disableMetadataCollection, enableInactiveDevic
 	return nil
 }
 
-func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, publicKey string, presharedKey string) (*storage.Device, error) {
+func (d *DeviceManager) usedAddresses() (map[netip.Addr]bool, map[netip.Addr]bool, error) {
+	devices, err := d.ListDevices("")
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to list devices")
+	}
+
+	usedIPv4s := make(map[netip.Addr]bool, len(devices)+3)
+	usedIPv6s := make(map[netip.Addr]bool, len(devices)+3)
+
+	// Check what IP addresses are already occupied
+	for _, device := range devices {
+		addresses := network.SplitAddresses(device.Address)
+		for _, addr := range addresses {
+			addr := netip.MustParsePrefix(addr).Addr()
+			if addr.Is4() {
+				usedIPv4s[addr] = true
+			} else {
+				usedIPv6s[addr] = true
+			}
+		}
+	}
+
+	return usedIPv4s, usedIPv6s, nil
+}
+
+func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, publicKey string, presharedKey string, manualIPAssignment bool, manualIPv4Address string, manualIPv6Address string) (*storage.Device, error) {
 	if name == "" {
 		return nil, errors.New("Device name must not be empty.")
 	}
@@ -112,9 +137,94 @@ func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, p
 		return nil, errors.New("Pre-shared key has invalid format.")
 	}
 
-	clientAddr, err := d.nextClientAddress()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate an ip address for device")
+	clientAddr := ""
+	if manualIPAssignment {
+		if manualIPv4Address == "" && manualIPv6Address == "" {
+			return nil, errors.New("Manual IP assignment enabled but no IP address provided.")
+		}
+
+		usedIPv4s, usedIPv6s, err := d.usedAddresses()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get used addresses")
+		}
+
+		var ipv4Addr, ipv6Addr string
+
+		if manualIPv4Address != "" {
+			if d.cidr == "" {
+				return nil, errors.New("Manual IPv4 assignment not possible, IPv4 subnet is not configured.")
+			}
+
+			ipv4, err := netip.ParseAddr(manualIPv4Address)
+			if err != nil {
+				return nil, errors.Wrap(err, "invalid manual IPv4 address")
+			}
+			if !ipv4.Is4() {
+				return nil, errors.New("manual IPv4 address is not a valid IPv4 address")
+			}
+
+			vpnsubnetv4 := netip.MustParsePrefix(d.cidr)
+			if !vpnsubnetv4.Contains(ipv4) {
+				return nil, fmt.Errorf("manual IPv4 address %s is not in the configured subnet %s", manualIPv4Address, d.cidr)
+			}
+
+			// also check for server and network address
+			startIPv4 := vpnsubnetv4.Masked().Addr()
+			if ipv4 == startIPv4 || ipv4 == startIPv4.Next() {
+				return nil, fmt.Errorf("manual IPv4 address %s is reserved", manualIPv4Address)
+			}
+
+			if usedIPv4s[ipv4] {
+				return nil, fmt.Errorf("manual IPv4 address %s is already in use", manualIPv4Address)
+			}
+
+			ipv4Addr = netip.PrefixFrom(ipv4, 32).String()
+		}
+
+		if manualIPv6Address != "" {
+			if d.cidrv6 == "" {
+				return nil, errors.New("Manual IPv6 assignment not possible, IPv6 subnet is not configured.")
+			}
+
+			ipv6, err := netip.ParseAddr(manualIPv6Address)
+			if err != nil {
+				return nil, errors.Wrap(err, "invalid manual IPv6 address")
+			}
+			if !ipv6.Is6() {
+				return nil, errors.New("manual IPv6 address is not a valid IPv6 address")
+			}
+
+			vpnsubnetv6 := netip.MustParsePrefix(d.cidrv6)
+			if !vpnsubnetv6.Contains(ipv6) {
+				return nil, fmt.Errorf("manual IPv6 address %s is not in the configured subnet %s", manualIPv6Address, d.cidrv6)
+			}
+
+			// also check for server and network address
+			startIPv6 := vpnsubnetv6.Masked().Addr()
+			if ipv6 == startIPv6 || ipv6 == startIPv6.Next() {
+				return nil, fmt.Errorf("manual IPv6 address %s is reserved", manualIPv6Address)
+			}
+
+			if usedIPv6s[ipv6] {
+				return nil, fmt.Errorf("manual IPv6 address %s is already in use", manualIPv6Address)
+			}
+
+			ipv6Addr = netip.PrefixFrom(ipv6, 128).String()
+		}
+
+		if ipv4Addr != "" && ipv6Addr != "" {
+			clientAddr = fmt.Sprintf("%s, %s", ipv4Addr, ipv6Addr)
+		} else if ipv4Addr != "" {
+			clientAddr = ipv4Addr
+		} else {
+			clientAddr = ipv6Addr
+		}
+
+	} else {
+		clientAddr, err = d.nextClientAddress()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to generate an ip address for device")
+		}
 	}
 
 	device := &storage.Device{
@@ -201,28 +311,12 @@ func (d *DeviceManager) nextClientAddress() (string, error) {
 	nextIPLock.Lock()
 	defer nextIPLock.Unlock()
 
-	devices, err := d.ListDevices("")
-	if err != nil {
-		return "", errors.Wrap(err, "failed to list devices")
-	}
-
 	// TODO: read up on better ways to allocate client's IP
 	// addresses from a configurable CIDR
 
-	usedIPv4s := make(map[netip.Addr]bool, len(devices)+3)
-	usedIPv6s := make(map[netip.Addr]bool, len(devices)+3)
-
-	// Check what IP addresses are already occupied
-	for _, device := range devices {
-		addresses := network.SplitAddresses(device.Address)
-		for _, addr := range addresses {
-			addr := netip.MustParsePrefix(addr).Addr()
-			if addr.Is4() {
-				usedIPv4s[addr] = true
-			} else {
-				usedIPv6s[addr] = true
-			}
-		}
+	usedIPv4s, usedIPv6s, err := d.usedAddresses()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get used addresses")
 	}
 
 	var ipv4 string

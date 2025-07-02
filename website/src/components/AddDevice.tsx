@@ -45,6 +45,12 @@ export const AddDevice = observer(
 
     devicePublickey = '';
 
+    manualIPAssignment = false;
+
+    manualIPv4Address = '';
+
+    manualIPv6Address = '';
+
     useDevicePresharekey = false;
     
     persistentKeepalive = 0;
@@ -76,6 +82,24 @@ export const AddDevice = observer(
     setDevicePublickey(devicePublickey: string){
       runInAction(() => {
         this.devicePublickey = devicePublickey;
+      });
+    }
+
+    setManualIPAssignment(manualIPAssignment: boolean){
+      runInAction(() => {
+        this.manualIPAssignment = manualIPAssignment;
+      });
+    }
+
+    setManualIPv4Address(manualIPv4Address: string){
+      runInAction(() => {
+        this.manualIPv4Address = manualIPv4Address;
+      });
+    }
+
+    setManualIPv6Address(manualIPv6Address: string){
+      runInAction(() => {
+        this.manualIPv6Address = manualIPv6Address;
       });
     }
 
@@ -134,6 +158,9 @@ export const AddDevice = observer(
           name: this.deviceName,
           publicKey,
           presharedKey,
+          manualIpAssignment: this.manualIPAssignment,
+          manualIpv4Address: this.manualIPv4Address,
+          manualIpv6Address: this.manualIPv6Address,
         });
         this.props.onAdd();
 
@@ -184,6 +211,9 @@ export const AddDevice = observer(
       this.setPersistentKeepalive(0);
       this.setShowAdvancedOptions(false);
       this.setError('')
+      this.setManualIPAssignment(false);
+      this.setManualIPv4Address('');
+      this.setManualIPv6Address('');
     };
 
 
@@ -199,6 +229,9 @@ export const AddDevice = observer(
         persistentKeepalive: observable,
         configFile: observable,
         showMobile: observable,
+        manualIPAssignment: observable,
+        manualIPv4Address: observable,
+        manualIPv6Address: observable,
       });
     }
 
@@ -249,8 +282,7 @@ export const AddDevice = observer(
                           aria-describedby="device-publickey-text"
                         />
                         <FormHelperText id="device-publickey-text">
-                          Put your public key to a pre-generated private key here. Replace the private key in the config
-                          file after downloading it.
+                          Put your public key to a pre-generated private key here. Replace the private key in the config file after downloading it.
                         </FormHelperText>
                       </FormControl>
                       <FormControlLabel
@@ -277,7 +309,53 @@ export const AddDevice = observer(
                           Interval in seconds between keepalive packets (empty to disable)
                         </FormHelperText>
                       </FormControl>
-                      </AccordionDetails>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            id="manual-ip-assignment"
+                            value={this.manualIPAssignment}
+                            onChange={(event) => {
+                              this.setManualIPAssignment(event.currentTarget.checked);
+                              if (!event.currentTarget.checked) {
+                                this.setManualIPv4Address('');
+                                this.setManualIPv6Address('');
+                              }
+                            }}
+                          />
+                        }
+                        label="Manually assign IP address"
+                      />
+                      {this.manualIPAssignment && (
+                        <>
+                          <FormControl fullWidth>
+                            <InputLabel htmlFor="manual-ipv4-address">IPv4 Address</InputLabel>
+                            <Input
+                              id="manual-ipv4-address"
+                              value={this.manualIPv4Address}
+                              onChange={(event) => (this.setManualIPv4Address(event.currentTarget.value) )}
+                              aria-describedby="manual-ipv4-address-text"
+                              placeholder="e.g. 10.0.0.123"
+                            />
+                            <FormHelperText id="manual-ipv4-address-text">
+                              Enter a valid IPv4 address for this device.
+                            </FormHelperText>
+                          </FormControl>
+                          <FormControl fullWidth>
+                            <InputLabel htmlFor="manual-ipv6-address">IPv6 Address</InputLabel>
+                            <Input
+                              id="manual-ipv6-address"
+                              value={this.manualIPv6Address}
+                              onChange={(event) => (this.setManualIPv6Address(event.currentTarget.value) )}
+                              aria-describedby="manual-ipv6-address-text"
+                              placeholder="e.g. fd00::123"
+                            />
+                            <FormHelperText id="manual-ipv6-address-text">
+                              Enter a valid IPv6 address for this device.
+                            </FormHelperText>
+                          </FormControl>
+                        </>
+                      )}
+                    </AccordionDetails>
                   </Accordion>
                 </Box>
                 {this.error && (
@@ -305,8 +383,7 @@ export const AddDevice = observer(
                   Your VPN connection file is not stored by this portal.
                 </Typography>
                 <Typography component="p" style={{ paddingBottom: 8 }}>
-                  If you lose this file you can simply create a new device on this portal to generate a new connection
-                  file.
+                  If you lose this file you can simply create a new device on this portal to generate a new connection file.
                 </Typography>
                 <Typography component="p">
                   The connection file contains your WireGuard Private Key (i.e. password) and should{' '}
