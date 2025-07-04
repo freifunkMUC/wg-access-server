@@ -160,6 +160,16 @@ func configureForwardingv4(options ForwardingOptions) error {
 			return errors.Wrap(err, "failed to set ip tables rule")
 		}
 	}
+
+	// Accept return traffic when NAT is disabled
+	if !options.NAT44 {
+		for _, allowedCIDR := range options.allowedIPv4s {
+			if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", allowedCIDR, "-d", options.CIDR, "-j", "ACCEPT"); err != nil {
+				return errors.Wrap(err, "failed to set ip tables rule for return traffic")
+			}
+		}
+	}
+	
 	// And reject everything else
 	if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", options.CIDR, "-j", "REJECT"); err != nil {
 		return errors.Wrap(err, "failed to set ip tables rule")
@@ -213,6 +223,16 @@ func configureForwardingv6(options ForwardingOptions) error {
 			return errors.Wrap(err, "failed to set ip tables rule")
 		}
 	}
+
+	// Accept return traffic when NAT is disabled
+	if !options.NAT66 {
+		for _, allowedCIDR := range options.allowedIPv6s {
+			if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", allowedCIDR, "-d", options.CIDRv6, "-j", "ACCEPT"); err != nil {
+				return errors.Wrap(err, "failed to set ip tables rule for return traffic")
+			}
+		}
+	}
+
 	// And reject everything else
 	if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", options.CIDRv6, "-j", "REJECT"); err != nil {
 		return errors.Wrap(err, "failed to set ip tables rule")
