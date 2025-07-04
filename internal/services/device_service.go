@@ -25,7 +25,7 @@ func (d *DeviceService) AddDevice(ctx context.Context, req *proto.AddDeviceReq) 
 		return nil, status.Errorf(codes.PermissionDenied, "Not authenticated")
 	}
 
-	device, err := d.DeviceManager.AddDevice(user, req.GetName(), req.GetPublicKey(), req.GetPresharedKey())
+	device, err := d.DeviceManager.AddDevice(user, req.GetName(), req.GetPublicKey(), req.GetPresharedKey(), req.GetManualIpAssignment(), req.GetManualIpv4Address(), req.GetManualIpv6Address())
 	if err != nil {
 		ctxlogrus.Extract(ctx).Error(err)
 		return nil, status.Errorf(codes.Internal, "%v", err)
