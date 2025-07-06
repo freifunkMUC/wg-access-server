@@ -45,14 +45,22 @@ jobs:
           AUTHOR=$(curl -sSL ${{ github.event.repository.owner.url }} | jq -r '.name')
           echo "AUTHOR=$AUTHOR" >> $GITHUB_ENV
 
+      - name: Set up environment
+        run: |
+          echo "TAG_NAME=" >> $GITHUB_ENV
+          if [[ "${GITHUB_REF##*/}" == "main" ]]; then
+            echo "TAG_NAME=main" >> $GITHUB_ENV
+          elif [[ "${GITHUB_REF##*/}" == "master" ]]; then
+            echo "TAG_NAME=master" >> $GITHUB_ENV
+          fi
+          
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=main,enable={{branch == 'master'}}
-            type=raw,value=master,enable={{branch == 'main'}}
+            type=raw,value=${{ env.TAG_NAME }}
             type=ref,event=branch
             type=ref,event=tag
             type=sha,prefix=sha-
