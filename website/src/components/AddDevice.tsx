@@ -173,7 +173,7 @@ export const AddDevice = observer(
         this.reset();
       } catch (error: any) {
         console.log(error);
-        this.error = 'Failed to add device: ' + error.message;
+        this.setError('Failed to add device: ' + error.message)
       }
     };
 
