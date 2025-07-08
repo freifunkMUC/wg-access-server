@@ -55,6 +55,28 @@ export function AddDeviceSkeleton() {
                 control={<Checkbox id="device-presharedkey" value={<Skeleton variant="text" width={20} />} />}
                 label={<Skeleton variant="text" width={100} />}
               />
+              <FormControlLabel
+                control={<Checkbox id="manual-ip-assignment" value={<Skeleton variant="text" width={20} />} />}
+                label={<Skeleton variant="text" width={180} />}
+              />
+              <FormControl fullWidth>
+                <InputLabel htmlFor="manual-ipv4-address">
+                  <Skeleton variant="text" width={120} />
+                </InputLabel>
+                <Input id="manual-ipv4-address" aria-describedby="manual-ipv4-address-text" />
+                <FormHelperText id="manual-ipv4-address-text">
+                  <Skeleton variant="text" width={100} />
+                </FormHelperText>
+              </FormControl>
+              <FormControl fullWidth>
+                <InputLabel htmlFor="manual-ipv6-address">
+                  <Skeleton variant="text" width={120} />
+                </InputLabel>
+                <Input id="manual-ipv6-address" aria-describedby="manual-ipv6-address-text" />
+                <FormHelperText id="manual-ipv6-address-text">
+                  <Skeleton variant="text" width={100} />
+                </FormHelperText>
+              </FormControl>
             </AccordionDetails>
           </Accordion>
         </Box>
