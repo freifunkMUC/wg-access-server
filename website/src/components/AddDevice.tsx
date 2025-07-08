@@ -289,7 +289,7 @@ export const AddDevice = observer(
                         control={
                           <Checkbox
                             id="device-presharedkey"
-                            value={this.useDevicePresharekey}
+                            checked={this.useDevicePresharekey}
                             onChange={(event) => (this.setUseDevicePresharekey(event.currentTarget.checked) )}
                           />
                         }
@@ -313,7 +313,7 @@ export const AddDevice = observer(
                         control={
                           <Checkbox
                             id="manual-ip-assignment"
-                            value={this.manualIPAssignment}
+                            checked={this.manualIPAssignment}
                             onChange={(event) => {
                               this.setManualIPAssignment(event.currentTarget.checked);
                               if (!event.currentTarget.checked) {
