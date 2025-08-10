@@ -53,7 +53,7 @@ export const AddDevice = observer(
 
     useDevicePresharekey = false;
     
-    persistentKeepalive = 0;
+    persistentKeepalive = AppState.info?.clientConfigPersistentKeepalive || 0;
 
     showAdvancedOptions = false;
 

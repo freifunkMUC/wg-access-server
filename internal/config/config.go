@@ -151,6 +151,11 @@ type AppConfig struct {
 		// which is usually a sane choice." (From wg-quick 8 manual page.)
 		// Empty by default.
 		MTU int `yaml:"mtu"`
+		// The default persistent keepalive interval for all clients.
+		// If set, this value will be used as the default in the web UI.
+		// Users can still override this value per device.
+		// Defaults to 0 (disabled)
+		PersistentKeepalive int `yaml:"PersistentKeepalive"`
 	} `yaml:"clientConfig"`
 	// Auth configures optional authentication backends
 	// to control access to the web ui.

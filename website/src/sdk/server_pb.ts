@@ -126,6 +126,7 @@ export declare namespace InfoRes {
 		clientConfigMtu: number,
 		buildInfo?: buildinfo.BuildInfo.AsObject,
 		mtu: number,
+		clientConfigPersistentKeepalive: number,
 	}
 }
 
@@ -263,6 +264,13 @@ export class InfoRes extends jspb.Message {
 		(jspb.Message as any).setProto3IntField(this, 17, value);
 	}
 
+	getClientConfigPersistentKeepalive(): number {return jspb.Message.getFieldWithDefault(this, 18, 0);
+	}
+
+	setClientConfigPersistentKeepalive(value: number): void {
+		(jspb.Message as any).setProto3IntField(this, 18, value);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		InfoRes.serializeBinaryToWriter(this, writer);
@@ -289,6 +297,7 @@ export class InfoRes extends jspb.Message {
 			clientConfigMtu: this.getClientConfigMtu(),
 			buildInfo: (f = this.getBuildInfo()) && f.toObject(),
 			mtu: this.getMtu(),
+			clientConfigPersistentKeepalive: this.getClientConfigPersistentKeepalive(),
 		};
 	}
 
@@ -360,6 +369,10 @@ export class InfoRes extends jspb.Message {
 		const field17 = message.getMtu();
 		if (field17 != 0) {
 			writer.writeInt32(17, field17);
+		}
+		const field18 = message.getClientConfigPersistentKeepalive();
+		if (field18 != 0) {
+			writer.writeInt32(18, field18);
 		}
 	}
 
@@ -447,6 +460,10 @@ export class InfoRes extends jspb.Message {
 				const field17 = reader.readInt32()
 				message.setMtu(field17);
 				break;
+			case 18:
+				const field18 = reader.readInt32()
+				message.setClientConfigPersistentKeepalive(field18);
+				break;
 			default:
 				reader.skipField();
 				break;
@@ -488,6 +505,7 @@ function InfoResFromObject(obj: InfoRes.AsObject | undefined): InfoRes | undefin
 	message.setClientConfigMtu(obj.clientConfigMtu);
 	message.setBuildInfo(BuildInfoFromObject(obj.buildInfo));
 	message.setMtu(obj.mtu);
+	message.setClientConfigPersistentKeepalive(obj.clientConfigPersistentKeepalive);
 	return message;
 }
 
