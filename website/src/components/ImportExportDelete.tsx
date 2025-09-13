@@ -51,6 +51,9 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
           name: device.name,
           publicKey: device.publicKey,
           presharedKey: device.presharedKey || '',
+          manualIpAssignment: device.manualIpAssignment || false,
+          manualIpv4Address: device.manualIpv4Address || '',
+          manualIpv6Address: device.manualIpv6Address || '',
         });
       }
 
