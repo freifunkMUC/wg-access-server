@@ -83,7 +83,7 @@ export const Devices = observer(
             </Grid>
           </Grid>
           <Grid item xs={12} sm={10} md={10} lg={6}>
-            <AddDevice onAdd={() => this.devices.refresh()} />
+            <AddDevice onAdd={() => this.devices.refresh()} onRefresh={() => this.devices.refresh()} />
           </Grid>
         </Grid>
       );
