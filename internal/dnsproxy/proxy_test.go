@@ -43,7 +43,7 @@ func TestDNSProxy_ServeDNS(t *testing.T) {
 		}
 	})
 	t.Run("Reply over 1500 bytes", func(t *testing.T) {
-		records, err := resolver.LookupTXT(context.Background(), "txtfill1500.go.dnscheck.tools.")
+		records, err := resolver.LookupTXT(context.Background(), "txtfill1500.test.dnscheck.tools.")
 		if err != nil {
 			t.Error(err)
 			return
