@@ -50,7 +50,7 @@ export const DeviceListItem = observer(
               </Avatar>
             }
             action={
-              <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={this.removeDevice}>
+              <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={this.removeDevice} title="Delete Device">
                 <DeleteIcon />
               </IconButton>
             }
