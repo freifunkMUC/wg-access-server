@@ -1,4 +1,4 @@
-FROM node:24.4.1-bookworm AS proto-js
+FROM node:24.8.0-bookworm AS proto-js
 RUN apt-get update && apt-get install -y protobuf-compiler libprotobuf-dev
 WORKDIR /code
 COPY ./website/package.json ./
