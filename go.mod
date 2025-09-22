@@ -1,6 +1,6 @@
 module github.com/freifunkMUC/wg-access-server
 
-go 1.24
+go 1.24.0
 
 toolchain go1.24.3
 
@@ -8,27 +8,27 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-oidc/v3 v3.15.0
-	github.com/docker/docker v28.3.3+incompatible
-	github.com/freifunkMUC/pg-events v0.4.8
-	github.com/freifunkMUC/wg-embed v0.10.8
+	github.com/docker/docker v28.4.0+incompatible
+	github.com/freifunkMUC/pg-events v0.4.9
+	github.com/freifunkMUC/wg-embed v0.10.9
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/sessions v1.4.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/improbable-eng/grpc-web v0.15.0
 	github.com/jinzhu/gorm v1.9.16
-	github.com/miekg/dns v1.1.67
+	github.com/miekg/dns v1.1.68
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/tg123/go-htpasswd v1.2.4
 	github.com/vishvananda/netlink v1.3.1
-	golang.org/x/crypto v0.40.0
-	golang.org/x/oauth2 v0.30.0
+	golang.org/x/crypto v0.42.0
+	golang.org/x/oauth2 v0.31.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10
-	google.golang.org/grpc v1.74.2
-	google.golang.org/protobuf v1.36.6
+	google.golang.org/grpc v1.75.1
+	google.golang.org/protobuf v1.36.9
 	gopkg.in/Knetic/govaluate.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -42,19 +42,18 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/desertbit/timer v1.0.1 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.1 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.2 // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
-	github.com/ishidawataru/sctp v0.0.0-20250708014235-1989182a9425 // indirect
+	github.com/ishidawataru/sctp v0.0.0-20250829011129-4b890084db30 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
-	github.com/josharian/native v1.1.0 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
-	github.com/mattn/go-sqlite3 v1.14.28 // indirect
+	github.com/mattn/go-sqlite3 v1.14.32 // indirect
 	github.com/mdlayher/genetlink v1.3.2 // indirect
-	github.com/mdlayher/netlink v1.7.2 // indirect
+	github.com/mdlayher/netlink v1.8.0 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/moby/sys/atomicwriter v0.1.0 // indirect
 	github.com/moby/sys/sequential v0.6.0 // indirect
@@ -63,15 +62,15 @@ require (
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
-	golang.org/x/mod v0.26.0 // indirect
-	golang.org/x/net v0.42.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
-	golang.org/x/tools v0.35.0 // indirect
+	golang.org/x/mod v0.28.0 // indirect
+	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/tools v0.37.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20250521234502-f333402bd9cb // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250715232539-7130f93afb79 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250908214217-97024824d090 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.1 // indirect

@@ -53,7 +53,7 @@ jobs:
           elif [[ "${GITHUB_REF##*/}" == "master" ]]; then
             echo "TAG_NAME=master" >> $GITHUB_ENV
           fi
-          
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5
