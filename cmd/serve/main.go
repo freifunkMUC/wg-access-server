@@ -18,6 +18,7 @@ import (
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/crypto/bcrypt"
@@ -247,6 +248,8 @@ func (cmd *servecmd) Run() {
 
 	// Health check endpoint
 	router.PathPrefix("/health").Handler(services.HealthEndpoint(deviceManager))
+	// Metrics endpoint
+	router.PathPrefix("/metrics").Handler(promhttp.Handler())
 
 	// Authentication middleware
 	middleware, err := authnz.NewMiddleware(conf.Auth, authnz.ClaimsMiddleware(conf))
