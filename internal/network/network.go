@@ -169,7 +169,7 @@ func configureForwardingv4(options ForwardingOptions) error {
 			}
 		}
 	}
-	
+
 	// And reject everything else
 	if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", options.CIDR, "-j", "REJECT"); err != nil {
 		return errors.Wrap(err, "failed to set ip tables rule")

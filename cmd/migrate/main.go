@@ -3,9 +3,9 @@ package migrate
 import (
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/alecthomas/kingpin/v2"
 )
 
 func Register(app *kingpin.Application) *migratecmd {

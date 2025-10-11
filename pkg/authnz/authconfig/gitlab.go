@@ -16,7 +16,7 @@ type GitlabConfig struct {
 }
 
 func (c *GitlabConfig) Provider() *authruntime.Provider {
-	o := OIDCConfig {
+	o := OIDCConfig{
 		Name:         c.Name,
 		Issuer:       c.BaseURL,
 		ClientID:     c.ClientID,
