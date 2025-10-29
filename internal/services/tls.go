@@ -106,7 +106,7 @@ func LoadTLSCert(certPath, keyPath string) (*tls.Config, error) {
 	// Create TLS config
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
-		MinVersion:  tls.VersionTLS12,
+		MinVersion:   tls.VersionTLS12,
 	}
 
 	return tlsConfig, nil
@@ -118,4 +118,4 @@ func GetDefaultCertPaths() (string, string) {
 	certPath := "wg-access-server.crt"
 	keyPath := "wg-access-server.key"
 	return certPath, keyPath
-} 
+}

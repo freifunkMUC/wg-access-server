@@ -1,8 +1,8 @@
 package buildinfo
 
 import (
-    "strings"
-   _ "embed"
+	_ "embed"
+	"strings"
 )
 
 //go:generate sh get_version.sh
@@ -14,16 +14,16 @@ var VersionRaw string
 var CommitHashRaw string
 
 func Version() string {
-    return strings.TrimSpace(VersionRaw)
+	return strings.TrimSpace(VersionRaw)
 }
 
 func CommitHash() string {
-    return strings.TrimSpace(CommitHashRaw)
+	return strings.TrimSpace(CommitHashRaw)
 }
 
 func ShortCommitHash() string {
-    if 7 < len(CommitHash()) {
-        return CommitHash()[0:7]
-    }
-    return CommitHash()
+	if 7 < len(CommitHash()) {
+		return CommitHash()[0:7]
+	}
+	return CommitHash()
 }

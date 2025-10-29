@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/alecthomas/kingpin/v2"
 
 	"github.com/freifunkMUC/wg-access-server/cmd"
 	"github.com/freifunkMUC/wg-access-server/cmd/migrate"
