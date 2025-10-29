@@ -20,6 +20,7 @@ require (
 	github.com/miekg/dns v1.1.67
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	github.com/tg123/go-htpasswd v1.2.4
@@ -52,7 +53,7 @@ require (
 	github.com/ishidawataru/sctp v0.0.0-20250708014235-1989182a9425 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/josharian/native v1.1.0 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/mattn/go-sqlite3 v1.14.28 // indirect
 	github.com/mdlayher/genetlink v1.3.2 // indirect
@@ -63,7 +64,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.23.2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
