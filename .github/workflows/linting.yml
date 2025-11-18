@@ -24,7 +24,7 @@ jobs: # Docs: <https://git.io/JvxXE>
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with: { fetch-depth: 0 }
 
-      - uses: gacts/gitleaks@c608b17278d480983bd6a26c94ba0a4169decb97 # v1.2.2 # Action page: <https://github.com/zricethezav/gitleaks-action>
+      - uses: gacts/gitleaks@02aceef15e73b088702bc802fa411a6d0021cf88 # v1.2.2 # Action page: <https://github.com/zricethezav/gitleaks-action>
         with:
           config-path: .gitleaks.toml
 
