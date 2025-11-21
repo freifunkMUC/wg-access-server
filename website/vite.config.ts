@@ -7,7 +7,7 @@ import viteTsconfigPaths from 'vite-tsconfig-paths'
 export default defineConfig({
     plugins: [react(), svgr()],
     build: {
-      outDir: "build",
+        outDir: "build",
     },
     server: {
         proxy: {
@@ -28,4 +28,4 @@ export default defineConfig({
             }
         }
     }
-  });
+});
