@@ -5,10 +5,12 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import Avatar from '@mui/material/Avatar';
+import { makeObservable, observable, action, computed } from 'mobx';
 import { observer } from 'mobx-react';
 import React from 'react';
 import { grpc } from '../../Api';
@@ -23,6 +25,20 @@ import { Error } from '../../components/Error';
 
 export const AllDevices = observer(
   class AllDevices extends React.Component {
+    sortBy: keyof Device.AsObject | 'download' | 'upload' | 'connected' = 'lastHandshakeTime';
+
+    sortOrder: 'asc' | 'desc' = 'desc';
+
+    constructor(props: any) {
+      super(props);
+      makeObservable(this, {
+        sortBy: observable,
+        sortOrder: observable,
+        handleRequestSort: action,
+        sortedDevices: computed,
+      });
+    }
+
     users = lazy(async () => {
       try {
         const result = await grpc.users.listUsers({});
@@ -37,19 +53,65 @@ export const AllDevices = observer(
     devices = lazy(async () => {
       try {
         const res = await grpc.devices.listAllDevices({});
-        let deviceList = res.items;
-        deviceList.sort(
-          (d1, d2) =>
-            (d2.lastHandshakeTime ? d2.lastHandshakeTime.seconds : 0) -
-            (d1.lastHandshakeTime ? d1.lastHandshakeTime.seconds : 0),
-        );
-        return deviceList;
+        return res.items;
       } catch (error: any) {
         console.error('An error occurred:', error);
         AppState.loadingError = error.message;
         return null;
       }
     });
+
+    handleRequestSort = (property: keyof Device.AsObject | 'download' | 'upload' | 'connected') => {
+      const isAsc = this.sortBy === property && this.sortOrder === 'asc';
+      this.sortOrder = isAsc ? 'desc' : 'asc';
+      this.sortBy = property;
+    };
+
+    get sortedDevices() {
+      if (!this.devices.current) return [];
+
+      const devices = [...this.devices.current];
+
+      return devices.sort((a, b) => {
+        let aValue: any = (a as any)[this.sortBy];
+        let bValue: any = (b as any)[this.sortBy];
+
+        if (this.sortBy === 'lastHandshakeTime') {
+          aValue = a.lastHandshakeTime ? a.lastHandshakeTime.seconds : 0;
+          bValue = b.lastHandshakeTime ? b.lastHandshakeTime.seconds : 0;
+        } else if (this.sortBy === 'download') {
+          aValue = a.transmitBytes;
+          bValue = b.transmitBytes;
+        } else if (this.sortBy === 'upload') {
+          aValue = a.receiveBytes;
+          bValue = b.receiveBytes;
+        } else if (this.sortBy === 'connected') {
+          aValue = a.connected ? 1 : 0;
+          bValue = b.connected ? 1 : 0;
+        }
+
+        // Handle null/undefined values
+        if (aValue === bValue) return 0;
+        if (aValue === null || aValue === undefined) return this.sortOrder === 'asc' ? 1 : -1;
+        if (bValue === null || bValue === undefined) return this.sortOrder === 'asc' ? -1 : 1;
+
+        // String comparison
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return this.sortOrder === 'asc'
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+        }
+
+        // Default comparison
+        if (bValue < aValue) {
+          return this.sortOrder === 'asc' ? 1 : -1;
+        }
+        if (bValue > aValue) {
+          return this.sortOrder === 'asc' ? -1 : 1;
+        }
+        return 0;
+      });
+    }
 
     deleteUser = async (user: User.AsObject) => {
       if (await confirm('Are you sure you want to delete all devices from ' + user.name + '?')) {
@@ -79,7 +141,7 @@ export const AllDevices = observer(
         return <Error message={AppState.loadingError} />;
       }
       const users = this.users.current;
-      const devices = this.devices.current;
+      const devices = this.sortedDevices;
 
       // show the provider column
       // when there is more than 1 provider in use
@@ -100,14 +162,88 @@ export const AllDevices = observer(
               <TableHead>
                 <TableRow>
                   <TableCell></TableCell>
-                  <TableCell>Owner</TableCell>
-                  {showProviderCol && <TableCell>Auth Provider</TableCell>}
-                  <TableCell>Device</TableCell>
-                  <TableCell>Connected</TableCell>
-                  <TableCell>Local Address</TableCell>
-                  <TableCell>Last Endpoint</TableCell>
-                  <TableCell>Download / Upload</TableCell>
-                  <TableCell>Last Seen</TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={this.sortBy === 'ownerName'}
+                      direction={this.sortBy === 'ownerName' ? this.sortOrder : 'asc'}
+                      onClick={() => this.handleRequestSort('ownerName')}
+                    >
+                      Owner
+                    </TableSortLabel>
+                  </TableCell>
+                  {showProviderCol && (
+                    <TableCell>
+                      <TableSortLabel
+                        active={this.sortBy === 'ownerProvider'}
+                        direction={this.sortBy === 'ownerProvider' ? this.sortOrder : 'asc'}
+                        onClick={() => this.handleRequestSort('ownerProvider')}
+                      >
+                        Auth Provider
+                      </TableSortLabel>
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <TableSortLabel
+                      active={this.sortBy === 'name'}
+                      direction={this.sortBy === 'name' ? this.sortOrder : 'asc'}
+                      onClick={() => this.handleRequestSort('name')}
+                    >
+                      Device
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={this.sortBy === 'connected'}
+                      direction={this.sortBy === 'connected' ? this.sortOrder : 'asc'}
+                      onClick={() => this.handleRequestSort('connected')}
+                    >
+                      Connected
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={this.sortBy === 'address'}
+                      direction={this.sortBy === 'address' ? this.sortOrder : 'asc'}
+                      onClick={() => this.handleRequestSort('address')}
+                    >
+                      Local Address
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={this.sortBy === 'endpoint'}
+                      direction={this.sortBy === 'endpoint' ? this.sortOrder : 'asc'}
+                      onClick={() => this.handleRequestSort('endpoint')}
+                    >
+                      Last Endpoint
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={this.sortBy === 'download'}
+                      direction={this.sortBy === 'download' ? this.sortOrder : 'asc'}
+                      onClick={() => this.handleRequestSort('download')}
+                    >
+                      Download
+                    </TableSortLabel>
+                    {' / '}
+                    <TableSortLabel
+                      active={this.sortBy === 'upload'}
+                      direction={this.sortBy === 'upload' ? this.sortOrder : 'asc'}
+                      onClick={() => this.handleRequestSort('upload')}
+                    >
+                      Upload
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={this.sortBy === 'lastHandshakeTime'}
+                      direction={this.sortBy === 'lastHandshakeTime' ? this.sortOrder : 'asc'}
+                      onClick={() => this.handleRequestSort('lastHandshakeTime')}
+                    >
+                      Last Seen
+                    </TableSortLabel>
+                  </TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
