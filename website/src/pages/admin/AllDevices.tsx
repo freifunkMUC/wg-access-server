@@ -73,8 +73,8 @@ export const AllDevices = observer(
       const devices = [...this.devices.current];
 
       return devices.sort((a, b) => {
-        let aValue: any = a[this.sortBy as keyof Device.AsObject];
-        let bValue: any = b[this.sortBy as keyof Device.AsObject];
+        let aValue: string | number | boolean | undefined | null = a[this.sortBy as keyof Device.AsObject];
+        let bValue: string | number | boolean | undefined | null = b[this.sortBy as keyof Device.AsObject];
 
         if (this.sortBy === 'lastHandshakeTime') {
           aValue = a.lastHandshakeTime ? a.lastHandshakeTime.seconds : 0;
