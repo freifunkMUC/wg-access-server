@@ -10,7 +10,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.15.0
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/freifunkMUC/pg-events v0.4.8
-	github.com/freifunkMUC/wg-embed v0.10.8
+	github.com/freifunkMUC/wg-embed v0.10.9
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/sessions v1.4.0
@@ -49,12 +49,11 @@ require (
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/ishidawataru/sctp v0.0.0-20250708014235-1989182a9425 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
-	github.com/josharian/native v1.1.0 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/mattn/go-sqlite3 v1.14.28 // indirect
 	github.com/mdlayher/genetlink v1.3.2 // indirect
-	github.com/mdlayher/netlink v1.7.2 // indirect
+	github.com/mdlayher/netlink v1.8.0 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/moby/sys/atomicwriter v0.1.0 // indirect
 	github.com/moby/sys/sequential v0.6.0 // indirect
