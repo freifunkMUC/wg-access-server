@@ -23,7 +23,7 @@ type BasicAuthConfig struct {
 
 func (c *BasicAuthConfig) Provider() *authruntime.Provider {
 	return &authruntime.Provider{
-		Type: "Basic",
+		Type: BasicAuthProvider,
 		Name: BasicAuthProvider,
 		Invoke: func(w http.ResponseWriter, r *http.Request, runtime *authruntime.ProviderRuntime) {
 			basicAuthLogin(c, runtime)(w, r)

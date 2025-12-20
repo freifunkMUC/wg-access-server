@@ -26,7 +26,7 @@ func (c *GitlabConfig) Provider() *authruntime.Provider {
 		EmailDomains: c.EmailDomains,
 	}
 	p := o.Provider()
-	p.Type = "Gitlab"
+	p.Type = GitlabAuthProvider
 	p.Name = c.Name
 	p.Branding = authruntime.ProviderBranding{
 		Background: "#fc6d26",

@@ -53,7 +53,7 @@
 	<h2>{{if .Title}}{{.Title}}{{else}}Sign In{{end}}</h2>
 
 	{{range $i, $p := .Providers}}
-		{{if eq $p.Type "Basic"}}
+		{{if eq $p.Type "basic"}}
 			<form autocomplete="off" method="post" action="/signin/{{$i}}">
 				{{if $.Banner}}
 					<div class="banner {{$.Banner.Intent}}">
