@@ -1,9 +1,12 @@
 package authruntime
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/freifunkMUC/wg-access-server/internal/traces"
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
+	"github.com/pkg/errors"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -14,6 +17,13 @@ type Provider struct {
 	Name           string
 	Invoke         func(http.ResponseWriter, *http.Request, *ProviderRuntime)
 	RegisterRoutes func(*mux.Router, *ProviderRuntime) error
+	Branding       ProviderBranding
+}
+
+type ProviderBranding struct {
+	Background string `yaml:"background"`
+	Color      string `yaml:"color"`
+	Icon       string `yaml:"icon"`
 }
 
 type ProviderRuntime struct {
@@ -42,4 +52,23 @@ func (p *ProviderRuntime) Restart(w http.ResponseWriter, r *http.Request) {
 
 func (p *ProviderRuntime) Done(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+func (p *ProviderRuntime) ShowBanner(w http.ResponseWriter, r *http.Request, banner authsession.Banner) {
+	data, err := json.Marshal(banner)
+	if err != nil {
+		traces.Logger(r.Context()).Error(errors.Wrap(err, "failed to serialize banner message"))
+	}
+	authsession.AddFlash(p.store, r, w, "banner", string(data))
+	http.Redirect(w, r, "/signin", http.StatusTemporaryRedirect)
+}
+
+func (p *ProviderRuntime) GetBanner(r *http.Request) (*authsession.Banner, bool) {
+	if v, found := authsession.GetFlash(p.store, r, "banner"); found {
+		banner := &authsession.Banner{}
+		if err := json.Unmarshal([]byte(v), banner); err == nil {
+			return banner, true
+		}
+	}
+	return nil, false
 }

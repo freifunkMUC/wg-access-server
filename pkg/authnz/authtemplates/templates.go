@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
 )
 
 var (
@@ -24,7 +25,9 @@ var (
 )
 
 type LoginPage struct {
+	Title     string
 	Providers []*authruntime.Provider
+	Banner    *authsession.Banner
 }
 
 func RenderLoginPage(w io.Writer, data LoginPage) error {

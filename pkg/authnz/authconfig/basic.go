@@ -23,7 +23,7 @@ type BasicAuthConfig struct {
 
 func (c *BasicAuthConfig) Provider() *authruntime.Provider {
 	return &authruntime.Provider{
-		Type: BasicAuthProvider,
+		Type: "Basic",
 		Name: BasicAuthProvider,
 		Invoke: func(w http.ResponseWriter, r *http.Request, runtime *authruntime.ProviderRuntime) {
 			basicAuthLogin(c, runtime)(w, r)
@@ -33,28 +33,42 @@ func (c *BasicAuthConfig) Provider() *authruntime.Provider {
 
 func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		u, p, ok := r.BasicAuth()
-		if ok {
-			if ok := checkCreds(c.Users, u, p); ok {
-				err := runtime.SetSession(w, r, &authsession.AuthSession{
-					Identity: &authsession.Identity{
-						Provider: BasicAuthProvider,
-						Subject:  u,
-						Name:     u,
-						Email:    "", // basic auth has no email
-					},
-				})
-				if err == nil {
-					runtime.Done(w, r)
-					return
-				}
+		// accept standard basic auth challenges
+		u, p, isBasic := r.BasicAuth()
+
+		if !isBasic {
+			// we'll handle form submissions and direct
+			// browser challenges
+			u = r.FormValue("username")
+			p = r.FormValue("password")
+		}
+
+		if ok := checkCreds(c.Users, u, p); ok {
+			err := runtime.SetSession(w, r, &authsession.AuthSession{
+				Identity: &authsession.Identity{
+					Provider: BasicAuthProvider,
+					Subject:  u,
+					Name:     u,
+					Email:    "", // basic auth has no email
+				},
+			})
+			if err == nil {
+				runtime.Done(w, r)
+				return
 			}
 		}
 
-		// If we're here something went wrong, return StatusUnauthorized
-		w.Header().Set("WWW-Authenticate", `Basic realm="site"`)
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = fmt.Fprintln(w, "Unauthorized")
+		if !isBasic {
+			runtime.ShowBanner(w, r, authsession.Banner{
+				Text:   "Invalid username or password",
+				Intent: "danger",
+			})
+		} else {
+			// challenge browser
+			w.Header().Set("WWW-Authenticate", `Basic realm="site"`)
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = fmt.Fprintln(w, "Unauthorized")
+		}
 	}
 }
 
