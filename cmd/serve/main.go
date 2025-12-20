@@ -134,18 +134,32 @@ func (cmd *servecmd) Run() {
 
 	// WireGuard Server
 	wg := wgembed.NewNoOpInterface()
-	var wgimpl wgembed.WireGuardInterface
 	if conf.WireGuard.Enabled {
 		wgOpts := wgembed.Options{
 			InterfaceName:     conf.WireGuard.Interface,
 			AllowKernelModule: true,
 		}
-		var err error
-		wgimpl, err = wgembed.NewWithOpts(wgOpts)
+		wgimpl, err := wgembed.NewWithOpts(wgOpts)
 		if err != nil {
 			logrus.Fatal(errors.Wrap(err, "failed to create WireGuard interface"))
 		}
-		// Note: We don't use defer here because we need to run PreDown/PostDown scripts
+		// Defer cleanup with PreDown/PostDown scripts
+		defer func() {
+			// Run PreDown script before closing the interface
+			if err := scriptrunner.RunScript(conf.WireGuard.PreDown, "PreDown"); err != nil {
+				logrus.Error(err)
+			}
+
+			// Close the WireGuard interface
+			if err := wgimpl.Close(); err != nil {
+				logrus.Error(errors.Wrap(err, "failed to close WireGuard interface"))
+			}
+
+			// Run PostDown script after closing the interface
+			if err := scriptrunner.RunScript(conf.WireGuard.PostDown, "PostDown"); err != nil {
+				logrus.Error(err)
+			}
+		}()
 		wg = wgimpl
 
 		logrus.Infof("Starting WireGuard on :%d", conf.WireGuard.Port)
@@ -360,24 +374,6 @@ func (cmd *servecmd) Run() {
 		}
 	case err := <-errChan:
 		logrus.Error(err)
-	}
-
-	// Cleanup WireGuard interface with PreDown/PostDown scripts
-	if wgimpl != nil {
-		// Run PreDown script before closing the interface
-		if err := scriptrunner.RunScript(conf.WireGuard.PreDown, "PreDown"); err != nil {
-			logrus.Error(err)
-		}
-
-		// Close the WireGuard interface
-		if err := wgimpl.Close(); err != nil {
-			logrus.Error(errors.Wrap(err, "failed to close WireGuard interface"))
-		}
-
-		// Run PostDown script after closing the interface
-		if err := scriptrunner.RunScript(conf.WireGuard.PostDown, "PostDown"); err != nil {
-			logrus.Error(err)
-		}
 	}
 }
 

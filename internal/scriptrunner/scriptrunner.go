@@ -48,8 +48,18 @@ func ValidateScriptSecurity(scriptPath string) error {
 		return fmt.Errorf("script file must be owned by root (UID 0), found UID %d: %s", stat.Uid, absPath)
 	}
 
-	// Check that others don't have write permission (check the 3rd bit from the right)
+	// Check that the file group is root (GID 0)
+	if stat.Gid != 0 {
+		return fmt.Errorf("script file must be in root group (GID 0), found GID %d: %s", stat.Gid, absPath)
+	}
+
+	// Check that group doesn't have write permission (check the 4th bit from the right)
 	mode := fileInfo.Mode()
+	if mode.Perm()&0020 != 0 {
+		return fmt.Errorf("script file must not be writable by group: %s (permissions: %s)", absPath, mode.Perm().String())
+	}
+
+	// Check that others don't have write permission (check the 3rd bit from the right)
 	if mode.Perm()&0002 != 0 {
 		return fmt.Errorf("script file must not be writable by others: %s (permissions: %s)", absPath, mode.Perm().String())
 	}

@@ -71,6 +71,55 @@ func TestValidateScriptSecurity_OthersWritable(t *testing.T) {
 	}
 }
 
+func TestValidateScriptSecurity_GroupWritable(t *testing.T) {
+	// Create a temporary script file
+	tmpDir := t.TempDir()
+	scriptPath := filepath.Join(tmpDir, "test-script.sh")
+
+	// Create the script with group-writable permissions
+	if err := os.WriteFile(scriptPath, []byte("#!/bin/bash\necho test"), 0770); err != nil {
+		t.Fatalf("Failed to create test script: %v", err)
+	}
+
+	if os.Getuid() == 0 {
+		if err := os.Chown(scriptPath, 0, 0); err != nil {
+			t.Fatalf("Failed to chown script: %v", err)
+		}
+
+		err := ValidateScriptSecurity(scriptPath)
+		if err == nil {
+			t.Error("Expected error for group-writable script")
+		}
+	} else {
+		t.Skip("Skipping test that requires root permissions")
+	}
+}
+
+func TestValidateScriptSecurity_NonRootGroup(t *testing.T) {
+	// Create a temporary script file
+	tmpDir := t.TempDir()
+	scriptPath := filepath.Join(tmpDir, "test-script.sh")
+
+	// Create the script
+	if err := os.WriteFile(scriptPath, []byte("#!/bin/bash\necho test"), 0755); err != nil {
+		t.Fatalf("Failed to create test script: %v", err)
+	}
+
+	if os.Getuid() == 0 {
+		// Set ownership to root user but non-root group (e.g., GID 1000)
+		if err := os.Chown(scriptPath, 0, 1000); err != nil {
+			t.Fatalf("Failed to chown script: %v", err)
+		}
+
+		err := ValidateScriptSecurity(scriptPath)
+		if err == nil {
+			t.Error("Expected error for non-root group")
+		}
+	} else {
+		t.Skip("Skipping test that requires root permissions")
+	}
+}
+
 func TestRunScript_EmptyPath(t *testing.T) {
 	// Empty path should be valid (no script to run)
 	err := RunScript("", "Test")
