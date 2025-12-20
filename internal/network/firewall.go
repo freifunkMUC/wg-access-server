@@ -147,7 +147,7 @@ func (f *nftablesFirewall) configureForwardingNFTablesV6(options ForwardingOptio
 
 func (f *nftablesFirewall) configureForwardingNFTables(family nftables.TableFamily, cidr string, allowedCIDRs []string, gatewayIface string, nat bool, clientIsolation bool) error {
 	tableName := "wg-access-server"
-	
+
 	// Get or create the table
 	table := f.conn.AddTable(&nftables.Table{
 		Family: family,
