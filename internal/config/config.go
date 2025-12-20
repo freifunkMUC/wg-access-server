@@ -76,6 +76,22 @@ type AppConfig struct {
 		// The maximum transmission unit (MTU) used on the server-side.
 		// Empty by default.
 		MTU int `yaml:"mtu"`
+		// Path to a script to run before the WireGuard interface is brought up.
+		// The script file must be owned by root:root and not writable by others.
+		// This option can only be set via the config file.
+		PreUp string `yaml:"preUp"`
+		// Path to a script to run after the WireGuard interface is brought up.
+		// The script file must be owned by root:root and not writable by others.
+		// This option can only be set via the config file.
+		PostUp string `yaml:"postUp"`
+		// Path to a script to run before the WireGuard interface is brought down.
+		// The script file must be owned by root:root and not writable by others.
+		// This option can only be set via the config file.
+		PreDown string `yaml:"preDown"`
+		// Path to a script to run after the WireGuard interface is brought down.
+		// The script file must be owned by root:root and not writable by others.
+		// This option can only be set via the config file.
+		PostDown string `yaml:"postDown"`
 	} `yaml:"wireguard"`
 	// Configure VPN related settings (networking)
 	VPN struct {

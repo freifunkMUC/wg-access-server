@@ -29,6 +29,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/dnsproxy"
 	"github.com/freifunkMUC/wg-access-server/internal/network"
+	"github.com/freifunkMUC/wg-access-server/internal/scriptrunner"
 	"github.com/freifunkMUC/wg-access-server/internal/services"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz"
@@ -133,19 +134,26 @@ func (cmd *servecmd) Run() {
 
 	// WireGuard Server
 	wg := wgembed.NewNoOpInterface()
+	var wgimpl wgembed.WireGuardInterface
 	if conf.WireGuard.Enabled {
 		wgOpts := wgembed.Options{
 			InterfaceName:     conf.WireGuard.Interface,
 			AllowKernelModule: true,
 		}
-		wgimpl, err := wgembed.NewWithOpts(wgOpts)
+		var err error
+		wgimpl, err = wgembed.NewWithOpts(wgOpts)
 		if err != nil {
 			logrus.Fatal(errors.Wrap(err, "failed to create WireGuard interface"))
 		}
-		defer wgimpl.Close()
+		// Note: We don't use defer here because we need to run PreDown/PostDown scripts
 		wg = wgimpl
 
 		logrus.Infof("Starting WireGuard on :%d", conf.WireGuard.Port)
+
+		// Run PreUp script before bringing up the interface
+		if err := scriptrunner.RunScript(conf.WireGuard.PreUp, "PreUp"); err != nil {
+			logrus.Fatal(err)
+		}
 
 		wgconfig := &wgembed.ConfigFile{
 			Interface: wgembed.IfaceConfig{
@@ -177,6 +185,11 @@ func (cmd *servecmd) Run() {
 		if err := network.ConfigureForwarding(options); err != nil {
 			logrus.Error(err)
 			return
+		}
+
+		// Run PostUp script after interface is up and iptables are configured
+		if err := scriptrunner.RunScript(conf.WireGuard.PostUp, "PostUp"); err != nil {
+			logrus.Fatal(err)
 		}
 	}
 
@@ -348,6 +361,24 @@ func (cmd *servecmd) Run() {
 	case err := <-errChan:
 		logrus.Error(err)
 	}
+
+	// Cleanup WireGuard interface with PreDown/PostDown scripts
+	if wgimpl != nil {
+		// Run PreDown script before closing the interface
+		if err := scriptrunner.RunScript(conf.WireGuard.PreDown, "PreDown"); err != nil {
+			logrus.Error(err)
+		}
+
+		// Close the WireGuard interface
+		if err := wgimpl.Close(); err != nil {
+			logrus.Error(errors.Wrap(err, "failed to close WireGuard interface"))
+		}
+
+		// Run PostDown script after closing the interface
+		if err := scriptrunner.RunScript(conf.WireGuard.PostDown, "PostDown"); err != nil {
+			logrus.Error(err)
+		}
+	}
 }
 
 // ReadConfig reads the config file from disk if specified and overrides any env vars or cmdline options
@@ -428,6 +459,20 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	}
 	if len(cmd.AppConfig.ClientConfig.DNSServers) == 1 {
 		cmd.AppConfig.ClientConfig.DNSServers = splitByCommaAndTrim(cmd.AppConfig.ClientConfig.DNSServers[0])
+	}
+
+	// Validate script security for Pre/Post Up/Down scripts
+	if err := scriptrunner.ValidateScriptSecurity(cmd.AppConfig.WireGuard.PreUp); err != nil {
+		logrus.Fatal(errors.Wrap(err, "PreUp script security validation failed"))
+	}
+	if err := scriptrunner.ValidateScriptSecurity(cmd.AppConfig.WireGuard.PostUp); err != nil {
+		logrus.Fatal(errors.Wrap(err, "PostUp script security validation failed"))
+	}
+	if err := scriptrunner.ValidateScriptSecurity(cmd.AppConfig.WireGuard.PreDown); err != nil {
+		logrus.Fatal(errors.Wrap(err, "PreDown script security validation failed"))
+	}
+	if err := scriptrunner.ValidateScriptSecurity(cmd.AppConfig.WireGuard.PostDown); err != nil {
+		logrus.Fatal(errors.Wrap(err, "PostDown script security validation failed"))
 	}
 
 	return &cmd.AppConfig
