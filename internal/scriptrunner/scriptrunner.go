@@ -69,7 +69,12 @@ func RunScript(scriptPath string, scriptName string) error {
 		return errors.Wrapf(err, "security validation failed for %s script", scriptName)
 	}
 
-	absPath, _ := filepath.Abs(scriptPath)
+	// Get absolute path for logging and execution
+	absPath, err := filepath.Abs(scriptPath)
+	if err != nil {
+		return errors.Wrapf(err, "failed to resolve absolute path for %s script: %s", scriptName, scriptPath)
+	}
+
 	logrus.Infof("Running %s script: %s", scriptName, absPath)
 
 	// Execute the script
