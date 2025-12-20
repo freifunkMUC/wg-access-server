@@ -203,3 +203,17 @@ func (s *SQLStorage) Ping() error {
 	}
 	return nil
 }
+
+func (s *SQLStorage) AddByteCounts(publicKey string, receiveDelta, transmitDelta int64) error {
+	// Use raw SQL to atomically add deltas to existing values
+	// This avoids race conditions in multi-replica deployments
+	err := s.db.Exec(
+		"UPDATE devices SET receive_bytes = receive_bytes + ?, transmit_bytes = transmit_bytes + ? WHERE public_key = ?",
+		receiveDelta, transmitDelta, publicKey,
+	).Error
+
+	if err != nil {
+		return errors.Wrapf(err, "failed to add byte counts for device with public key %s", publicKey)
+	}
+	return nil
+}
