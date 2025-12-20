@@ -5,12 +5,22 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/freifunkMUC/wg-access-server/internal/storage"
 )
 
 func metadataLoop(d *DeviceManager) {
 	for {
 		syncMetrics(d)
 		time.Sleep(30 * time.Second)
+	}
+}
+
+// updateDeviceMetadata updates the endpoint and last handshake time for a device
+func updateDeviceMetadata(d *DeviceManager, device *storage.Device, endpoint string, lastHandshake time.Time) {
+	device.Endpoint = endpoint
+	device.LastHandshakeTime = &lastHandshake
+	if err := d.SaveDevice(device); err != nil {
+		logrus.Error(errors.Wrap(err, "failed to save device during metadata sync"))
 	}
 }
 
@@ -42,7 +52,6 @@ func syncMetrics(d *DeviceManager) {
 				// Get the last known byte counts for this peer
 				d.peerStatsMutex.Lock()
 				lastStats, exists := d.peerStats[publicKey]
-				
 				if !exists {
 					// First time seeing this peer in this replica
 					// Initialize tracking with current values
@@ -53,11 +62,7 @@ func syncMetrics(d *DeviceManager) {
 					d.peerStatsMutex.Unlock()
 					
 					// Update endpoint and handshake time without changing byte counts
-					device.Endpoint = peer.Endpoint.IP.String()
-					device.LastHandshakeTime = &peer.LastHandshakeTime
-					if err := d.SaveDevice(device); err != nil {
-						logrus.Error(errors.Wrap(err, "failed to save device during metadata sync"))
-					}
+					updateDeviceMetadata(d, device, peer.Endpoint.IP.String(), peer.LastHandshakeTime)
 					continue
 				}
 
@@ -90,11 +95,7 @@ func syncMetrics(d *DeviceManager) {
 				}
 
 				// Update endpoint and handshake time
-				device.Endpoint = peer.Endpoint.IP.String()
-				device.LastHandshakeTime = &peer.LastHandshakeTime
-				if err := d.SaveDevice(device); err != nil {
-					logrus.Error(errors.Wrap(err, "failed to save device during metadata sync"))
-				}
+				updateDeviceMetadata(d, device, peer.Endpoint.IP.String(), peer.LastHandshakeTime)
 			}
 		}
 	}
