@@ -60,7 +60,7 @@ func syncMetrics(d *DeviceManager) {
 						TransmitBytes: currentTx,
 					}
 					d.peerStatsMutex.Unlock()
-					
+
 					// Update endpoint and handshake time without changing byte counts
 					updateDeviceMetadata(d, device, peer.Endpoint.IP.String(), peer.LastHandshakeTime)
 					continue
