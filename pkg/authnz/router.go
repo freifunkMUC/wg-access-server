@@ -77,7 +77,7 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		banner, _ := runtime.GetBanner(r)
+		banner, _ := runtime.GetBanner(w, r)
 		_, _ = fmt.Fprint(w, authtemplates.RenderLoginPage(w, authtemplates.LoginPage{
 			Title:     "Sign In",
 			Providers: providers,

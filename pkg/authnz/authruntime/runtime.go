@@ -63,8 +63,8 @@ func (p *ProviderRuntime) ShowBanner(w http.ResponseWriter, r *http.Request, ban
 	http.Redirect(w, r, "/signin", http.StatusTemporaryRedirect)
 }
 
-func (p *ProviderRuntime) GetBanner(r *http.Request) (*authsession.Banner, bool) {
-	if v, found := authsession.GetFlash(p.store, r, "banner"); found {
+func (p *ProviderRuntime) GetBanner(w http.ResponseWriter, r *http.Request) (*authsession.Banner, bool) {
+	if v, found := authsession.GetFlash(p.store, r, w, "banner"); found {
 		banner := &authsession.Banner{}
 		if err := json.Unmarshal([]byte(v), banner); err == nil {
 			return banner, true

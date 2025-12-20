@@ -60,12 +60,12 @@ func AddFlash(store sessions.Store, r *http.Request, w http.ResponseWriter, key 
 	session.Save(r, w)
 }
 
-func GetFlash(store sessions.Store, r *http.Request, key string) (string, bool) {
+func GetFlash(store sessions.Store, r *http.Request, w http.ResponseWriter, key string) (string, bool) {
 	session, _ := store.Get(r, string(sessionKey))
 	results := session.Flashes(key)
 	if len(results) == 1 {
 		if v, ok := results[0].(string); ok {
-			session.Save(r, nil)
+			session.Save(r, w)
 			return v, true
 		}
 	}
