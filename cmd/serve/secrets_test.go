@@ -48,13 +48,13 @@ func TestReadSecretFromFile(t *testing.T) {
 			name:        "empty file",
 			content:     "",
 			expected:    "",
-			shouldError: false,
+			shouldError: true,
 		},
 		{
 			name:        "only whitespace",
 			content:     "  \n\t\n  ",
 			expected:    "",
-			shouldError: false,
+			shouldError: true,
 		},
 	}
 

@@ -359,14 +359,19 @@ func readSecretFromFile(filePath string) (string, error) {
 	if filePath == "" {
 		return "", nil
 	}
-	
+
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to read secret from file: %s", filePath)
 	}
-	
+
 	// Trim whitespace including newlines which are common in Docker secrets
-	return strings.TrimSpace(string(content)), nil
+	secret := strings.TrimSpace(string(content))
+	if secret == "" {
+		return "", errors.Errorf("secret file is empty: %s", filePath)
+	}
+
+	return secret, nil
 }
 
 // ReadConfig reads the config file from disk if specified and overrides any env vars or cmdline options
@@ -385,9 +390,7 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		if password != "" {
-			cmd.AppConfig.AdminPassword = password
-		}
+		cmd.AppConfig.AdminPassword = password
 	}
 
 	if cmd.WireguardPrivateKeyFile != "" {
@@ -395,9 +398,7 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		if privateKey != "" {
-			cmd.AppConfig.WireGuard.PrivateKey = privateKey
-		}
+		cmd.AppConfig.WireGuard.PrivateKey = privateKey
 	}
 
 	if cmd.AppConfig.LogLevel != "" {
