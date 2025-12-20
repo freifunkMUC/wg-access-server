@@ -24,6 +24,17 @@ func updateDeviceMetadata(d *DeviceManager, device *storage.Device, endpoint str
 	}
 }
 
+// handleCounterReset checks if a delta is negative (indicating a counter reset)
+// and returns the appropriate delta value to use. If negative, logs a warning
+// and returns the current value as the delta.
+func handleCounterReset(delta, currentValue int64, counterType, publicKey string) int64 {
+	if delta < 0 {
+		logrus.Warnf("%s byte counter reset detected for peer %s, using current value as delta", counterType, publicKey)
+		return currentValue
+	}
+	return delta
+}
+
 func syncMetrics(d *DeviceManager) {
 	logrus.Debug("Metadata sync executing")
 
@@ -71,23 +82,17 @@ func syncMetrics(d *DeviceManager) {
 				txDelta := currentTx - lastStats.TransmitBytes
 
 				// Handle potential counter resets (e.g., if WireGuard interface was restarted)
-				// If delta is negative, it means the counter was reset, so use the current value as delta
-				if rxDelta < 0 {
-					logrus.Warnf("Receive byte counter reset detected for peer %s, using current value as delta", publicKey)
-					rxDelta = currentRx
-				}
-				if txDelta < 0 {
-					logrus.Warnf("Transmit byte counter reset detected for peer %s, using current value as delta", publicKey)
-					txDelta = currentTx
-				}
+				rxDelta = handleCounterReset(rxDelta, currentRx, "Receive", publicKey)
+				txDelta = handleCounterReset(txDelta, currentTx, "Transmit", publicKey)
 
 				// Update tracking with current values
 				lastStats.ReceiveBytes = currentRx
 				lastStats.TransmitBytes = currentTx
 				d.peerStatsMutex.Unlock()
 
-				// Only update database if there's a change
-				if rxDelta > 0 || txDelta > 0 {
+				// Only update database if there's data transfer
+				hasDataTransfer := rxDelta > 0 || txDelta > 0
+				if hasDataTransfer {
 					// Add the delta to the database atomically
 					if err := d.storage.AddByteCounts(publicKey, rxDelta, txDelta); err != nil {
 						logrus.Error(errors.Wrap(err, "failed to add byte counts during metadata sync"))
