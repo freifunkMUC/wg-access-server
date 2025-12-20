@@ -90,9 +90,9 @@ func syncMetrics(d *DeviceManager) {
 				lastStats.TransmitBytes = currentTx
 				d.peerStatsMutex.Unlock()
 
-				// Only update database if there's data transfer
-				hasDataTransfer := rxDelta > 0 || txDelta > 0
-				if hasDataTransfer {
+				// Only update database if there are positive deltas
+				shouldUpdateDatabase := rxDelta > 0 || txDelta > 0
+				if shouldUpdateDatabase {
 					// Add the delta to the database atomically
 					if err := d.storage.AddByteCounts(publicKey, rxDelta, txDelta); err != nil {
 						logrus.Error(errors.Wrap(err, "failed to add byte counts during metadata sync"))
