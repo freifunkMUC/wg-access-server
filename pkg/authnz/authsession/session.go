@@ -55,17 +55,28 @@ func SetSession(store sessions.Store, r *http.Request, w http.ResponseWriter, s 
 }
 
 func AddFlash(store sessions.Store, r *http.Request, w http.ResponseWriter, key string, value string) {
-	session, _ := store.Get(r, string(sessionKey))
+	session, err := store.Get(r, string(sessionKey))
+	if err != nil {
+		logrus.Warn(errors.Wrap(err, "failed to get session for flash message"))
+		return
+	}
 	session.AddFlash(value, key)
-	session.Save(r, w)
+	if err := session.Save(r, w); err != nil {
+		logrus.Warn(errors.Wrap(err, "failed to save flash message"))
+	}
 }
 
 func GetFlash(store sessions.Store, r *http.Request, w http.ResponseWriter, key string) (string, bool) {
-	session, _ := store.Get(r, string(sessionKey))
+	session, err := store.Get(r, string(sessionKey))
+	if err != nil {
+		return "", false
+	}
 	results := session.Flashes(key)
-	if len(results) == 1 {
+	if len(results) >= 1 {
 		if v, ok := results[0].(string); ok {
-			session.Save(r, w)
+			if err := session.Save(r, w); err != nil {
+				logrus.Warn(errors.Wrap(err, "failed to save session after getting flash"))
+			}
 			return v, true
 		}
 	}

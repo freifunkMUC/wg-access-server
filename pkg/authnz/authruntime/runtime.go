@@ -58,6 +58,7 @@ func (p *ProviderRuntime) ShowBanner(w http.ResponseWriter, r *http.Request, ban
 	data, err := json.Marshal(banner)
 	if err != nil {
 		traces.Logger(r.Context()).Error(errors.Wrap(err, "failed to serialize banner message"))
+		return
 	}
 	authsession.AddFlash(p.store, r, w, "banner", string(data))
 	http.Redirect(w, r, "/signin", http.StatusTemporaryRedirect)
