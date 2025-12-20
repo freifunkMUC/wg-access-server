@@ -41,6 +41,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("config", "Path to a wg-access-server config file").Envar("WG_CONFIG").StringVar(&cmd.ConfigFilePath)
 	cli.Flag("admin-username", "Admin username (defaults to admin)").Envar("WG_ADMIN_USERNAME").Default("admin").StringVar(&cmd.AppConfig.AdminUsername)
 	cli.Flag("admin-password", "Admin password (provide plaintext, stored in-memory only)").Envar("WG_ADMIN_PASSWORD").StringVar(&cmd.AppConfig.AdminPassword)
+	cli.Flag("admin-password-file", "Path to a file containing the admin password (Docker secrets support)").Envar("WG_ADMIN_PASSWORD_FILE").StringVar(&cmd.AdminPasswordFile)
 	cli.Flag("port", "The port that the web ui server will listen on").Envar("WG_PORT").Default("8000").IntVar(&cmd.AppConfig.Port)
 	cli.Flag("external-host", "The external origin of the server (e.g. https://mydomain.com)").Envar("WG_EXTERNAL_HOST").StringVar(&cmd.AppConfig.ExternalHost)
 	cli.Flag("storage", "The storage backend connection string").Envar("WG_STORAGE").Default("memory://").StringVar(&cmd.AppConfig.Storage)
@@ -57,6 +58,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("wireguard-enabled", "Enable or disable the embedded wireguard server (useful for development)").Envar("WG_WIREGUARD_ENABLED").Default("true").BoolVar(&cmd.AppConfig.WireGuard.Enabled)
 	cli.Flag("wireguard-interface", "Set the wireguard interface name").Default("wg0").Envar("WG_WIREGUARD_INTERFACE").StringVar(&cmd.AppConfig.WireGuard.Interface)
 	cli.Flag("wireguard-private-key", "Wireguard private key").Envar("WG_WIREGUARD_PRIVATE_KEY").StringVar(&cmd.AppConfig.WireGuard.PrivateKey)
+	cli.Flag("wireguard-private-key-file", "Path to a file containing the Wireguard private key (Docker secrets support)").Envar("WG_WIREGUARD_PRIVATE_KEY_FILE").StringVar(&cmd.WireguardPrivateKeyFile)
 	cli.Flag("wireguard-port", "The port that the Wireguard server will listen on").Envar("WG_WIREGUARD_PORT").Default("51820").IntVar(&cmd.AppConfig.WireGuard.Port)
 	cli.Flag("wireguard-mtu", "The maximum transmission unit (MTU) to be used on the server-side interface.").Envar("WG_WIREGUARD_MTU").Default("1420").IntVar(&cmd.AppConfig.WireGuard.MTU)
 	cli.Flag("vpn-allowed-ips", "A list of networks that VPN clients will be allowed to connect to via the VPN").Envar("WG_VPN_ALLOWED_IPS").Default("0.0.0.0/0", "::/0").StringsVar(&cmd.AppConfig.VPN.AllowedIPs)
@@ -78,8 +80,10 @@ func Register(app *kingpin.Application) *servecmd {
 }
 
 type servecmd struct {
-	ConfigFilePath string
-	AppConfig      config.AppConfig
+	ConfigFilePath          string
+	AdminPasswordFile       string
+	WireguardPrivateKeyFile string
+	AppConfig               config.AppConfig
 }
 
 func (cmd *servecmd) Name() string {
@@ -350,6 +354,21 @@ func (cmd *servecmd) Run() {
 	}
 }
 
+// readSecretFromFile reads a secret from a file and trims whitespace
+func readSecretFromFile(filePath string) (string, error) {
+	if filePath == "" {
+		return "", nil
+	}
+	
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to read secret from file: %s", filePath)
+	}
+	
+	// Trim whitespace including newlines which are common in Docker secrets
+	return strings.TrimSpace(string(content)), nil
+}
+
 // ReadConfig reads the config file from disk if specified and overrides any env vars or cmdline options
 func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	if cmd.ConfigFilePath != "" {
@@ -357,6 +376,27 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 			if err := yaml.Unmarshal(b, &cmd.AppConfig); err != nil {
 				logrus.Fatal(errors.Wrap(err, "failed to bind configuration file"))
 			}
+		}
+	}
+
+	// Read secrets from files if specified (Docker secrets support)
+	if cmd.AdminPasswordFile != "" {
+		password, err := readSecretFromFile(cmd.AdminPasswordFile)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		if password != "" {
+			cmd.AppConfig.AdminPassword = password
+		}
+	}
+
+	if cmd.WireguardPrivateKeyFile != "" {
+		privateKey, err := readSecretFromFile(cmd.WireguardPrivateKeyFile)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		if privateKey != "" {
+			cmd.AppConfig.WireGuard.PrivateKey = privateKey
 		}
 	}
 
