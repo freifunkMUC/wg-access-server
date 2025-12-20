@@ -419,7 +419,8 @@ func (f *nftablesFirewall) configureForwardingNFTables(family nftables.TableFami
 				&expr.Cmp{
 					Op:       expr.CmpOpEq,
 					Register: 1,
-					Data:     []byte(gatewayIface + "\x00"),
+					// Interface names in nftables must be null-terminated strings
+					Data: []byte(gatewayIface + "\x00"),
 				},
 				// Masquerade
 				&expr.Masq{},

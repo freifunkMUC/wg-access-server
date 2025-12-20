@@ -37,6 +37,8 @@ func parseCIDR(cidr string) (*ipNet, error) {
 }
 
 // ipSourceOffset returns the byte offset of the source IP address in the IP header
+// IPv4: offset 12 (RFC 791 - Internet Protocol, Section 3.1)
+// IPv6: offset 8 (RFC 2460 - Internet Protocol, Version 6 Specification, Section 3)
 func ipSourceOffset(family nftables.TableFamily) uint32 {
 	if family == nftables.TableFamilyIPv4 {
 		return 12 // IPv4 source address offset
@@ -45,6 +47,8 @@ func ipSourceOffset(family nftables.TableFamily) uint32 {
 }
 
 // ipDestOffset returns the byte offset of the destination IP address in the IP header
+// IPv4: offset 16 (RFC 791 - Internet Protocol, Section 3.1)
+// IPv6: offset 24 (RFC 2460 - Internet Protocol, Version 6 Specification, Section 3)
 func ipDestOffset(family nftables.TableFamily) uint32 {
 	if family == nftables.TableFamilyIPv4 {
 		return 16 // IPv4 destination address offset
@@ -53,6 +57,8 @@ func ipDestOffset(family nftables.TableFamily) uint32 {
 }
 
 // ipAddrLen returns the length of an IP address for the given family
+// IPv4: 4 bytes (32 bits)
+// IPv6: 16 bytes (128 bits)
 func ipAddrLen(family nftables.TableFamily) uint32 {
 	if family == nftables.TableFamilyIPv4 {
 		return 4 // IPv4 address length
