@@ -1,16 +1,108 @@
 {{/*gotype: github.com/freifunkMUC/wg-access-server/pkg/authnz/authtemplates.LoginPage*/ -}}
 {{- define "body" -}}
+<style>
+	.banner {
+		padding: 0.75rem;
+		font-size: 0.9rem;
+		margin-bottom: 1rem;
+		border-radius: 8px;
+		text-align: center;
+	}
+
+	.banner.danger {
+		background: #dc3545;
+		color: white;
+	}
+
+	.form button {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.form button img {
+		position: absolute;
+		left: 0.75rem;
+		height: 1.125rem;
+		width: 1.125rem;
+	}
+
+	.form hr {
+		position: relative;
+		width: 55%;
+		margin: 1.5rem auto;
+		height: 1px;
+		border: none;
+		background-color: #e0e0e0;
+	}
+
+	.form hr:after {
+		content: "";
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
+		width: 6px;
+		height: 6px;
+		background-color: #e0e0e0;
+		border-radius: 50%;
+	}
+</style>
 <section class="form">
-	<h2>Sign In</h2>
+	<h2>{{if .Title}}{{.Title}}{{else}}Sign In{{end}}</h2>
 
 	{{range $i, $p := .Providers}}
-	<a href="/signin/{{$i}}">
-		{{ if ne $p.Name $p.Type }}
-			<button>{{$p.Name}} ({{$p.Type}})</button>
-		{{ else }}
-			<button>{{$p.Type}}</button>
-		{{ end }}
-	</a>
+		{{if eq $p.Type "basic"}}
+			<form autocomplete="off" method="post" action="/signin/{{$i}}">
+				{{if $.Banner}}
+					<div class="banner {{$.Banner.Intent}}">
+						{{$.Banner.Text}}
+					</div>
+				{{end}}
+				<div>
+					<label for="username">Username</label>
+					<input id="username" name="username" placeholder="Username" type="text"></input>
+				</div>
+				<div>
+					<label for="password">Password</label>
+					<input id="password" name="password" placeholder="Password" type="password"></input>
+				</div>
+				<button id="submit">Sign in</button>
+			</form>
+
+			{{ $length := len $.Providers }}
+			{{ if gt $length 1 }}
+				<hr />
+			{{end}}
+
+		{{else}}
+
+			<a href="/signin/{{$i}}">
+				<button
+					style="
+						{{if .Branding.Background}}
+							background: {{.Branding.Background}};
+						{{end}}
+					"
+				>
+					{{if .Branding.Icon}}
+						<img src="{{.Branding.Icon}}" />
+					{{end}}
+					<span
+						style="
+							{{if .Branding.Color}}
+								color: {{.Branding.Color}};
+							{{else}}
+								color: white;
+							{{end}}
+						"
+					>
+						{{$p.Name}}
+					</span>
+				</button>
+			</a>
+		{{end}}
 	{{end}}
 
 </section>

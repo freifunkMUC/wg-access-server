@@ -15,6 +15,11 @@ type AuthSession struct {
 	Identity *Identity
 }
 
+type Banner struct {
+	Text   string
+	Intent string
+}
+
 type authSessionKey string
 
 var sessionKey authSessionKey = "auth-session"
@@ -47,6 +52,35 @@ func SetSession(store sessions.Store, r *http.Request, w http.ResponseWriter, s 
 	}
 
 	return nil
+}
+
+func AddFlash(store sessions.Store, r *http.Request, w http.ResponseWriter, key string, value string) {
+	session, err := store.Get(r, string(sessionKey))
+	if err != nil {
+		logrus.Warn(errors.Wrap(err, "failed to get session for flash message"))
+		return
+	}
+	session.AddFlash(value, key)
+	if err := session.Save(r, w); err != nil {
+		logrus.Warn(errors.Wrap(err, "failed to save flash message"))
+	}
+}
+
+func GetFlash(store sessions.Store, r *http.Request, w http.ResponseWriter, key string) (string, bool) {
+	session, err := store.Get(r, string(sessionKey))
+	if err != nil {
+		return "", false
+	}
+	results := session.Flashes(key)
+	if len(results) >= 1 {
+		if v, ok := results[0].(string); ok {
+			if err := session.Save(r, w); err != nil {
+				logrus.Warn(errors.Wrap(err, "failed to save session after getting flash"))
+			}
+			return v, true
+		}
+	}
+	return "", false
 }
 
 func ClearSession(store sessions.Store, r *http.Request, w http.ResponseWriter) error {
