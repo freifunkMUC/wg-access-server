@@ -248,6 +248,12 @@ func (cmd *servecmd) Run() {
 	// Health check endpoint
 	router.PathPrefix("/health").Handler(services.HealthEndpoint(deviceManager))
 
+	// Prometheus metrics endpoint (public, no auth)
+	router.Path("/metrics").Handler(services.MetricsHandler(&services.MetricsDeps{
+		Config:        conf,
+		DeviceManager: deviceManager,
+	}))
+
 	// Authentication middleware
 	middleware, err := authnz.NewMiddleware(conf.Auth, authnz.ClaimsMiddleware(conf))
 	if err != nil {
