@@ -3,3 +3,5 @@ cfb8cf835e7c8a2141d39b5c685868f82b91d2f0:demo.sh:generic-api-key:24
 ae1212d15d512e0f9d446cbdf8e4b87abeb3accf:config-demo.yaml:generic-api-key:4
 c40f7971c325dbb6e1e3ad847e9cd4cfd76988ec:demo.sh:generic-api-key:24
 1cc84cefd1f2bc396231278bc55232b6f303c9b9:README.md:generic-api-key:48
+8796879f795abd4ac01462434c374bd29725e1eb:cmd/serve/docker_secrets_test.go:generic-api-key:25
+0373c62b00b076a5d11d94cfc51c3db1ad3d6e17:docs/4-auth.md:generic-api-key:47
