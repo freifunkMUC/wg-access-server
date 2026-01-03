@@ -115,6 +115,10 @@ type AppConfig struct {
 		// DisableIPTables configures whether to disable iptables configuration completely
 		// defaults to false
 		DisableIPTables bool `yaml:"disableIPTables"`
+		// FirewallBackend configures which firewall backend to use
+		// options: "auto" (default), "iptables", "nftables"
+		// auto will try nftables first, then fallback to iptables
+		FirewallBackend string `yaml:"firewallBackend"`
 	} `yaml:"vpn"`
 	// Configure the embedded DNS server
 	DNS struct {
