@@ -67,6 +67,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("vpn-nat66-enabled", "Enable or disable NAT of IPv6 traffic leaving through the gateway").Envar("WG_IPV6_NAT_ENABLED").Default("true").BoolVar(&cmd.AppConfig.VPN.NAT66)
 	cli.Flag("vpn-client-isolation", "Block or allow traffic between client devices").Envar("WG_VPN_CLIENT_ISOLATION").Default("false").BoolVar(&cmd.AppConfig.VPN.ClientIsolation)
 	cli.Flag("vpn-disable-iptables", "Disable iptables configuration completely").Envar("WG_VPN_DISABLE_IPTABLES").Default("false").BoolVar(&cmd.AppConfig.VPN.DisableIPTables)
+	cli.Flag("vpn-firewall-backend", "Firewall backend to use (auto, iptables, nftables)").Envar("WG_VPN_FIREWALL_BACKEND").Default("auto").StringVar(&cmd.AppConfig.VPN.FirewallBackend)
 	cli.Flag("dns-enabled", "Enable or disable the embedded dns proxy server (useful for development)").Envar("WG_DNS_ENABLED").Default("true").BoolVar(&cmd.AppConfig.DNS.Enabled)
 	cli.Flag("dns-upstream", "An upstream DNS server to proxy DNS traffic to. Defaults to resolvconf with Cloudflare DNS as fallback").Envar("WG_DNS_UPSTREAM").StringsVar(&cmd.AppConfig.DNS.Upstream)
 	cli.Flag("dns-domain", "A domain to serve configured device names authoritatively").Envar("WG_DNS_DOMAIN").StringVar(&cmd.AppConfig.DNS.Domain)
@@ -172,6 +173,7 @@ func (cmd *servecmd) Run() {
 			ClientIsolation: conf.VPN.ClientIsolation,
 			AllowedIPs:      conf.VPN.AllowedIPs,
 			DisableIPTables: conf.VPN.DisableIPTables,
+			FirewallBackend: network.FirewallBackend(conf.VPN.FirewallBackend),
 		}
 
 		if err := network.ConfigureForwarding(options); err != nil {

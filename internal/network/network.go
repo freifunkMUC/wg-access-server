@@ -1,7 +1,6 @@
 package network
 
 import (
-	"net"
 	"net/netip"
 	"strings"
 
@@ -76,6 +75,7 @@ type ForwardingOptions struct {
 	allowedIPv4s    []string
 	allowedIPv6s    []string
 	DisableIPTables bool
+	FirewallBackend FirewallBackend
 }
 
 func ConfigureForwarding(options ForwardingOptions) error {
@@ -84,40 +84,14 @@ func ConfigureForwarding(options ForwardingOptions) error {
 		return nil
 	}
 
-	// Networking configuration (iptables) configuration
-	// to ensure that traffic from clients of the WireGuard interface
-	// is sent to the provided network interface
-	allowedIPv4s := make([]string, 0, len(options.AllowedIPs)/2)
-	allowedIPv6s := make([]string, 0, len(options.AllowedIPs)/2)
+	// Create firewall instance based on backend preference
+	fw, err := NewFirewall(options.FirewallBackend)
+	if err != nil {
+		return errors.Wrap(err, "failed to initialize firewall")
+	}
 
-	for _, allowedCIDR := range options.AllowedIPs {
-		parsedAddress, parsedNetwork, err := net.ParseCIDR(allowedCIDR)
-		if err != nil {
-			return errors.Wrap(err, "invalid cidr in AllowedIPs")
-		}
-		if as4 := parsedAddress.To4(); as4 != nil {
-			// Handle IPv4-mapped IPv6 addresses, if they go into ip6tables they don't get hit
-			// and go-iptables can't convert them (whereas commandline iptables can).
-			parsedNetwork.IP = as4
-			allowedIPv4s = append(allowedIPv4s, parsedNetwork.String())
-		} else {
-			allowedIPv6s = append(allowedIPv6s, parsedNetwork.String())
-		}
-	}
-	options.allowedIPv4s = allowedIPv4s
-	options.allowedIPv6s = allowedIPv6s
-
-	if options.CIDR != "" {
-		if err := configureForwardingv4(options); err != nil {
-			return err
-		}
-	}
-	if options.CIDRv6 != "" {
-		if err := configureForwardingv6(options); err != nil {
-			return err
-		}
-	}
-	return nil
+	// Configure forwarding rules using the firewall backend
+	return fw.ConfigureForwarding(options)
 }
 
 func configureForwardingv4(options ForwardingOptions) error {
