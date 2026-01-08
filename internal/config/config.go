@@ -36,9 +36,9 @@ type AppConfig struct {
 	// Supports memory:// postgresql:// mysql:// sqlite3://
 	// Defaults to memory://
 	Storage string `yaml:"storage"`
-	// DisableMetadata allows you to turn off collection of device
+	// EnableMetadata allows you to turn on collection of device
 	// metadata including last handshake time & rx/tx bytes
-	DisableMetadata bool `yaml:"disableMetadata"`
+	EnableMetadata bool `yaml:"enableMetadata"`
 	// EnableInactiveDeviceDeletion allows you to delete inactive devices
 	// automatically after a time duration defined by InactiveDeviceGracePeriod
 	EnableInactiveDeviceDeletion bool `yaml:"enableInactiveDeviceDeletion"`

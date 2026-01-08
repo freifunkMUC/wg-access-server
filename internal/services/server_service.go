@@ -63,7 +63,7 @@ func (s *ServerService) Info(ctx context.Context, req *proto.InfoReq) (*proto.In
 		Port:      int32(s.Config.WireGuard.Port),
 		// TODO IPv6 what is HostVpnIp used for, do we need HostVpnIpv6 as well?
 		HostVpnIp:                       hostVPNIP,
-		MetadataEnabled:                 !s.Config.DisableMetadata,
+		MetadataEnabled:                 s.Config.EnableMetadata,
 		InactiveDeviceDeletionEnabled:   s.Config.EnableInactiveDeviceDeletion,
 		InactiveDeviceGracePeriod:       DurationToDurationpb(&s.Config.InactiveDeviceGracePeriod),
 		IsAdmin:                         user.Claims.IsAdmin(),
