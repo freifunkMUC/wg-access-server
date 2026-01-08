@@ -44,7 +44,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("port", "The port that the web ui server will listen on").Envar("WG_PORT").Default("8000").IntVar(&cmd.AppConfig.Port)
 	cli.Flag("external-host", "The external origin of the server (e.g. https://mydomain.com)").Envar("WG_EXTERNAL_HOST").StringVar(&cmd.AppConfig.ExternalHost)
 	cli.Flag("storage", "The storage backend connection string").Envar("WG_STORAGE").Default("memory://").StringVar(&cmd.AppConfig.Storage)
-	cli.Flag("disable-metadata", "Disable metadata collection (i.e. metrics)").Envar("WG_DISABLE_METADATA").Default("false").BoolVar(&cmd.AppConfig.DisableMetadata)
+	cli.Flag("enable-metadata", "Enable metadata collection (i.e. metrics)").Envar("WG_ENABLE_METADATA").Default("false").BoolVar(&cmd.AppConfig.EnableMetadata)
 	cli.Flag("enable-inactive-device-deletion", "Enable inactive device deletion").Envar("WG_ENABLE_INACTIVE_DEVICE_DELETION").Default("false").BoolVar(&cmd.AppConfig.EnableInactiveDeviceDeletion)
 	cli.Flag("inactive-device-grace-period", "Duration after inactive device are deleted").Envar("WG_INACTIVE_DEVICE_GRACE_PERIOD").Default((1 * config.Year).String()).DurationVar(&cmd.AppConfig.InactiveDeviceGracePeriod)
 	cli.Flag("filename", "The configuration filename (e.g. WireGuard-Home)").Envar("WG_FILENAME").StringVar(&cmd.AppConfig.Filename)
@@ -236,7 +236,7 @@ func (cmd *servecmd) Run() {
 	}
 
 	// Services
-	if err := deviceManager.StartSync(conf.DisableMetadata, conf.EnableInactiveDeviceDeletion, conf.InactiveDeviceGracePeriod); err != nil {
+	if err := deviceManager.StartSync(conf.EnableMetadata, conf.EnableInactiveDeviceDeletion, conf.InactiveDeviceGracePeriod); err != nil {
 		logrus.Error(errors.Wrap(err, "failed to sync"))
 		return
 	}
@@ -372,7 +372,7 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		}
 	}
 
-	if cmd.AppConfig.DisableMetadata {
+	if !cmd.AppConfig.EnableMetadata {
 		logrus.Info("Metadata collection has been disabled. No metrics or device connectivity information will be recorded or shown")
 	}
 

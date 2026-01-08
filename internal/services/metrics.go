@@ -18,7 +18,7 @@ type MetricsDeps struct {
 }
 
 // MetricsHandler returns an http.Handler that exposes Prometheus metrics.
-// It honors DisableMetadata by skipping device-specific metrics when disabled,
+// It honors EnableMetadata by including device-specific metrics when enabled,
 // but still exposes basic process/go/build metrics.
 func MetricsHandler(deps *MetricsDeps) http.Handler {
     reg := prometheus.NewRegistry()
@@ -56,8 +56,8 @@ func MetricsHandler(deps *MetricsDeps) http.Handler {
     })
     reg.MustRegister(up)
 
-    // Device-related metrics (skipped when metadata disabled)
-    if deps.DeviceManager != nil && !deps.Config.DisableMetadata {
+    // Device-related metrics (included when metadata enabled)
+    if deps.DeviceManager != nil && deps.Config.EnableMetadata {
         // Total devices stored
         devicesTotal := prometheus.NewGaugeFunc(prometheus.GaugeOpts{
             Namespace: "wg_access_server",
