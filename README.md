@@ -135,7 +135,7 @@ See the [Releases section](https://github.com/freifunkMUC/wg-access-server/relea
   - `wg_access_server_devices_bytes_received_total`: sum of received bytes across devices
   - `wg_access_server_devices_bytes_transmitted_total`: sum of transmitted bytes across devices
 
-If `DisableMetadata` is enabled, device-specific metrics are omitted, but basic metrics remain available.
+If `EnableMetadata` is enabled, device-specific metrics are included in the output.
 
 The software consists of a Golang server and a React app.
 
