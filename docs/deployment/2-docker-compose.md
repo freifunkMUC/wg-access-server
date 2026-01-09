@@ -187,3 +187,111 @@ volumes:
   wg-access-server-data:
     driver: local
 ```
+
+## Using Docker Secrets
+
+Docker Compose and Docker Swarm support Docker secrets for securely managing sensitive data. Here's how to use Docker secrets with wg-access-server:
+
+### Docker Compose with Secrets
+
+```yaml
+version: "3.0"
+services:
+  wg-access-server:
+    image: ghcr.io/freifunkmuc/wg-access-server:latest
+    container_name: wg-access-server
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: 0
+      net.ipv6.conf.all.forwarding: 1
+    volumes:
+      - "wg-access-server-data:/data"
+    environment:
+      - "WG_ADMIN_PASSWORD_FILE=/run/secrets/wg_admin_password"
+      - "WG_WIREGUARD_PRIVATE_KEY_FILE=/run/secrets/wg_private_key"
+    ports:
+      - "8000:8000/tcp"
+      - "8443:8443/tcp"
+      - "51820:51820/udp"
+    devices:
+      - "/dev/net/tun:/dev/net/tun"
+    secrets:
+      - wg_admin_password
+      - wg_private_key
+
+secrets:
+  wg_admin_password:
+    file: ./secrets/admin_password.txt
+  wg_private_key:
+    file: ./secrets/wg_private_key.txt
+
+volumes:
+  wg-access-server-data:
+    driver: local
+```
+
+Before running the above compose file, create the secret files:
+
+```bash
+mkdir -p secrets
+echo "your-secure-password" > secrets/admin_password.txt
+wg genkey > secrets/wg_private_key.txt
+chmod 600 secrets/*.txt
+```
+
+### Docker Stack (Swarm Mode)
+
+For Docker Swarm deployments, create the secrets first:
+
+```bash
+# Create secrets in Swarm
+echo "your-secure-password" | docker secret create wg_admin_password -
+wg genkey | docker secret create wg_private_key -
+```
+
+Then use this stack file:
+
+```yaml
+version: "3.0"
+services:
+  wg-access-server:
+    image: ghcr.io/freifunkmuc/wg-access-server:latest
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: 0
+      net.ipv6.conf.all.forwarding: 1
+    volumes:
+      - "wg-access-server-data:/data"
+    environment:
+      - "WG_ADMIN_PASSWORD_FILE=/run/secrets/wg_admin_password"
+      - "WG_WIREGUARD_PRIVATE_KEY_FILE=/run/secrets/wg_private_key"
+    ports:
+      - "8000:8000/tcp"
+      - "8443:8443/tcp"
+      - "51820:51820/udp"
+    devices:
+      - "/dev/net/tun:/dev/net/tun"
+    secrets:
+      - wg_admin_password
+      - wg_private_key
+
+secrets:
+  wg_admin_password:
+    external: true
+  wg_private_key:
+    external: true
+
+volumes:
+  wg-access-server-data:
+    driver: local
+```
+
+Deploy the stack:
+
+```bash
+docker stack deploy -c docker-compose.yml wg-access-server
+```
+
+**Note:** When using `WG_ADMIN_PASSWORD_FILE` or `WG_WIREGUARD_PRIVATE_KEY_FILE`, they take precedence over `WG_ADMIN_PASSWORD` and `WG_WIREGUARD_PRIVATE_KEY` respectively.
