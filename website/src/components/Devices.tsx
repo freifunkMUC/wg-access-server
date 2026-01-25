@@ -17,6 +17,7 @@ import { AddDeviceSkeleton } from './AddDeviceSkeleton';
 export const Devices = observer(
   class Devices extends React.Component {
     devices: any = null;
+    refreshHandler?: EventListener;
 
     constructor(props: {}) {
       super(props);
@@ -42,10 +43,23 @@ export const Devices = observer(
           AppState.loadingError = error.message;
           return null;
         }
-      }));    
+      }));
+
+      // listen for global refresh events (e.g. import/delete from other UI locations)
+      this.refreshHandler = async () => {
+        try {
+          if (this.devices) await this.devices.refresh();
+        } catch (err) {
+          console.error('Failed to refresh devices from global event', err);
+        }
+      };
+      window.addEventListener('wg.devices.refresh', this.refreshHandler as EventListener);
     }
 
     componentWillUnmount() {
+        if (this.refreshHandler) {
+          window.removeEventListener('wg.devices.refresh', this.refreshHandler as EventListener);
+        }
         this.devices.dispose();
       }
 

@@ -45,20 +45,36 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
         throw new Error('Invalid format: expected an array of devices');
       }
 
-      // Import each device
+      // Import each device, continue on errors and collect failures
+      const failed: string[] = [];
+      let imported = 0;
       for (const device of devices) {
-        await grpc.devices.addDevice({
-          name: device.name,
-          publicKey: device.publicKey,
-          presharedKey: device.presharedKey || '',
-          manualIpAssignment: device.manualIpAssignment || false,
-          manualIpv4Address: device.manualIpv4Address || '',
-          manualIpv6Address: device.manualIpv6Address || '',
-        });
+        try {
+          await grpc.devices.addDevice({
+            name: device.name,
+            publicKey: device.publicKey,
+            presharedKey: device.presharedKey || '',
+            manualIpAssignment: device.manualIpAssignment || false,
+            manualIpv4Address: device.manualIpv4Address || '',
+            manualIpv6Address: device.manualIpv6Address || '',
+          });
+          imported++;
+        } catch (err: any) {
+          failed.push(`${device.name || device.publicKey}: ${err.message}`);
+        }
       }
 
-  toast({ text: 'Devices imported successfully', intent: 'success' });
-  if (onRefresh) onRefresh();
+      if (failed.length > 0) {
+        toast({ text: `Imported ${imported} devices, failed ${failed.length}: ${failed.join('; ')}`, intent: 'warning' });
+      } else {
+        toast({ text: 'Devices imported successfully', intent: 'success' });
+      }
+
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        window.dispatchEvent(new CustomEvent('wg.devices.refresh'));
+      }
     } catch (error) {
       toast({ text: 'Failed to import devices: ' + (error as Error).message, intent: 'error' });
     }
@@ -77,7 +93,11 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
         }
   
   toast({ text: 'All devices deleted successfully', intent: 'success' });
-  if (onRefresh) onRefresh();
+  if (onRefresh) {
+    onRefresh();
+  } else {
+    window.dispatchEvent(new CustomEvent('wg.devices.refresh'));
+  }
       } catch (error) {
         toast({ text: 'Failed to delete devices: ' + (error as Error).message, intent: 'error' });
       }
