@@ -124,6 +124,19 @@ See the [Releases section](https://github.com/freifunkMUC/wg-access-server/relea
 
 ## Development
 
+### Metrics (Prometheus)
+
+- Endpoint: `/metrics` on the HTTP/HTTPS server.
+- Exposed metrics include:
+  - `wg_access_server_build_info{version,commit}`: build metadata (value 1)
+  - `wg_access_server_up`: 1 if storage and WireGuard are reachable
+  - `wg_access_server_devices_total`: total devices in storage
+  - `wg_access_server_devices_connected`: devices with a recent handshake
+  - `wg_access_server_devices_bytes_received_total`: sum of received bytes across devices
+  - `wg_access_server_devices_bytes_transmitted_total`: sum of transmitted bytes across devices
+
+If `EnableMetadata` is enabled, device-specific metrics are included in the output.
+
 The software consists of a Golang server and a React app.
 
 If you want to make changes to the project locally, you can do so relatively easily with the following steps.
