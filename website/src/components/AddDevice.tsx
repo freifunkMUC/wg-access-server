@@ -30,9 +30,11 @@ import AccordionDetails from '@mui/material/AccordionDetails';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Box from '@mui/material/Box';
 import { Warning } from '@mui/icons-material';
+import { ImportExportDelete } from './ImportExportDelete';
 
 interface Props {
   onAdd: () => void;
+  onRefresh: () => void;
 }
 
 export const AddDevice = observer(
@@ -251,7 +253,9 @@ export const AddDevice = observer(
       return (
         <>
           <Card>
-            <CardHeader title="Add A Device" />
+            <CardHeader title="Add A Device" 
+              action={<ImportExportDelete onRefresh={() => this.props.onRefresh()} />}
+            />
             <CardContent>
               <form onSubmit={this.submit}>
                 <FormControl fullWidth>
