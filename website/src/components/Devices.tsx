@@ -97,7 +97,7 @@ export const Devices = observer(
             </Box>
           </Box>
           <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 10', md: 'span 10', lg: 'span 6' } }}>
-            <AddDevice onAdd={() => this.devices.refresh()} />
+            <AddDevice onAdd={() => this.devices.refresh()} onRefresh={() => this.devices.refresh()} />
           </Box>
         </Box>
       );
