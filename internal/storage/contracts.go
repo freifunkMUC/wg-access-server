@@ -19,6 +19,8 @@ type Storage interface {
 	Delete(device *Device) error
 	Close() error
 	Open() error
+	// AddByteCounts atomically adds the given byte deltas to the device's statistics
+	AddByteCounts(publicKey string, receiveDelta, transmitDelta int64) error
 }
 
 type Watcher interface {

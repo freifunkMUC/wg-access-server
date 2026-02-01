@@ -79,3 +79,13 @@ func (s *InMemoryStorage) Delete(device *Device) error {
 func (s *InMemoryStorage) Ping() error {
 	return nil
 }
+
+func (s *InMemoryStorage) AddByteCounts(publicKey string, receiveDelta, transmitDelta int64) error {
+	device, err := s.GetByPublicKey(publicKey)
+	if err != nil {
+		return err
+	}
+	device.ReceiveBytes += receiveDelta
+	device.TransmitBytes += transmitDelta
+	return nil
+}

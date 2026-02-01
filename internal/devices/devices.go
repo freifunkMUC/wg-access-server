@@ -21,6 +21,15 @@ type DeviceManager struct {
 	storage storage.Storage
 	cidr    string
 	cidrv6  string
+	// Track last seen byte counts for each peer to calculate deltas
+	peerStats      map[string]*peerByteStats
+	peerStatsMutex sync.RWMutex
+}
+
+// peerByteStats tracks the last seen byte counts for a peer
+type peerByteStats struct {
+	ReceiveBytes  int64
+	TransmitBytes int64
 }
 
 type User struct {
@@ -32,7 +41,13 @@ type User struct {
 var wgKeyRegex = regexp.MustCompile("^[A-Za-z0-9+/]{42}[A|E|I|M|Q|U|Y|c|g|k|o|s|w|4|8|0]=$")
 
 func New(wg wgembed.WireGuardInterface, s storage.Storage, cidr, cidrv6 string) *DeviceManager {
-	return &DeviceManager{wg, s, cidr, cidrv6}
+	return &DeviceManager{
+		wg:        wg,
+		storage:   s,
+		cidr:      cidr,
+		cidrv6:    cidrv6,
+		peerStats: make(map[string]*peerByteStats),
+	}
 }
 
 func (d *DeviceManager) StartSync(enableMetadataCollection, enableInactiveDeviceDeletion bool, inactiveDeviceGracePeriod time.Duration) error {

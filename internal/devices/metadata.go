@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/freifunkMUC/wg-access-server/internal/storage"
 )
 
 func metadataLoop(d *DeviceManager) {
@@ -12,6 +13,26 @@ func metadataLoop(d *DeviceManager) {
 		syncMetrics(d)
 		time.Sleep(30 * time.Second)
 	}
+}
+
+// updateDeviceMetadata updates the endpoint and last handshake time for a device
+func updateDeviceMetadata(d *DeviceManager, device *storage.Device, endpoint string, lastHandshake time.Time) {
+	device.Endpoint = endpoint
+	device.LastHandshakeTime = &lastHandshake
+	if err := d.SaveDevice(device); err != nil {
+		logrus.Error(errors.Wrap(err, "failed to save device during metadata sync"))
+	}
+}
+
+// handleCounterReset checks if a delta is negative (indicating a counter reset)
+// and returns the appropriate delta value to use. If negative, logs a warning
+// and returns the current value as the delta.
+func handleCounterReset(delta, currentValue int64, counterType, publicKey string) int64 {
+	if delta < 0 {
+		logrus.Warnf("%s byte counter reset detected for peer %s, using current value as delta", counterType, publicKey)
+		return currentValue
+	}
+	return delta
 }
 
 func syncMetrics(d *DeviceManager) {
@@ -34,15 +55,68 @@ func syncMetrics(d *DeviceManager) {
 					// Not connected, and we haven't been the last time either, nothing to update
 					continue
 				}
-				device.Endpoint = peer.Endpoint.IP.String()
-				device.ReceiveBytes = peer.ReceiveBytes
-				device.TransmitBytes = peer.TransmitBytes
-				device.LastHandshakeTime = &peer.LastHandshakeTime
 
-				if err := d.SaveDevice(device); err != nil {
-					logrus.Error(errors.Wrap(err, "failed to save device during metadata sync"))
+				publicKey := peer.PublicKey.String()
+				currentRx := peer.ReceiveBytes
+				currentTx := peer.TransmitBytes
+
+				// Get the last known byte counts for this peer
+				d.peerStatsMutex.Lock()
+				lastStats, exists := d.peerStats[publicKey]
+				if !exists {
+					// First time seeing this peer in this replica
+					// Initialize tracking with current values
+					d.peerStats[publicKey] = &peerByteStats{
+						ReceiveBytes:  currentRx,
+						TransmitBytes: currentTx,
+					}
+					d.peerStatsMutex.Unlock()
+
+					// Update endpoint and handshake time without changing byte counts
+					updateDeviceMetadata(d, device, peer.Endpoint.IP.String(), peer.LastHandshakeTime)
+					continue
 				}
+
+				// Calculate deltas since last sync
+				rxDelta := currentRx - lastStats.ReceiveBytes
+				txDelta := currentTx - lastStats.TransmitBytes
+
+				// Handle potential counter resets (e.g., if WireGuard interface was restarted)
+				rxDelta = handleCounterReset(rxDelta, currentRx, "Receive", publicKey)
+				txDelta = handleCounterReset(txDelta, currentTx, "Transmit", publicKey)
+
+				// Update tracking with current values
+				lastStats.ReceiveBytes = currentRx
+				lastStats.TransmitBytes = currentTx
+				d.peerStatsMutex.Unlock()
+
+				// Only update database if there are positive deltas
+				shouldUpdateDatabase := rxDelta > 0 || txDelta > 0
+				if shouldUpdateDatabase {
+					// Add the delta to the database atomically
+					if err := d.storage.AddByteCounts(publicKey, rxDelta, txDelta); err != nil {
+						logrus.Error(errors.Wrap(err, "failed to add byte counts during metadata sync"))
+					}
+				}
+
+				// Update endpoint and handshake time
+				updateDeviceMetadata(d, device, peer.Endpoint.IP.String(), peer.LastHandshakeTime)
 			}
 		}
 	}
+
+	// Clean up tracking for peers that are no longer connected to this replica
+	d.peerStatsMutex.Lock()
+	connectedPeers := make(map[string]bool)
+	for _, peer := range peers {
+		if peer.Endpoint != nil {
+			connectedPeers[peer.PublicKey.String()] = true
+		}
+	}
+	for publicKey := range d.peerStats {
+		if !connectedPeers[publicKey] {
+			delete(d.peerStats, publicKey)
+		}
+	}
+	d.peerStatsMutex.Unlock()
 }
