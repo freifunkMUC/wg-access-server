@@ -47,6 +47,10 @@ Here's what you can configure:
 | `WG_WIREGUARD_PRIVATE_KEY`           | `--wireguard-private-key`           | `wireguard.privateKey`         | Yes      |                                              | The wireguard private key. This value is required and must be stable. If this value changes all devices must re-register.                                                                                                                                                     |
 | `WG_WIREGUARD_PORT`                  | `--wireguard-port`                  | `wireguard.port`               |          | `51820`                                      | The wireguard server port (udp)                                                                                                                                                                                                                                               |
 | `WG_WIREGUARD_MTU`                   | `--wireguard-mtu`                   | `wireguard.mtu`                |          | `1420`                                       | The maximum transmission unit (MTU) to be used on the server-side interface.                                                                                                                                                                                                  |
+|                                      |                                     | `wireguard.preUp`              |          |                                              | Path to a script to run before the WireGuard interface is brought up. The script file must be owned by root:root and not writable by group or others. This option can only be set via the config file.                                                                        |
+|                                      |                                     | `wireguard.postUp`             |          |                                              | Path to a script to run after the WireGuard interface is brought up and iptables rules are configured. The script file must be owned by root:root and not writable by group or others. This option can only be set via the config file.                                       |
+|                                      |                                     | `wireguard.preDown`            |          |                                              | Path to a script to run before the WireGuard interface is brought down. The script file must be owned by root:root and not writable by group or others. This option can only be set via the config file.                                                                      |
+|                                      |                                     | `wireguard.postDown`           |          |                                              | Path to a script to run after the WireGuard interface is brought down. The script file must be owned by root:root and not writable by group or others. This option can only be set via the config file.                                                                       |
 | `WG_VPN_CIDR`                        | `--vpn-cidr`                        | `vpn.cidr`                     |          | `10.44.0.0/24`                               | The VPN IPv4 network range. VPN clients will be assigned IP addresses in this range. Set to `0` to disable IPv4.                                                                                                                                                              |
 | `WG_IPV4_NAT_ENABLED`                | `--vpn-nat44-enabled`               | `vpn.nat44`                    |          | `true`                                       | Disables NAT for IPv4                                                                                                                                                                                                                                                         |
 | `WG_IPV6_NAT_ENABLED`                | `--vpn-nat66-enabled`               | `vpn.nat66`                    |          | `true`                                       | Disables NAT for IPv6                                                                                                                                                                                                                                                         |
@@ -77,10 +81,41 @@ loglevel: info
 storage: sqlite3:///data/db.sqlite3
 wireguard:
   privateKey: "<some-key>"
+  # Optional: scripts to run when the interface goes up/down
+  # postUp: "/etc/wg-access-server/postup.sh"
+  # preDown: "/etc/wg-access-server/predown.sh"
 dns:
   upstream:
     - "2001:678:e68:f000::"
     - "2001:678:ed0:f000::"
     - "5.1.66.255"
     - "185.150.99.255"
+```
+
+### Pre/Post Up/Down Scripts
+
+The `wireguard.preUp`, `wireguard.postUp`, `wireguard.preDown`, and `wireguard.postDown` configuration options allow you to run custom scripts at different stages of the WireGuard interface lifecycle.
+
+**Use cases:**
+- Adding custom routes when the interface comes up
+- Setting up additional firewall rules
+- Notifying external systems
+- Custom logging or monitoring
+
+**Security requirements:**
+- Script files must be owned by `root:root` (UID 0, GID 0)
+- Script files must not be writable by group or others
+- Scripts can only be configured via the config file (not via environment variables)
+
+**Example script** (`/etc/wg-access-server/postup.sh`):
+```bash
+#!/bin/bash
+# Add a custom route
+ip route add 192.168.100.0/24 dev wg0
+```
+
+Make sure the script is executable and has the correct ownership and permissions:
+```bash
+chown root:root /etc/wg-access-server/postup.sh
+chmod 755 /etc/wg-access-server/postup.sh
 ```
