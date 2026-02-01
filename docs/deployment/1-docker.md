@@ -75,3 +75,47 @@ docker run \
   -p 51820:51820/udp \
   ghcr.io/freifunkmuc/wg-access-server:latest
 ```
+
+## Using Docker Secrets
+
+For enhanced security, you can use Docker secrets to store sensitive configuration values like passwords and private keys. This is particularly useful in Docker Swarm deployments or when following security best practices.
+
+### Creating Docker Secrets
+
+First, create the secrets:
+
+```bash
+# Create admin password secret
+echo "your-secure-password" | docker secret create wg_admin_password -
+
+# Create WireGuard private key secret
+wg genkey | docker secret create wg_private_key -
+```
+
+### Using Secrets in Docker Run
+
+When using `docker run`, you can mount secrets as files:
+
+```bash
+docker run \
+  -it \
+  --rm \
+  --cap-add NET_ADMIN \
+  --device /dev/net/tun:/dev/net/tun \
+  --sysctl net.ipv6.conf.all.disable_ipv6=0 \
+  --sysctl net.ipv6.conf.all.forwarding=1 \
+  -v wg-access-server-data:/data \
+  -v /path/to/admin_password:/run/secrets/admin_password:ro \
+  -v /path/to/wg_private_key:/run/secrets/wg_private_key:ro \
+  -e "WG_ADMIN_PASSWORD_FILE=/run/secrets/admin_password" \
+  -e "WG_WIREGUARD_PRIVATE_KEY_FILE=/run/secrets/wg_private_key" \
+  -p 8000:8000/tcp \
+  -p 51820:51820/udp \
+  ghcr.io/freifunkmuc/wg-access-server:latest
+```
+
+### Using Secrets in Docker Stack (Swarm)
+
+For Docker Swarm deployments, you can reference secrets directly in your stack file. See the [docker-compose documentation](./2-docker-compose.md) for more details on using Docker secrets in stack files.
+
+**Note:** When `WG_ADMIN_PASSWORD_FILE` or `WG_WIREGUARD_PRIVATE_KEY_FILE` are set, they take precedence over `WG_ADMIN_PASSWORD` and `WG_WIREGUARD_PRIVATE_KEY` respectively.
