@@ -1,5 +1,5 @@
 import React from 'react';
-import Grid from '@mui/material/Grid';
+import { Box } from '@mui/material';
 import { observable, makeObservable, runInAction } from 'mobx';
 import { observer } from 'mobx-react';
 import { grpc } from '../Api';
@@ -69,37 +69,37 @@ export const Devices = observer(
       }
       if (!this.devices || !this.devices.current) {
         return (
-          <Grid container spacing={3} justifyContent="center">
-            <Grid item xs={12}>
-              <Grid container spacing={3}>
+          <Box sx={{ display: 'grid', gap: 3, justifyContent: 'center' }}>
+            <Box sx={{ gridColumn: 'span 12' }}>
+              <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' } }}>
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <Grid key={i} item xs={12} sm={6} md={4} lg={3}>
+                  <Box key={i}>
                     <DeviceListItemSkeleton />
-                  </Grid>
+                  </Box>
                 ))}
-              </Grid>
-            </Grid>
-            <Grid item xs={12} sm={10} md={10} lg={6}>
+              </Box>
+            </Box>
+            <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 10', md: 'span 10', lg: 'span 6' } }}>
               <AddDeviceSkeleton />
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         );
       }
       return (
-        <Grid container spacing={3} justifyContent="center">
-          <Grid item xs={12}>
-            <Grid container spacing={3}>
+        <Box sx={{ display: 'grid', gap: 3, justifyContent: 'center' }}>
+          <Box sx={{ gridColumn: 'span 12' }}>
+            <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' } }}>
               {this.devices.current.map((device: Device.AsObject, i: React.Key) => (
-                <Grid key={i} item xs={12} sm={6} md={4} lg={3}>
+                <Box key={i}>
                   <DeviceListItem device={device} onRemove={() => this.devices.refresh()} />
-                </Grid>
+                </Box>
               ))}
-            </Grid>
-          </Grid>
-          <Grid item xs={12} sm={10} md={10} lg={6}>
+            </Box>
+          </Box>
+          <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 10', md: 'span 10', lg: 'span 6' } }}>
             <AddDevice onAdd={() => this.devices.refresh()} onRefresh={() => this.devices.refresh()} />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       );
     }
   },

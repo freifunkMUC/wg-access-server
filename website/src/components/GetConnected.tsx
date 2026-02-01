@@ -1,6 +1,5 @@
-import { ButtonGroup } from '@mui/material';
+import { ButtonGroup, Box } from '@mui/material';
 import Button from '@mui/material/Button';
-import Grid from '@mui/material/Grid';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
@@ -63,7 +62,7 @@ export class GetConnected extends Component<PropsWithChildren<Props>, any> {
         </Paper>
 
         <TabPanel for="desktop" value={this.state.currentTab}>
-          <Grid container direction="row" justifyContent="space-around" alignItems="center">
+          <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
             <List>
               <ListItem>
                 <ListItemText style={{ width: 300 }} primary="1. Install the WireGuard App" />
@@ -89,13 +88,13 @@ export class GetConnected extends Component<PropsWithChildren<Props>, any> {
                 <ListItemText style={{ width: 300 }} primary="3. Import your connection file in the App" />
               </ListItem>
             </List>
-          </Grid>
+          </Box>
         </TabPanel>
 
         {this.props.showMobile && (
           <TabPanel for="mobile" value={this.state.currentTab}>
-            <Grid container direction="row" justifyContent="space-around" alignItems="center">
-              <Grid item>
+            <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+              <Box>
                 <List>
                   <ListItem>
                     <ListItemText primary="1. Install the WireGuard app" />
@@ -107,11 +106,11 @@ export class GetConnected extends Component<PropsWithChildren<Props>, any> {
                     <ListItemText primary="3. Create from QR code" />
                   </ListItem>
                 </List>
-              </Grid>
-              <Grid item>
+              </Box>
+              <Box>
                 <QRCode content={this.props.configFile} />
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </TabPanel>
         )}
       </React.Fragment>
