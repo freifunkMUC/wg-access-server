@@ -523,7 +523,7 @@ var missingPrivateKey = `Missing WireGuard private key:
 
     configure via environment variable:
 
-        $ export WIREGUARD_PRIVATE_KEY="<private-key>"
+        $ export WG_WIREGUARD_PRIVATE_KEY="<private-key>"
 
     or configure via flag:
 
