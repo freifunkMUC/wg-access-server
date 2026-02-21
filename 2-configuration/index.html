@@ -1,0 +1,1025 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://www.freie-netze.org/wg-access-server/2-configuration/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../3-storage/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>Configuration - wg-access-server</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#configuration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="wg-access-server" class="md-header__button md-logo" aria-label="wg-access-server" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6.5 20q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48 1.18-1.53 3.08-1.95.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5 1.14 1.28 1.14 3 0 1.88-1.31 3.19T18.5 20m-12-2h12q1.05 0 1.77-.73.73-.72.73-1.77t-.73-1.77Q19.55 13 18.5 13H17v-2q0-2.07-1.46-3.54Q14.08 6 12 6 9.93 6 8.46 7.46 7 8.93 7 11h-.5q-1.45 0-2.47 1.03Q3 13.05 3 14.5T4.03 17q1.02 1 2.47 1m5.5-6"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            wg-access-server
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Configuration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/freifunkMUC/wg-access-server" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    freifunkMUC/wg-access-server
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="wg-access-server" class="md-nav__button md-logo" aria-label="wg-access-server" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6.5 20q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48 1.18-1.53 3.08-1.95.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5 1.14 1.28 1.14 3 0 1.88-1.31 3.19T18.5 20m-12-2h12q1.05 0 1.77-.73.73-.72.73-1.77t-.73-1.77Q19.55 13 18.5 13H17v-2q0-2.07-1.46-3.54Q14.08 6 12 6 9.93 6 8.46 7.46 7 8.93 7 11h-.5q-1.45 0-2.47 1.03Q3 13.05 3 14.5T4.03 17q1.02 1 2.47 1m5.5-6"/></svg>
+
+    </a>
+    wg-access-server
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/freifunkMUC/wg-access-server" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    freifunkMUC/wg-access-server
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    wg-access-server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-config-file-configyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Config File (config.yaml)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../3-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../4-auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Deployment
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/1-docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/2-docker-compose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Compose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/3-kubernetes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helm Chart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-config-file-configyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Config File (config.yaml)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link"> ¶</a></h1>
+<p>You can configure wg-access-server using environment variables, cli flags or a config file
+taking precedence over one another in that order.</p>
+<p>The default configuration should work out of the box if you're just looking to try it out.</p>
+<p>The only required configuration is a wireguard private key.
+You can generate a wireguard private key by <a href="https://www.wireguard.com/quickstart/#key-generation">following the official docs</a>.</p>
+<p>TLDR:</p>
+<div class="highlight"><pre><span></span><code>wg<span class="w"> </span>genkey
+</code></pre></div>
+<p>The config file format is <code>yaml</code> and an example is provided <a href="#the-config-file-configyaml">below</a>.</p>
+<p>The format for specifying multiple values for options that allow it is:</p>
+<ul>
+<li>as commandline flags:</li>
+<li>repeat the flag (e.g. <code>--dns-upstream 2001:db8::1 --dns-upstream 192.0.2.1</code>)</li>
+<li>separate the values with a comma (e.g. <code>--dns-upstream 2001:db8::1,192.0.2.1</code>)</li>
+<li>as environment variables:</li>
+<li>separate with a comma (e.g. <code>WG_DNS_UPSTREAM="2001:db8::1,192.0.2.1"</code>)</li>
+<li>separate with a new line char (e.g. <code>WG_DNS_UPSTREAM=$'2001:db8::1\n192.0.2.1'</code>)</li>
+<li>in the config file as YAML list.</li>
+</ul>
+<p>Here's what you can configure:</p>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Config File Path</th>
+<th>Required</th>
+<th>Default (docker)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WG_CONFIG</code></td>
+<td><code>--config</code></td>
+<td></td>
+<td></td>
+<td></td>
+<td>The path to a wg-access-server config.yaml file</td>
+</tr>
+<tr>
+<td><code>WG_LOG_LEVEL</code></td>
+<td><code>--log-level</code></td>
+<td><code>loglevel</code></td>
+<td></td>
+<td><code>info</code></td>
+<td>The global log level</td>
+</tr>
+<tr>
+<td><code>WG_ADMIN_USERNAME</code></td>
+<td><code>--admin-username</code></td>
+<td><code>adminUsername</code></td>
+<td></td>
+<td><code>admin</code></td>
+<td>The admin account username</td>
+</tr>
+<tr>
+<td><code>WG_ADMIN_PASSWORD</code></td>
+<td><code>--admin-password</code></td>
+<td><code>adminPassword</code></td>
+<td>Yes</td>
+<td></td>
+<td>The admin account password</td>
+</tr>
+<tr>
+<td><code>WG_PORT</code></td>
+<td><code>--port</code></td>
+<td><code>port</code></td>
+<td></td>
+<td><code>8000</code></td>
+<td>The port the web ui will listen on (http)</td>
+</tr>
+<tr>
+<td><code>WG_HTTP_HOST</code></td>
+<td><code>--http-host</code></td>
+<td><code>httpHost</code></td>
+<td></td>
+<td>`` (all hosts)</td>
+<td>Hostname or IP address to bind the HTTP server to. If left empty, the HTTP server will listen on all IP addresses on all available network interfaces.</td>
+</tr>
+<tr>
+<td><code>WG_EXTERNAL_HOST</code></td>
+<td><code>--external-host</code></td>
+<td><code>externalHost</code></td>
+<td></td>
+<td></td>
+<td>The external domain for the server (e.g. www.mydomain.com)</td>
+</tr>
+<tr>
+<td><code>WG_STORAGE</code></td>
+<td><code>--storage</code></td>
+<td><code>storage</code></td>
+<td></td>
+<td><code>sqlite3:///data/db.sqlite3</code></td>
+<td>A storage backend connection string. See <a href="../3-storage/">storage docs</a></td>
+</tr>
+<tr>
+<td><code>WG_ENABLE_METADATA</code></td>
+<td><code>--enable-metadata</code></td>
+<td><code>enableMetadata</code></td>
+<td></td>
+<td><code>false</code></td>
+<td>Turn on collection of device metadata logging. Includes last handshake time and RX/TX bytes only.</td>
+</tr>
+<tr>
+<td><code>WG_ENABLE_INACTIVE_DEVICE_DELETION</code></td>
+<td><code>--enable-inactive-device-deletion</code></td>
+<td><code>enableInactiveDeviceDeletion</code></td>
+<td></td>
+<td><code>false</code></td>
+<td>Enable/Disable the automatic deletion of inactive devices.</td>
+</tr>
+<tr>
+<td><code>WG_INACTIVE_DEVICE_GRACE_PERIOD</code></td>
+<td><code>--inactive-device-grace-period</code></td>
+<td><code>inactiveDeviceGracePeriod</code></td>
+<td></td>
+<td><code>8760h</code> (1 Year)</td>
+<td>The duration after which inactive devices are automatically deleted, if automatic deletion is enabled. A device is inactive if it has not been connected to the server for longer than the inactive device grace period. The duration format is the go duration string format</td>
+</tr>
+<tr>
+<td><code>WG_FILENAME</code></td>
+<td><code>--filename</code></td>
+<td><code>filename</code></td>
+<td></td>
+<td><code>WireGuard</code></td>
+<td>Change the name of the configuration file the user can download (Do not include the '.conf' extension )</td>
+</tr>
+<tr>
+<td><code>WG_WIREGUARD_ENABLED</code></td>
+<td><code>--[no-]wireguard-enabled</code></td>
+<td><code>wireguard.enabled</code></td>
+<td></td>
+<td><code>true</code></td>
+<td>Enable/disable the wireguard server. Useful for development on non-linux machines.</td>
+</tr>
+<tr>
+<td><code>WG_WIREGUARD_INTERFACE</code></td>
+<td><code>--wireguard-interface</code></td>
+<td><code>wireguard.interface</code></td>
+<td></td>
+<td><code>wg0</code></td>
+<td>The wireguard network interface name</td>
+</tr>
+<tr>
+<td><code>WG_WIREGUARD_PRIVATE_KEY</code></td>
+<td><code>--wireguard-private-key</code></td>
+<td><code>wireguard.privateKey</code></td>
+<td>Yes</td>
+<td></td>
+<td>The wireguard private key. This value is required and must be stable. If this value changes all devices must re-register.</td>
+</tr>
+<tr>
+<td><code>WG_WIREGUARD_PORT</code></td>
+<td><code>--wireguard-port</code></td>
+<td><code>wireguard.port</code></td>
+<td></td>
+<td><code>51820</code></td>
+<td>The wireguard server port (udp)</td>
+</tr>
+<tr>
+<td><code>WG_WIREGUARD_MTU</code></td>
+<td><code>--wireguard-mtu</code></td>
+<td><code>wireguard.mtu</code></td>
+<td></td>
+<td><code>1420</code></td>
+<td>The maximum transmission unit (MTU) to be used on the server-side interface.</td>
+</tr>
+<tr>
+<td><code>WG_VPN_CIDR</code></td>
+<td><code>--vpn-cidr</code></td>
+<td><code>vpn.cidr</code></td>
+<td></td>
+<td><code>10.44.0.0/24</code></td>
+<td>The VPN IPv4 network range. VPN clients will be assigned IP addresses in this range. Set to <code>0</code> to disable IPv4.</td>
+</tr>
+<tr>
+<td><code>WG_IPV4_NAT_ENABLED</code></td>
+<td><code>--vpn-nat44-enabled</code></td>
+<td><code>vpn.nat44</code></td>
+<td></td>
+<td><code>true</code></td>
+<td>Disables NAT for IPv4</td>
+</tr>
+<tr>
+<td><code>WG_IPV6_NAT_ENABLED</code></td>
+<td><code>--vpn-nat66-enabled</code></td>
+<td><code>vpn.nat66</code></td>
+<td></td>
+<td><code>true</code></td>
+<td>Disables NAT for IPv6</td>
+</tr>
+<tr>
+<td><code>WG_VPN_CLIENT_ISOLATION</code></td>
+<td><code>--vpn-client-isolation</code></td>
+<td><code>vpn.clientIsolation</code></td>
+<td></td>
+<td><code>false</code></td>
+<td>BLock or allow traffic between client devices (client isolation)</td>
+</tr>
+<tr>
+<td><code>WG_VPN_CIDRV6</code></td>
+<td><code>--vpn-cidrv6</code></td>
+<td><code>vpn.cidrv6</code></td>
+<td></td>
+<td><code>fd48:4c4:7aa9::/64</code></td>
+<td>The VPN IPv6 network range. VPN clients will be assigned IP addresses in this range. Set to <code>0</code> to disable IPv6.</td>
+</tr>
+<tr>
+<td><code>WG_VPN_GATEWAY_INTERFACE</code></td>
+<td><code>--vpn-gateway-interface</code></td>
+<td><code>vpn.gatewayInterface</code></td>
+<td></td>
+<td><em>default gateway interface (e.g. eth0)</em></td>
+<td>The VPN gateway interface. VPN client traffic will be forwarded to this interface.</td>
+</tr>
+<tr>
+<td><code>WG_VPN_ALLOWED_IPS</code></td>
+<td><code>--vpn-allowed-ips</code></td>
+<td><code>vpn.allowedIPs</code></td>
+<td></td>
+<td><code>0.0.0.0/0, ::/0</code></td>
+<td>Allowed IPs that clients may route through this VPN. This will be set in the client's WireGuard connection file and routing is also enforced by the server using iptables.</td>
+</tr>
+<tr>
+<td><code>WG_VPN_DISABLE_IPTABLES</code></td>
+<td><code>--vpn-disable-iptables</code></td>
+<td><code>vpn.disableIPTables</code></td>
+<td></td>
+<td><code>false</code></td>
+<td>Disable iptables configuration completely. When enabled, no iptables rules will be configured (no NAT, no client isolation, no forwarding rules).</td>
+</tr>
+<tr>
+<td><code>WG_DNS_ENABLED</code></td>
+<td><code>--[no-]dns-enabled</code></td>
+<td><code>dns.enabled</code></td>
+<td></td>
+<td><code>true</code></td>
+<td>Enable/disable the embedded DNS proxy server. This is enabled by default and allows VPN clients to avoid DNS leaks by sending all DNS requests to wg-access-server itself.</td>
+</tr>
+<tr>
+<td><code>WG_DNS_UPSTREAM</code></td>
+<td><code>--dns-upstream</code></td>
+<td><code>dns.upstream</code></td>
+<td></td>
+<td><em>resolvconf autodetection or Cloudflare DNS</em></td>
+<td>The upstream DNS servers to proxy DNS requests to. By default the host machine's resolveconf configuration is used to find its upstream DNS server, with a fallback to Cloudflare.</td>
+</tr>
+<tr>
+<td><code>WG_DNS_DOMAIN</code></td>
+<td><code>--dns-domain</code></td>
+<td><code>dns.domain</code></td>
+<td></td>
+<td></td>
+<td>A domain to serve configured devices authoritatively. Queries for names in the format <device>.<user>.<domain> will be answered with the device's IP addresses.</td>
+</tr>
+<tr>
+<td><code>WG_CLIENTCONFIG_DNS_SERVERS</code></td>
+<td><code>--clientconfig-dns-servers</code></td>
+<td><code>clientConfig.dnsServers</code></td>
+<td></td>
+<td></td>
+<td>DNS servers (one or more IP addresses) to write into the client configuration file. Are used instead of the servers DNS settings, if set.</td>
+</tr>
+<tr>
+<td><code>WG_CLIENTCONFIG_DNS_SEARCH_DOMAIN</code></td>
+<td><code>--clientconfig-dns-search-domain</code></td>
+<td><code>clientConfig.dnsSearchDomain</code></td>
+<td></td>
+<td></td>
+<td>DNS search domain to write into the client configuration file.</td>
+</tr>
+<tr>
+<td><code>WG_CLIENTCONFIG_MTU</code></td>
+<td><code>--clientconfig-mtu</code></td>
+<td><code>clientConfig.mtu</code></td>
+<td></td>
+<td></td>
+<td>The maximum transmission unit (MTU) to write into the client configuration file. If left empty, a sensible default is used.</td>
+</tr>
+<tr>
+<td><code>WG_CLIENTCONFIG_PERSISTENT_KEEPALIVE</code></td>
+<td><code>--clientconfig-persistent-keepalive</code></td>
+<td><code>clientConfig.persistentkeepalive</code></td>
+<td></td>
+<td><code>0</code></td>
+<td>The default persistent keepalive interval for all clients (in seconds). Can be overridden per device in the web UI at creation time.</td>
+</tr>
+<tr>
+<td><code>WG_HTTPS_ENABLED</code></td>
+<td><code>--https-enabled</code></td>
+<td><code>https.enabled</code></td>
+<td></td>
+<td><code>true</code></td>
+<td>Enable HTTPS for the web UI.</td>
+</tr>
+<tr>
+<td><code>WG_HTTPS_CERT_FILE</code></td>
+<td><code>--https-cert-file</code></td>
+<td><code>https.certFile</code></td>
+<td></td>
+<td></td>
+<td>Path to the TLS certificate file. If not provided, a self-signed certificate will be generated.</td>
+</tr>
+<tr>
+<td><code>WG_HTTPS_KEY_FILE</code></td>
+<td><code>--https-key-file</code></td>
+<td><code>https.keyFile</code></td>
+<td></td>
+<td></td>
+<td>Path to the TLS private key file. If not provided, a self-signed certificate will be generated.</td>
+</tr>
+<tr>
+<td><code>WG_HTTPS_PORT</code></td>
+<td><code>--https-port</code></td>
+<td><code>https.port</code></td>
+<td></td>
+<td>8443</td>
+<td>Port for HTTPS server.</td>
+</tr>
+<tr>
+<td><code>WG_HTTPS_HOST</code></td>
+<td><code>--https-host</code></td>
+<td><code>https.host</code></td>
+<td></td>
+<td>``  (listen all hosts)</td>
+<td>Hostname or IP address to bind the HTTPS server to. If left empty, the HTTPS server will listen on all IP addresses on all available network interfaces.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-config-file-configyaml">The Config File (config.yaml)<a class="headerlink" href="#the-config-file-configyaml" title="Permanent link"> ¶</a></h2>
+<p>Here's an example config file to get started with.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">loglevel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">info</span>
+<span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sqlite3:///data/db.sqlite3</span>
+<span class="nt">wireguard</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">privateKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;some-key&gt;&quot;</span>
+<span class="nt">dns</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">upstream</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;2001:678:e68:f000::&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;2001:678:ed0:f000::&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;5.1.66.255&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;185.150.99.255&quot;</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
