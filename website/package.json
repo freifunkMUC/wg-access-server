@@ -25,7 +25,7 @@
     "react-dom": "19.2.4",
     "react-router-dom": "^7.13.0",
     "tweetnacl-ts": "^1.0.3",
-    "vite-tsconfig-paths": "^6.0.5"
+    "vite-tsconfig-paths": "^6.1.1"
   },
   "devDependencies": {
     "@types/common-tags": "^1.8.4",
