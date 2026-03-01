@@ -35,7 +35,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^5.1.2",
-    "@vitejs/plugin-react-swc": "^4.2.2",
+    "@vitejs/plugin-react-swc": "^4.2.3",
     "fork-ts-checker-webpack-plugin": "^9.1.0",
     "grpc-ts-web": "^0.2.0",
     "grpc-web": "^1.2.1",
