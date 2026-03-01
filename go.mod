@@ -26,7 +26,7 @@ require (
 	github.com/tg123/go-htpasswd v1.2.4
 	github.com/vishvananda/netlink v1.3.1
 	golang.org/x/crypto v0.47.0
-	golang.org/x/oauth2 v0.34.0
+	golang.org/x/oauth2 v0.35.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
