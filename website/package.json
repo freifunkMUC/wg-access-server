@@ -3,19 +3,21 @@
   "type": "module",
   "scripts": {
     "codegen": "npx grpc-ts-web -o src/sdk ../proto/*.proto",
-    "start": "vite --port 3000",
+    "dev": "vite dev --port 3000",
+    "start": "npm run dev",
     "build": "npx tsc && vite build",
+    "preview": "vite preview --port 5000",
     "lint": "npx eslint . --report-unused-disable-directives --max-warnings 0",
     "prettier": "npx prettier \"./src/**/*.{ts,tsx}\" --write"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^7.3.7",
-    "@mui/material": "^7.3.7",
+    "@mui/icons-material": "^7.3.9",
+    "@mui/material": "^7.3.9",
     "common-tags": "^1.8.2",
     "date-fns": "^4.1.0",
-    "google-protobuf": "^4.0.1",
+    "google-protobuf": "^4.0.2",
     "mobx": "^6.15.0",
     "mobx-react": "^9.2.1",
     "mobx-utils": "^6.1.1",
@@ -24,8 +26,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-router-dom": "^7.13.1",
-    "tweetnacl-ts": "^1.0.3",
-    "vite-tsconfig-paths": "^6.1.1"
+    "tweetnacl-ts": "^1.0.3"
   },
   "devDependencies": {
     "@types/common-tags": "^1.8.4",
@@ -34,14 +35,13 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/react-router-dom": "^5.3.3",
-    "@vitejs/plugin-react": "^5.1.2",
-    "@vitejs/plugin-react-swc": "^4.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
     "fork-ts-checker-webpack-plugin": "^9.1.0",
     "grpc-ts-web": "^0.2.0",
     "grpc-web": "^1.2.1",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
+    "vite": "^8.0.1",
     "vite-plugin-svgr": "^4.5.0"
   },
   "browserslist": {
