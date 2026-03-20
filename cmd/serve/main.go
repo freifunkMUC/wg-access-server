@@ -45,6 +45,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("external-host", "The external origin of the server (e.g. https://mydomain.com)").Envar("WG_EXTERNAL_HOST").StringVar(&cmd.AppConfig.ExternalHost)
 	cli.Flag("storage", "The storage backend connection string").Envar("WG_STORAGE").Default("memory://").StringVar(&cmd.AppConfig.Storage)
 	cli.Flag("enable-metadata", "Enable metadata collection (i.e. metrics)").Envar("WG_ENABLE_METADATA").Default("false").BoolVar(&cmd.AppConfig.EnableMetadata)
+	cli.Flag("enable-device-metrics", "Expose device-level metrics on /metrics (requires enable-metadata)").Envar("WG_ENABLE_DEVICE_METRICS").Default("true").BoolVar(&cmd.AppConfig.EnableDeviceMetrics)
 	cli.Flag("enable-inactive-device-deletion", "Enable inactive device deletion").Envar("WG_ENABLE_INACTIVE_DEVICE_DELETION").Default("false").BoolVar(&cmd.AppConfig.EnableInactiveDeviceDeletion)
 	cli.Flag("inactive-device-grace-period", "Duration after inactive device are deleted").Envar("WG_INACTIVE_DEVICE_GRACE_PERIOD").Default((1 * config.Year).String()).DurationVar(&cmd.AppConfig.InactiveDeviceGracePeriod)
 	cli.Flag("filename", "The configuration filename (e.g. WireGuard-Home)").Envar("WG_FILENAME").StringVar(&cmd.AppConfig.Filename)
@@ -373,7 +374,9 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	}
 
 	if !cmd.AppConfig.EnableMetadata {
-		logrus.Info("Metadata collection has been disabled. No metrics or device connectivity information will be recorded or shown")
+		logrus.Info("Metadata collection has been disabled. No device connectivity information or device metrics will be recorded or shown")
+	} else if !cmd.AppConfig.EnableDeviceMetrics {
+		logrus.Info("Device-level Prometheus metrics are disabled; metadata remains available for the UI")
 	}
 
 	if !cmd.AppConfig.Auth.IsEnabled() {

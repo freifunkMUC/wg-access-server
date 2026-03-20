@@ -39,6 +39,9 @@ type AppConfig struct {
 	// EnableMetadata allows you to turn on collection of device
 	// metadata including last handshake time & rx/tx bytes
 	EnableMetadata bool `yaml:"enableMetadata"`
+	// EnableDeviceMetrics controls whether device-level Prometheus metrics
+	// are exposed on /metrics. Requires EnableMetadata to be effective.
+	EnableDeviceMetrics bool `yaml:"enableDeviceMetrics"`
 	// EnableInactiveDeviceDeletion allows you to delete inactive devices
 	// automatically after a time duration defined by InactiveDeviceGracePeriod
 	EnableInactiveDeviceDeletion bool `yaml:"enableInactiveDeviceDeletion"`
