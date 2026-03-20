@@ -1,29 +1,12 @@
-# New Project
+# Web UI (Vite 8)
 
-> ✨ Bootstrapped with Create Snowpack App (CSA).
+The `website/` package now runs on Vite 8 with Rolldown and Oxc handling all bundling, dependency optimization, and JSX transforms.
 
-## Available Scripts
+## Common Scripts
 
-### npm start
+- `npm run dev` / `npm start` – Launches the dev server on http://localhost:3000 with hot module reloading.
+- `npm run build` – Type-checks with `tsc` and outputs the production bundle to `website/build` using Rolldown + Lightning CSS.
+- `npm run preview` – Serves the production build locally (default port 5000).
+- `npm run lint` / `npm run prettier` – Static analysis and formatting helpers.
+- `npm run codegen` – Regenerates the gRPC TypeScript SDK from `../proto/*.proto`.
 
-Runs the app in the development mode.
-Open http://localhost:3000 to view it in the browser.
-
-The page will reload if you make edits.
-You will also see any lint errors in the console.
-
-### npm test
-
-Launches the test runner in the interactive watch mode.
-See the section about running tests for more information.
-
-### npm run build
-
-Builds a static copy of your site to the `build/` folder.
-Your app is ready to be deployed!
-
-**For the best production performance:** Add a build bundler plugin like "@snowpack/plugin-webpack" or "@snowpack/plugin-parcel" to your `snowpack.config.json` config file.
-
-### Q: What about Eject?
-
-No eject needed! Snowpack guarantees zero lock-in, and CSA strives for the same.
