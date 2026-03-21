@@ -45,6 +45,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("external-host", "The external origin of the server (e.g. https://mydomain.com)").Envar("WG_EXTERNAL_HOST").StringVar(&cmd.AppConfig.ExternalHost)
 	cli.Flag("storage", "The storage backend connection string").Envar("WG_STORAGE").Default("memory://").StringVar(&cmd.AppConfig.Storage)
 	cli.Flag("enable-metadata", "Enable metadata collection (i.e. metrics)").Envar("WG_ENABLE_METADATA").Default("false").BoolVar(&cmd.AppConfig.EnableMetadata)
+	cli.Flag("enable-device-metrics", "Expose device-level metrics on /metrics (requires enable-metadata)").Envar("WG_ENABLE_DEVICE_METRICS").Default("true").BoolVar(&cmd.AppConfig.EnableDeviceMetrics)
 	cli.Flag("metrics-basic-auth-username", "Require basic auth for /metrics (username)").Envar("WG_METRICS_BASIC_AUTH_USERNAME").StringVar(&cmd.AppConfig.Metrics.BasicAuth.Username)
 	cli.Flag("metrics-basic-auth-password-hash", "Require basic auth for /metrics (bcrypt hash)").Envar("WG_METRICS_BASIC_AUTH_PASSWORD_HASH").StringVar(&cmd.AppConfig.Metrics.BasicAuth.PasswordHash)
 	cli.Flag("enable-inactive-device-deletion", "Enable inactive device deletion").Envar("WG_ENABLE_INACTIVE_DEVICE_DELETION").Default("false").BoolVar(&cmd.AppConfig.EnableInactiveDeviceDeletion)
