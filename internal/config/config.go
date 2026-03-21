@@ -160,6 +160,15 @@ type AppConfig struct {
 		// Defaults to 0 (disabled)
 		PersistentKeepalive int `yaml:"PersistentKeepalive"`
 	} `yaml:"clientConfig"`
+	// Metrics configures access to the /metrics endpoint.
+	Metrics struct {
+		BasicAuth struct {
+			// Username required when accessing /metrics. Empty disables auth.
+			Username string `yaml:"username"`
+			// Bcrypt hashed password required when accessing /metrics.
+			PasswordHash string `yaml:"passwordHash"`
+		} `yaml:"basicAuth"`
+	} `yaml:"metrics"`
 	// Auth configures optional authentication backends
 	// to control access to the web ui.
 	// Devices will be managed on a per-user basis if any

@@ -18,8 +18,8 @@ type MetricsDeps struct {
 }
 
 // MetricsHandler returns an http.Handler that exposes Prometheus metrics.
-// It honors EnableMetadata/EnableDeviceMetrics by including device-specific metrics only when both are enabled,
-// but still exposes basic process/go/build metrics.
+// Device-level gauges are only registered when both metadata collection and
+// device metrics are enabled, but process/build metrics are always exposed.
 func MetricsHandler(deps *MetricsDeps) http.Handler {
 	reg := prometheus.NewRegistry()
 
@@ -129,4 +129,14 @@ func MetricsHandler(deps *MetricsDeps) http.Handler {
 	}
 
 	return promhttp.HandlerFor(reg, promhttp.HandlerOpts{EnableOpenMetrics: true})
+}
+
+// MetricsEndpoint wraps MetricsHandler with optional basic auth protection.
+func MetricsEndpoint(deps *MetricsDeps) http.Handler {
+	h := MetricsHandler(deps)
+	creds := deps.Config.Metrics.BasicAuth
+	if creds.Username == "" || creds.PasswordHash == "" {
+		return h
+	}
+	return basicAuthHandler(h, "metrics", creds.Username, creds.PasswordHash)
 }
