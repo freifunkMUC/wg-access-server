@@ -1,24 +1,47 @@
-name: Publish docs via GitHub Pages
+name: Publish versioned docs via mike
 on:
   push:
     branches:
       - master
+    tags:
+      - v*
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  mkdocs:
+  docs:
     name: Deploy docs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
 
-      - name: Deploy docs
-        uses: mhausenblas/mkdocs-deploy-gh-pages@d77dd03172e96abbcdb081d8c948224762033653 # v1.26
+      - name: Set up Python
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5.2.0
+
+      - name: Install documentation dependencies
+        run: pip install -r requirements-docs.txt
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages || true
+
+      - name: Deploy docs with mike
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CONFIG_FILE: mkdocs.yml
-          EXTRA_PACKAGES: build-base # required for Python dependencies
-          REQUIREMENTS: requirements-docs.txt
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          if [ "$REF_TYPE" = "branch" ] && [ "$REF_NAME" = "master" ]; then
+            mike deploy --push --update-aliases latest master
+            mike set-default --push latest
+          elif [ "$REF_TYPE" = "tag" ] && [[ "$REF_NAME" == v* ]]; then
+            mike deploy --push "$REF_NAME"
+          else
+            echo "Skipping docs deployment for ref $REF_NAME ($REF_TYPE)."
+          fi
