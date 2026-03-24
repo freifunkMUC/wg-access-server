@@ -135,7 +135,7 @@ See the [Releases section](https://github.com/freifunkMUC/wg-access-server/relea
   - `wg_access_server_devices_bytes_received_total`: sum of received bytes across devices
   - `wg_access_server_devices_bytes_transmitted_total`: sum of transmitted bytes across devices
 
-If both `EnableMetadata` and `EnableDeviceMetrics` are enabled, device-specific metrics are included in the output. Set `metrics.basicAuth.username` and `metrics.basicAuth.passwordHash` (bcrypt) to protect the `/metrics` endpoint with HTTP Basic Auth.
+`EnableMetadata` is on by default so the UI always shows last handshake/bytes, while `EnableDeviceMetrics` defaults to `false` so Prometheus doesn't see device-level data unless you opt in. When both flags are enabled, device-specific metrics are exported. Set `metrics.basicAuth.username` and `metrics.basicAuth.passwordHash` (bcrypt) to protect the `/metrics` endpoint with HTTP Basic Auth.
 
 The software consists of a Golang server and a React app.
 
