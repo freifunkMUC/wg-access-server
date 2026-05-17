@@ -14,7 +14,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.9",
-    "@mui/material": "^7.3.9",
+    "@mui/material": "^9.0.1",
     "common-tags": "^1.8.2",
     "date-fns": "^4.1.0",
     "google-protobuf": "^4.0.2",
