@@ -16,7 +16,7 @@
     "@mui/icons-material": "^7.3.9",
     "@mui/material": "^7.3.9",
     "common-tags": "^1.8.2",
-    "date-fns": "^4.1.0",
+    "date-fns": "^4.4.0",
     "google-protobuf": "^4.0.2",
     "mobx": "^6.15.0",
     "mobx-react": "^9.2.1",
