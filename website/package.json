@@ -24,7 +24,7 @@
     "numeral": "^2.0.6",
     "qrcode": "^1.5.4",
     "react": "19.2.6",
-    "react-dom": "19.2.6",
+    "react-dom": "19.2.7",
     "react-router-dom": "^7.17.0",
     "tweetnacl-ts": "^1.0.3"
   },
