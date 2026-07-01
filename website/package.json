@@ -38,7 +38,7 @@
     "fork-ts-checker-webpack-plugin": "^9.1.0",
     "grpc-ts-web": "^0.2.0",
     "grpc-web": "^1.2.1",
-    "prettier": "^3.8.1",
+    "prettier": "^3.9.4",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
     "vite-plugin-svgr": "^5.2.0"
