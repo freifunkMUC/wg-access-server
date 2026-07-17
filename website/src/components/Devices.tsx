@@ -37,10 +37,12 @@ export const Devices = observer(
       this.setDevices(autorefresh(30, async () => {
         try {
           const res = await grpc.devices.listDevices({});
+          // a refresh that works again ends an earlier failure
+          AppState.clearLoadingError();
           return res.items;
         } catch (error) {
           console.log('An error occurred:', error);
-          AppState.loadingError = errorMessage(error);
+          AppState.setLoadingError(errorMessage(error));
           return null;
         }
       }));

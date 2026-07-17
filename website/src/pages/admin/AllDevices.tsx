@@ -42,10 +42,11 @@ export const AllDevices = observer(
     users = lazy(async () => {
       try {
         const result = await grpc.users.listUsers({});
+        AppState.clearLoadingError();
         return result.items;
       } catch (error) {
         console.error('An error occurred:', error);
-        AppState.loadingError = errorMessage(error);
+        AppState.setLoadingError(errorMessage(error));
         return null;
       }
     });
@@ -53,10 +54,11 @@ export const AllDevices = observer(
     devices = lazy(async () => {
       try {
         const res = await grpc.devices.listAllDevices({});
+        AppState.clearLoadingError();
         return res.items;
       } catch (error) {
         console.error('An error occurred:', error);
-        AppState.loadingError = errorMessage(error);
+        AppState.setLoadingError(errorMessage(error));
         return null;
       }
     });

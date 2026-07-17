@@ -36,6 +36,12 @@ class GlobalAppState {
       this.loadingError = error;
     });
   }
+
+  clearLoadingError(){
+    runInAction(() => {
+      this.loadingError = undefined;
+    });
+  }
 }
 
 export const AppState = new GlobalAppState();
