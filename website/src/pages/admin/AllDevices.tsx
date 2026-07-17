@@ -144,11 +144,11 @@ export const AllDevices = observer(
     };
 
     render() {
-      if (!this.devices.current || !this.users.current) {
-        return <Loading />;
-      }
       if (AppState.loadingError) {
         return <Error message={AppState.loadingError} />;
+      }
+      if (!this.devices.current || !this.users.current) {
+        return <Loading />;
       }
       const users = this.users.current;
       const devices = this.sortedDevices;
