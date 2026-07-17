@@ -13,6 +13,12 @@ type Storage interface {
 	Watcher
 	Pingable
 	Save(device *Device) error
+	// UpdateMetadata updates the metadata fields of an existing device.
+	// Unlike Save it never inserts: if the device has been deleted in the
+	// meantime the call is a no-op, so a revoked device cannot be
+	// resurrected by a concurrent metadata update. It also never emits an
+	// add event.
+	UpdateMetadata(device *Device) error
 	List(owner string) ([]*Device, error)
 	Get(owner string, name string) (*Device, error)
 	GetByPublicKey(publicKey string) (*Device, error)

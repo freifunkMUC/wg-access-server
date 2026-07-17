@@ -39,8 +39,8 @@ func syncMetrics(d *DeviceManager) {
 				device.TransmitBytes = peer.TransmitBytes
 				device.LastHandshakeTime = &peer.LastHandshakeTime
 
-				if err := d.SaveDevice(device); err != nil {
-					logrus.Error(errors.Wrap(err, "failed to save device during metadata sync"))
+				if err := d.UpdateDeviceMetadata(device); err != nil {
+					logrus.Error(errors.Wrap(err, "failed to update device metadata during metadata sync"))
 				}
 			}
 		}

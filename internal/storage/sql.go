@@ -152,6 +152,29 @@ func (s *SQLStorage) Save(device *Device) error {
 	return nil
 }
 
+func (s *SQLStorage) UpdateMetadata(device *Device) error {
+	logrus.Debugf("updating metadata for device %s", key(device))
+	// Use an explicit UPDATE instead of gorm's Save because in gorm v1
+	// Save falls back to an INSERT when the UPDATE matches 0 rows, which
+	// would re-create (and re-add as a WireGuard peer) a device that was
+	// deleted between the caller's read and this write.
+	q := s.db.Model(&Device{}).
+		Where("owner = ? AND name = ?", device.Owner, device.Name).
+		Updates(map[string]interface{}{
+			"endpoint":            device.Endpoint,
+			"receive_bytes":       device.ReceiveBytes,
+			"transmit_bytes":      device.TransmitBytes,
+			"last_handshake_time": device.LastHandshakeTime,
+		})
+	if q.Error != nil {
+		return errors.Wrapf(q.Error, "failed to update device metadata")
+	}
+	if q.RowsAffected == 0 {
+		logrus.Debugf("device %s no longer exists - skipped metadata update", key(device))
+	}
+	return nil
+}
+
 func (s *SQLStorage) List(username string) ([]*Device, error) {
 	var err error
 	devices := []*Device{}

@@ -36,6 +36,21 @@ func (s *InMemoryStorage) Save(device *Device) error {
 	return nil
 }
 
+func (s *InMemoryStorage) UpdateMetadata(device *Device) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	existing, ok := s.db[key(device)]
+	if !ok {
+		// the device was deleted in the meantime; don't resurrect it
+		return nil
+	}
+	existing.Endpoint = device.Endpoint
+	existing.ReceiveBytes = device.ReceiveBytes
+	existing.TransmitBytes = device.TransmitBytes
+	existing.LastHandshakeTime = device.LastHandshakeTime
+	return nil
+}
+
 func (s *InMemoryStorage) List(username string) ([]*Device, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
