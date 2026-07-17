@@ -42,7 +42,7 @@ func checkAndRemove(ctx context.Context, d *DeviceManager, inactiveDeviceGracePe
 		logrus.Debugf("Checking inactive device: %s/%s", dev.Owner, dev.Name)
 
 		var elapsed time.Duration
-		if dev.LastHandshakeTime == nil {
+		if dev.LastHandshakeTime == nil || dev.LastHandshakeTime.IsZero() {
 			// Never connected
 			elapsed = time.Since(dev.CreatedAt)
 		} else {
