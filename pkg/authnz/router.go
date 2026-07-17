@@ -58,6 +58,19 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 		}
 	}
 	store := sessions.NewCookieStore(storeSecret)
+	store.Options = &sessions.Options{
+		Path: "/",
+		// keep the gorilla/sessions default session lifetime of 30 days
+		// (ClearSession relies on mutating MaxAge to -1 to delete the cookie)
+		MaxAge: 86400 * 30,
+		// prevent JavaScript from reading the session cookie (XSS hardening)
+		HttpOnly: true,
+		Secure:   true,
+		// Lax still sends the cookie on top-level GET navigations, so the
+		// OIDC redirect callback keeps working while cross-site subrequests
+		// no longer carry the session cookie (CSRF hardening)
+		SameSite: http.SameSiteLaxMode,
+	}
 	runtime := authruntime.NewProviderRuntime(store)
 	providers := config.Providers()
 
