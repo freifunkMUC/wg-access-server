@@ -157,6 +157,74 @@ func TestDNSProxy_CacheResponse(t *testing.T) {
 	})
 }
 
+func TestPurgeECS(t *testing.T) {
+	newECS := func() *dns.EDNS0_SUBNET {
+		return &dns.EDNS0_SUBNET{
+			Code:          dns.EDNS0SUBNET,
+			Family:        1,
+			SourceNetmask: 24,
+			Address:       net.IPv4(192, 0, 2, 0),
+		}
+	}
+	newCookie := func() *dns.EDNS0_COOKIE {
+		return &dns.EDNS0_COOKIE{Code: dns.EDNS0COOKIE, Cookie: "24a5ac1223344556"}
+	}
+	countECS := func(m *dns.Msg) int {
+		opt := m.IsEdns0()
+		if opt == nil {
+			return 0
+		}
+		n := 0
+		for _, o := range opt.Option {
+			if o.Option() == dns.EDNS0SUBNET {
+				n++
+			}
+		}
+		return n
+	}
+	newMsg := func(options ...dns.EDNS0) *dns.Msg {
+		m := new(dns.Msg)
+		m.SetQuestion("example.com.", dns.TypeA)
+		m.SetEdns0(1232, false)
+		opt := m.IsEdns0()
+		opt.Option = append(opt.Option, options...)
+		return m
+	}
+
+	t.Run("no EDNS0 at all", func(t *testing.T) {
+		m := new(dns.Msg)
+		m.SetQuestion("example.com.", dns.TypeA)
+		purgeECS(m) // must not panic
+	})
+
+	t.Run("no ECS option", func(t *testing.T) {
+		m := newMsg(newCookie())
+		purgeECS(m)
+		if got := len(m.IsEdns0().Option); got != 1 {
+			t.Fatalf("expected 1 remaining option, got %d", got)
+		}
+	})
+
+	t.Run("single ECS option", func(t *testing.T) {
+		m := newMsg(newECS())
+		purgeECS(m)
+		if got := countECS(m); got != 0 {
+			t.Fatalf("expected 0 ECS options, got %d", got)
+		}
+	})
+
+	t.Run("multiple ECS options are all removed", func(t *testing.T) {
+		m := newMsg(newECS(), newECS(), newCookie(), newECS())
+		purgeECS(m)
+		if got := countECS(m); got != 0 {
+			t.Fatalf("expected 0 ECS options, got %d", got)
+		}
+		if got := len(m.IsEdns0().Option); got != 1 {
+			t.Fatalf("expected 1 remaining non-ECS option, got %d", got)
+		}
+	})
+}
+
 func TestMinTTL(t *testing.T) {
 	newA := func(ttl uint32) dns.RR {
 		return &dns.A{

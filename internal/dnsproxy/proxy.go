@@ -148,11 +148,13 @@ func minTTL(m *dns.Msg) time.Duration {
 
 func purgeECS(m *dns.Msg) {
 	if opt := m.IsEdns0(); opt != nil {
-		for i, option := range opt.Option {
-			if option.Option() == dns.EDNS0SUBNET {
-				opt.Option = append(opt.Option[:i], opt.Option[i+1:]...)
+		filtered := opt.Option[:0]
+		for _, option := range opt.Option {
+			if option.Option() != dns.EDNS0SUBNET {
+				filtered = append(filtered, option)
 			}
 		}
+		opt.Option = filtered
 	}
 }
 
