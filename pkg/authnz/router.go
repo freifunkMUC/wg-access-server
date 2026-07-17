@@ -143,8 +143,8 @@ func ClaimsMiddleware(conf *config.AppConfig) authsession.ClaimsMiddleware {
 			user.Claims.MakeAdmin()
 		}
 		// allow access to users only when access claim is present for OIDC
-		if conf.Auth.OIDC != nil && user.Provider == conf.Auth.OIDC.Name && conf.Auth.OIDC.AccessClaim != "" {
-			if !user.Claims.Has(conf.Auth.OIDC.AccessClaim, "true") {
+		if oidc := findOIDCProvider(&conf.Auth, user.Provider); oidc != nil && oidc.AccessClaim != "" {
+			if !user.Claims.Has(oidc.AccessClaim, "true") {
 				return &LoginError{
 					msg:  "User has no access",
 					code: NotAuthorized,
@@ -154,6 +154,25 @@ func ClaimsMiddleware(conf *config.AppConfig) authsession.ClaimsMiddleware {
 
 		return nil
 	}
+}
+
+// findOIDCProvider returns the OIDC provider config with the given name,
+// looking at both the legacy top-level OIDC provider and the ones
+// configured under auth.multiple.
+func findOIDCProvider(auth *authconfig.AuthConfig, name string) *authconfig.OIDCConfig {
+	if auth.OIDC != nil && auth.OIDC.Name == name {
+		return auth.OIDC
+	}
+	for providerName, providerConfig := range auth.Multiple {
+		if providerConfig.OIDC == nil {
+			continue
+		}
+		// the name defaults to the map key if not set explicitly (see AuthConfig.Providers)
+		if providerConfig.OIDC.Name == name || (providerConfig.OIDC.Name == "" && providerName == name) {
+			return providerConfig.OIDC
+		}
+	}
+	return nil
 }
 
 func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
