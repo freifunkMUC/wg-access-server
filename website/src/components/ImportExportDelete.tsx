@@ -36,6 +36,9 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    // Reset the input so selecting the same file again re-fires onChange.
+    // The File reference is captured above, so clearing the value is safe.
+    event.target.value = '';
     if (!file) return;
 
     try {
