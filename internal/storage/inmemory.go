@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"strings"
 	"sync"
 )
 
@@ -47,14 +46,8 @@ func (s *InMemoryStorage) List(username string) ([]*Device, error) {
 // username is empty). Callers must hold s.mu.
 func (s *InMemoryStorage) list(username string) []*Device {
 	devices := []*Device{}
-	prefix := func() string {
-		if username != "" {
-			return keyStr(username, "")
-		}
-		return ""
-	}()
-	for key, device := range s.db {
-		if strings.HasPrefix(key, prefix) {
+	for _, device := range s.db {
+		if username == "" || device.Owner == username {
 			devices = append(devices, device)
 		}
 	}

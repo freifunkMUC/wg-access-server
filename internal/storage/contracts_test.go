@@ -15,6 +15,23 @@ func TestMemoryStorage(t *testing.T) {
 	require.IsType(&InMemoryStorage{}, s)
 }
 
+func TestMemoryStorageListMatchesOwnerExactly(t *testing.T) {
+	require := require.New(t)
+
+	s := NewMemoryStorage()
+	require.NoError(s.Save(&Device{Owner: "alice", Name: "phone"}))
+	require.NoError(s.Save(&Device{Owner: "alicebob", Name: "laptop"}))
+
+	devices, err := s.List("alice")
+	require.NoError(err)
+	require.Len(devices, 1)
+	require.Equal("alice", devices[0].Owner)
+
+	all, err := s.List("")
+	require.NoError(err)
+	require.Len(all, 2)
+}
+
 func TestPostgresqlStorage(t *testing.T) {
 	require := require.New(t)
 
