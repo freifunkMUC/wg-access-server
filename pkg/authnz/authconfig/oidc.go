@@ -80,15 +80,17 @@ func (c *OIDCConfig) loginHandler(runtime *authruntime.ProviderRuntime, oauthCon
 	return func(w http.ResponseWriter, r *http.Request) {
 		// 1. Client prepares an Authentication Request containing the desired request parameters.
 		oauthStateString := authutil.RandomString(32)
+		oidcNonce := authutil.RandomString(32)
 		err := runtime.SetSession(w, r, &authsession.AuthSession{
-			Nonce: &oauthStateString,
+			State: &oauthStateString,
+			Nonce: &oidcNonce,
 		})
 		if err != nil {
 			http.Error(w, "No session", http.StatusUnauthorized)
 			return
 		}
 		// 2. Client sends the request to the Authorization Server.
-		authCodeURL := oauthConfig.AuthCodeURL(oauthStateString)
+		authCodeURL := oauthConfig.AuthCodeURL(oauthStateString, oidc.Nonce(oidcNonce))
 		http.Redirect(w, r, authCodeURL, http.StatusTemporaryRedirect)
 	}
 }
@@ -109,10 +111,10 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 
 		// Make sure the returned state matches the one saved in the session cookie to prevent CSRF attacks
 		state := r.FormValue("state")
-		if s.Nonce == nil {
+		if s.State == nil {
 			http.Error(w, "No state associated with session", http.StatusBadRequest)
 			return
-		} else if *s.Nonce != state {
+		} else if *s.State != state {
 			http.Error(w, "Bad state value", http.StatusBadRequest)
 			return
 		}
@@ -152,6 +154,16 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 			idToken, err := verifier.Verify(r.Context(), rawIDToken)
 			if err != nil {
 				panic(errors.Wrap(err, "failed to verify ID token"))
+			}
+
+			// Verify the nonce in the ID token matches the one stored in the session
+			// to prevent replay attacks
+			if s.Nonce == nil {
+				http.Error(w, "No nonce associated with session", http.StatusBadRequest)
+				return
+			} else if idToken.Nonce != *s.Nonce {
+				http.Error(w, "Bad nonce value in ID token", http.StatusBadRequest)
+				return
 			}
 
 			// Dump the claims

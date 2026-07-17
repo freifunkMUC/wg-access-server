@@ -11,6 +11,9 @@ import (
 )
 
 type AuthSession struct {
+	// State holds the OAuth2 state value used for CSRF protection
+	State *string
+	// Nonce holds the OpenID Connect nonce used to bind an ID token to the login session
 	Nonce    *string
 	Identity *Identity
 }
