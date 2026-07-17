@@ -43,6 +43,11 @@ func (w *GormWatcher) OnReconnect(cb func()) {
 }
 
 func (w *GormWatcher) emit(cb Callback, scope *gorm.Scope) {
+	if scope.HasError() {
+		// the operation failed (e.g. constraint violation or rollback),
+		// so we must not emit an event for a change that never happened
+		return
+	}
 	if scope.TableName() == w.table {
 		cb(*scope.Value.(**Device))
 	}
