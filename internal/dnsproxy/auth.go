@@ -68,7 +68,13 @@ func (d *DNSAuth) Lookup(m *dns.Msg) (*dns.Msg, error) {
 		return nil, errors.New("only class INET allowed")
 	}
 
-	deviceAndOwner := strings.TrimSuffix(qname, d.Domain)
+	// DNS names are case-insensitive and clients may randomize the case of
+	// queries (0x20 encoding), so the domain suffix must be stripped
+	// case-insensitively while preserving the original casing of the qname.
+	deviceAndOwner := qname
+	if len(qname) >= len(d.Domain) && strings.EqualFold(qname[len(qname)-len(d.Domain):], d.Domain) {
+		deviceAndOwner = qname[:len(qname)-len(d.Domain)]
+	}
 	parts := dns.SplitDomainName(deviceAndOwner)
 
 	response := new(dns.Msg)
