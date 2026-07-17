@@ -137,6 +137,14 @@ func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, p
 		return nil, errors.New("Pre-shared key has invalid format.")
 	}
 
+	// Hold the IP allocation lock from address selection (manual or automatic)
+	// through SaveDevice, so concurrent AddDevice calls cannot both read an
+	// address as free and persist duplicate assignments (TOCTOU).
+	// Note: this mutex is process-local; it does not protect against multiple
+	// server replicas sharing the same Postgres database.
+	nextIPLock.Lock()
+	defer nextIPLock.Unlock()
+
 	clientAddr := ""
 	if manualIPAssignment {
 		if manualIPv4Address == "" && manualIPv6Address == "" {
@@ -221,7 +229,7 @@ func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, p
 		}
 
 	} else {
-		clientAddr, err = d.nextClientAddress()
+		clientAddr, err = d.nextClientAddressLocked()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to generate an ip address for device")
 		}
@@ -313,12 +321,14 @@ func (d *DeviceManager) GetByPublicKey(publicKey string) (*storage.Device, error
 	return d.storage.GetByPublicKey(publicKey)
 }
 
+// nextIPLock serializes the "read used addresses -> pick address -> save device"
+// sequence in AddDevice to prevent duplicate IP assignments. It is process-local
+// and does not protect against multiple replicas sharing one Postgres database.
 var nextIPLock = sync.Mutex{}
 
-func (d *DeviceManager) nextClientAddress() (string, error) {
-	nextIPLock.Lock()
-	defer nextIPLock.Unlock()
-
+// nextClientAddressLocked returns the next free client address.
+// Callers must hold nextIPLock.
+func (d *DeviceManager) nextClientAddressLocked() (string, error) {
 	// TODO: read up on better ways to allocate client's IP
 	// addresses from a configurable CIDR
 
