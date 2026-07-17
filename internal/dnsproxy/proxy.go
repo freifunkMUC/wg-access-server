@@ -2,6 +2,7 @@ package dnsproxy
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"runtime/debug"
 	"time"
@@ -99,13 +100,50 @@ func (d *DNSProxy) Lookup(m *dns.Msg) (*dns.Msg, error) {
 		return nil, fmt.Errorf("no response from upstream servers")
 	}
 
-	if len(response.Answer) > 0 {
-		ttl := time.Duration(response.Answer[0].Header().Ttl) * time.Second
-		logrus.Debugf("caching dns response for %s for %v seconds", prettyPrintMsg(m), ttl)
-		d.cache.Set(key, response, ttl)
-	}
+	d.cacheResponse(key, response)
 
 	return response.Copy(), nil
+}
+
+// cacheResponse stores a response using the minimum TTL across all of its
+// records so the cache never serves a record past its TTL. A minimum TTL of 0
+// means "do not cache": passing a zero duration to go-cache would make it use
+// the cache's DefaultExpiration instead, pinning deliberately uncacheable
+// records (e.g. DNS failover) for minutes.
+func (d *DNSProxy) cacheResponse(key string, response *dns.Msg) {
+	if len(response.Answer) == 0 {
+		return
+	}
+	if ttl := minTTL(response); ttl > 0 {
+		logrus.Debugf("caching dns response for %s for %v", prettyPrintMsg(response), ttl)
+		d.cache.Set(key, response, ttl)
+	} else {
+		logrus.Debugf("not caching dns response for %s: minimum record TTL is 0", prettyPrintMsg(response))
+	}
+}
+
+// minTTL returns the minimum TTL across all records in the message (Answer,
+// Ns and Extra sections), or 0 if the message contains no such records.
+// OPT pseudo-records are ignored because their header TTL field encodes
+// extended RCODE and flags rather than a time to live.
+func minTTL(m *dns.Msg) time.Duration {
+	min := uint32(math.MaxUint32)
+	found := false
+	for _, rrs := range [][]dns.RR{m.Answer, m.Ns, m.Extra} {
+		for _, rr := range rrs {
+			if rr.Header().Rrtype == dns.TypeOPT {
+				continue
+			}
+			if ttl := rr.Header().Ttl; ttl < min {
+				min = ttl
+			}
+			found = true
+		}
+	}
+	if !found {
+		return 0
+	}
+	return time.Duration(min) * time.Second
 }
 
 func purgeECS(m *dns.Msg) {

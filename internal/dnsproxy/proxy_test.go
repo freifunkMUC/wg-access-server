@@ -82,3 +82,118 @@ func TestDNSProxy_Lookup(t *testing.T) {
 		}
 	})
 }
+
+func TestDNSProxy_CacheResponse(t *testing.T) {
+	newA := func(ttl uint32) dns.RR {
+		return &dns.A{
+			Hdr: dns.RR_Header{Name: "example.com.", Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl},
+			A:   net.IPv4(127, 0, 0, 1),
+		}
+	}
+	newProxy := func() *DNSProxy {
+		return &DNSProxy{cache: cache.New(10*time.Minute, 10*time.Minute)}
+	}
+	newResponse := func(name string, ttls ...uint32) (string, *dns.Msg) {
+		query := new(dns.Msg)
+		query.SetQuestion(name, dns.TypeA)
+		response := new(dns.Msg)
+		response.SetReply(query)
+		for _, ttl := range ttls {
+			response.Answer = append(response.Answer, newA(ttl))
+		}
+		return makekey(query), response
+	}
+
+	t.Run("TTL 0 responses are not cached", func(t *testing.T) {
+		proxy := newProxy()
+		key, response := newResponse("ttl-zero.example.com.", 0)
+
+		proxy.cacheResponse(key, response)
+
+		if _, found := proxy.cache.Get(key); found {
+			t.Fatal("response with TTL 0 must not be cached")
+		}
+	})
+
+	t.Run("mixed TTLs with a 0 are not cached", func(t *testing.T) {
+		proxy := newProxy()
+		key, response := newResponse("mixed-zero.example.com.", 300, 0)
+
+		proxy.cacheResponse(key, response)
+
+		if _, found := proxy.cache.Get(key); found {
+			t.Fatal("response containing a TTL 0 record must not be cached")
+		}
+	})
+
+	t.Run("minimum TTL across answers is used", func(t *testing.T) {
+		proxy := newProxy()
+		key, response := newResponse("mixed-ttl.example.com.", 300, 30)
+
+		proxy.cacheResponse(key, response)
+
+		_, expiration, found := proxy.cache.GetWithExpiration(key)
+		if !found {
+			t.Fatal("expected response to be cached")
+		}
+		remaining := time.Until(expiration)
+		if remaining > 30*time.Second {
+			t.Fatalf("cache TTL %v exceeds minimum record TTL of 30s", remaining)
+		}
+		if remaining <= 0 {
+			t.Fatalf("cache TTL %v should be positive", remaining)
+		}
+	})
+
+	t.Run("responses without answers are not cached", func(t *testing.T) {
+		proxy := newProxy()
+		key, response := newResponse("no-answer.example.com.")
+
+		proxy.cacheResponse(key, response)
+
+		if _, found := proxy.cache.Get(key); found {
+			t.Fatal("response without answers must not be cached")
+		}
+	})
+}
+
+func TestMinTTL(t *testing.T) {
+	newA := func(ttl uint32) dns.RR {
+		return &dns.A{
+			Hdr: dns.RR_Header{Name: "example.com.", Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl},
+			A:   net.IPv4(127, 0, 0, 1),
+		}
+	}
+
+	t.Run("empty message", func(t *testing.T) {
+		if got := minTTL(new(dns.Msg)); got != 0 {
+			t.Fatalf("expected 0, got %v", got)
+		}
+	})
+
+	t.Run("minimum across sections", func(t *testing.T) {
+		m := new(dns.Msg)
+		m.Answer = []dns.RR{newA(300), newA(60)}
+		m.Extra = []dns.RR{newA(10)}
+		if got := minTTL(m); got != 10*time.Second {
+			t.Fatalf("expected 10s, got %v", got)
+		}
+	})
+
+	t.Run("OPT records are ignored", func(t *testing.T) {
+		m := new(dns.Msg)
+		m.Answer = []dns.RR{newA(60)}
+		m.SetEdns0(1232, false) // OPT header TTL is 0 but must not count
+		if got := minTTL(m); got != 60*time.Second {
+			t.Fatalf("expected 60s, got %v", got)
+		}
+	})
+
+	t.Run("zero TTL answer", func(t *testing.T) {
+		m := new(dns.Msg)
+		m.Answer = []dns.RR{newA(0), newA(300)}
+		if got := minTTL(m); got != 0 {
+			t.Fatalf("expected 0, got %v", got)
+		}
+	})
+}
