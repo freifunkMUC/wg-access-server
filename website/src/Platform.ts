@@ -16,6 +16,10 @@ export function getPlatform() {
   const windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'];
   const iosPlatforms = ['iPhone', 'iPad', 'iPod'];
   if (macosPlatforms.indexOf(platform) !== -1) {
+    // iPadOS 13+ reports 'MacIntel' but, unlike real Macs, has a touch screen.
+    if (platform === 'MacIntel' && (window.navigator.maxTouchPoints || 0) > 1) {
+      return Platform.Ios;
+    }
     return Platform.Mac;
   } else if (iosPlatforms.indexOf(platform) !== -1) {
     return Platform.Ios;
