@@ -134,9 +134,16 @@ See the [Releases section](https://github.com/freifunkMUC/wg-access-server/relea
   - `wg_access_server_devices_connected`: devices with a recent handshake
   - `wg_access_server_devices_bytes_received_total`: sum of received bytes across devices
   - `wg_access_server_devices_bytes_transmitted_total`: sum of transmitted bytes across devices
-  - `wg_access_server_device_connected{device,owner}`, `wg_access_server_device_bytes_received_total{device,owner}`, `wg_access_server_device_bytes_transmitted_total{device,owner}`, `wg_access_server_device_last_handshake_timestamp_seconds{device,owner}`: same, per device
+  - `wg_access_server_device_connected{device,owner}`, `wg_access_server_device_bytes_received_total{device,owner}`, `wg_access_server_device_bytes_transmitted_total{device,owner}`, `wg_access_server_device_last_handshake_timestamp_seconds{device,owner}`: the same, per device
+  - `wg_access_server_device_metrics_scrape_error`: 1 if the last scrape could not read devices from storage
+  - `wg_access_server_device_metrics_series_dropped`: devices left out of the per-device metrics in the last scrape
 
 `EnableMetadata` is on by default so the UI always shows last handshake/bytes, while `EnableDeviceMetrics` defaults to `false` so Prometheus doesn't see device-level data unless you opt in. When both flags are enabled, device-specific metrics are exported. Set `metrics.basicAuth.username` and `metrics.basicAuth.passwordHash` (bcrypt) to protect the `/metrics` endpoint with HTTP Basic Auth.
+
+The per-device metrics carry user controlled label values: the device name as users typed it and the owner's identity from your auth provider. Two things follow from that.
+
+- **They expose who uses the VPN and when.** Enable them only where that is acceptable, and protect `/metrics` with basic auth (or a network policy) — the endpoint is unauthenticated otherwise.
+- **Every device adds four time series.** Nothing limits how many devices a user may create, so `metrics.maxDeviceSeries` caps how many devices get their own labels; it defaults to `1000`. Beyond the cap devices are dropped in a stable order and counted in `wg_access_server_device_metrics_series_dropped`, while the aggregate metrics stay complete. Set it to `0` to export only the aggregates, or to a negative value to remove the cap. Names longer than 128 bytes are truncated, and devices whose labels collide after truncation are dropped rather than failing the scrape.
 
 The software consists of a Golang server and a React app.
 
