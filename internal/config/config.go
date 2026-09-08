@@ -168,6 +168,13 @@ type AppConfig struct {
 			// Bcrypt hashed password required when accessing /metrics.
 			PasswordHash string `yaml:"passwordHash"`
 		} `yaml:"basicAuth"`
+		// MaxDeviceSeries caps how many devices are exported as individual
+		// time series on /metrics. Device names and owners are user
+		// controlled, so an uncapped export lets any user inflate the
+		// cardinality of the scraping Prometheus.
+		// A negative value removes the cap, 0 exports only the aggregate
+		// device metrics. Defaults to 1000.
+		MaxDeviceSeries int `yaml:"maxDeviceSeries"`
 	} `yaml:"metrics"`
 	// Auth configures optional authentication backends
 	// to control access to the web ui.
