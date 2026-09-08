@@ -257,7 +257,7 @@ func TestDeviceMetrics_HostileLabelValuesAreSanitized(t *testing.T) {
 		Owner: "user-a", Name: longName,
 		LastHandshakeTime: &now,
 	})
-	// Invalid UTF-8 would make the exposition unparseable for Prometheus.
+	// Invalid UTF-8 would make the exposition unparsable for Prometheus.
 	saveDevice(t, s, &storage.Device{
 		Owner: "user-b", Name: "bad-\xff-name",
 		LastHandshakeTime: &now,
