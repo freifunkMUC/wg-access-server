@@ -1,7 +1,7 @@
 import { Alert, AlertTitle, Box } from '@mui/material';
 
 interface ErrorProps {
-  message: String;
+  message: string;
 }
 
 export function Error({ message }: ErrorProps) {
