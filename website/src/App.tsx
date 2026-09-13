@@ -11,15 +11,15 @@ import { AllDevices } from './pages/admin/AllDevices';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { Loading } from './components/Loading';
 import { Error } from './components/Error';
+import { errorMessage } from './Util';
 
 export const App = observer(
   class App extends React.Component {
     async componentDidMount() {
       try {
         AppState.setInfo(await grpc.server.info({}));
-      } catch (error: any) {
-
-        AppState.setLoadingError(error.message);
+      } catch (error) {
+        AppState.setLoadingError(errorMessage(error));
         console.error('An error occurred:', error);
       }
     }

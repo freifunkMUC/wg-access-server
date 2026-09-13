@@ -12,7 +12,13 @@ export const grpc = {
 };
 
 // https://github.com/SafetyCulture/grpc-web-devtools
-const devtools = (window as any).__GRPCWEB_DEVTOOLS__;
+declare global {
+  interface Window {
+    __GRPCWEB_DEVTOOLS__?: (clients: unknown[]) => void;
+  }
+}
+
+const devtools = window.__GRPCWEB_DEVTOOLS__;
 if (devtools) {
   devtools(Object.values(grpc));
 }

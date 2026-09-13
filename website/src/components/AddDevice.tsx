@@ -31,6 +31,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Box from '@mui/material/Box';
 import { Warning } from '@mui/icons-material';
 import { ImportExportDelete } from './ImportExportDelete';
+import { errorMessage } from '../Util';
 
 interface Props {
   onAdd: () => void;
@@ -146,13 +147,13 @@ export const AddDevice = observer(
         privateKey = 'pleaseReplaceThisPrivatekey';
         this.setShowMobile(false)
       } else {
-        publicKey = window.btoa(String.fromCharCode(...(new Uint8Array(keypair.publicKey) as any)));
-        privateKey = window.btoa(String.fromCharCode(...(new Uint8Array(keypair.secretKey) as any)));
+        publicKey = window.btoa(String.fromCharCode(...Array.from(new Uint8Array(keypair.publicKey))));
+        privateKey = window.btoa(String.fromCharCode(...Array.from(new Uint8Array(keypair.secretKey))));
         this.setShowMobile(true)
       }
 
       const presharedKey = this.useDevicePresharekey
-        ? window.btoa(String.fromCharCode(...(randomBytes(32) as any)))
+        ? window.btoa(String.fromCharCode(...Array.from(randomBytes(32))))
         : '';
 
       try {
@@ -200,9 +201,9 @@ export const AddDevice = observer(
         this.setConfigFile(configFile)
         this.setDialogOpen(true)
         this.reset();
-      } catch (error: any) {
+      } catch (error) {
         console.log(error);
-        this.setError('Failed to add device: ' + error.message)
+        this.setError('Failed to add device: ' + errorMessage(error))
       }
     };
 
@@ -238,7 +239,7 @@ export const AddDevice = observer(
     }
 
     render() {
-      const handleClose = (event: any, reason: string) => {
+      const handleClose = (event: unknown, reason: string) => {
         if (reason === 'backdropClick') {
           return false;
         }

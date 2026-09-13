@@ -4,6 +4,15 @@ import { toDate } from './Api';
 import { fromResource, lazyObservable } from 'mobx-utils';
 import { toast } from './components/Toast';
 
+// Errors reaching the UI are either gRPC-web errors, plain Errors or - in
+// theory - anything a rejected promise carries, so narrow instead of casting.
+export function errorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return String((error as { message: unknown }).message);
+  }
+  return String(error);
+}
+
 export function sleep(seconds: number) {
   return new Promise<void>((resolve) => {
     setTimeout(() => {

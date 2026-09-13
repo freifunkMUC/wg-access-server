@@ -9,6 +9,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { grpc } from '../Api';
 import { toast } from './Toast';
 import { confirm } from './Present';
+import { errorMessage } from '../Util';
 
 
 export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
@@ -27,7 +28,7 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast({ text: 'Devices exported successfully', intent: 'success' });
-    } catch (error) {
+    } catch {
       toast({ text: 'Failed to export devices', intent: 'error' });
     }
   };
@@ -59,8 +60,8 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
             manualIpv6Address: device.manualIpv6Address || '',
           });
           imported++;
-        } catch (err: any) {
-          failed.push(`${device.name || device.publicKey}: ${err.message}`);
+        } catch (err) {
+          failed.push(`${device.name || device.publicKey}: ${errorMessage(err)}`);
         }
       }
 

@@ -42,7 +42,7 @@ export const AppState = new GlobalAppState();
 
 console.info('see global app state by typing "window.AppState"');
 
-Object.assign(window as any, {
+Object.assign(window, {
   get AppState() {
     return JSON.parse(JSON.stringify(AppState));
   },
