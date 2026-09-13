@@ -24,8 +24,12 @@ interface Props {
   showMobile: boolean;
 }
 
-export class GetConnected extends Component<PropsWithChildren<Props>, any> {
-  state = {
+interface State {
+  currentTab: string;
+}
+
+export class GetConnected extends Component<PropsWithChildren<Props>, State> {
+  state: State = {
     currentTab: isMobile() && this.props.showMobile ? 'mobile' : 'desktop',
   };
 

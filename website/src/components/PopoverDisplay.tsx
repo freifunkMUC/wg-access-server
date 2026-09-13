@@ -9,7 +9,7 @@ interface Props {
 
 export class PopoverDisplay extends React.Component<Props> {
   state = {
-    anchorEl: undefined as any,
+    anchorEl: undefined as HTMLElement | undefined,
   };
 
   render() {

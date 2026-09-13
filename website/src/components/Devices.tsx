@@ -3,23 +3,23 @@ import { Box } from '@mui/material';
 import { observable, makeObservable, runInAction } from 'mobx';
 import { observer } from 'mobx-react';
 import { grpc } from '../Api';
-import { autorefresh } from '../Util';
+import { autorefresh, errorMessage } from '../Util';
 import { DeviceListItem } from './DeviceListItem';
 import { Device } from '../sdk/devices_pb';
 import { AddDevice } from './AddDevice';
-import { Loading } from './Loading';
 import { AppState } from '../AppState';
 import { Error } from './Error';
-import { Card, CardContent, CardHeader, Skeleton } from '@mui/material';
 import { DeviceListItemSkeleton } from './DeviceListItemSkeleton';
 import { AddDeviceSkeleton } from './AddDeviceSkeleton';
 
+type DeviceResource = ReturnType<typeof autorefresh<Device.AsObject[] | null>>;
+
 export const Devices = observer(
   class Devices extends React.Component {
-    devices: any = null;
+    devices: DeviceResource | null = null;
     refreshHandler?: EventListener;
 
-    constructor(props: {}) {
+    constructor(props: object) {
       super(props);
 
       makeObservable(this, {
@@ -27,7 +27,7 @@ export const Devices = observer(
       });   
     }
 
-    setDevices(devices: any) {
+    setDevices(devices: DeviceResource) {
       runInAction(() => {
         this.devices = devices;
       })
@@ -38,9 +38,9 @@ export const Devices = observer(
         try {
           const res = await grpc.devices.listDevices({});
           return res.items;
-        } catch (error: any) {
+        } catch (error) {
           console.log('An error occurred:', error);
-          AppState.loadingError = error.message;
+          AppState.loadingError = errorMessage(error);
           return null;
         }
       }));
@@ -60,14 +60,18 @@ export const Devices = observer(
         if (this.refreshHandler) {
           window.removeEventListener('wg.devices.refresh', this.refreshHandler as EventListener);
         }
-        this.devices.dispose();
+        this.devices?.dispose();
       }
 
     render() {
+      // bind once: the field stays null until componentDidMount has run, and
+      // narrowing on `this.devices` would not carry into the callbacks below
+      const devices = this.devices;
+
       if (AppState.loadingError) {
         return <Error message={AppState.loadingError} />;
       }
-      if (!this.devices || !this.devices.current) {
+      if (!devices || !devices.current) {
         return (
           <Box sx={{ display: 'grid', gap: 3, justifyContent: 'center' }}>
             <Box sx={{ gridColumn: 'span 12' }}>
@@ -89,15 +93,15 @@ export const Devices = observer(
         <Box sx={{ display: 'grid', gap: 3, justifyContent: 'center' }}>
           <Box sx={{ gridColumn: 'span 12' }}>
             <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' } }}>
-              {this.devices.current.map((device: Device.AsObject, i: React.Key) => (
+              {devices.current.map((device: Device.AsObject, i: React.Key) => (
                 <Box key={i}>
-                  <DeviceListItem device={device} onRemove={() => this.devices.refresh()} />
+                  <DeviceListItem device={device} onRemove={() => devices.refresh()} />
                 </Box>
               ))}
             </Box>
           </Box>
           <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 10', md: 'span 10', lg: 'span 6' } }}>
-            <AddDevice onAdd={() => this.devices.refresh()} onRefresh={() => this.devices.refresh()} />
+            <AddDevice onAdd={() => devices.refresh()} onRefresh={() => devices.refresh()} />
           </Box>
         </Box>
       );

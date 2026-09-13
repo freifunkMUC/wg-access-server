@@ -18,7 +18,7 @@ import { AppState } from '../../AppState';
 import { confirm } from '../../components/Present';
 import { Device } from '../../sdk/devices_pb';
 import { User } from '../../sdk/users_pb';
-import { lastSeen, lazy } from '../../Util';
+import { errorMessage, lastSeen, lazy } from '../../Util';
 import numeral from 'numeral';
 import { Loading } from '../../components/Loading';
 import { Error } from '../../components/Error';
@@ -29,7 +29,7 @@ export const AllDevices = observer(
 
     sortOrder: 'asc' | 'desc' = 'desc';
 
-    constructor(props: any) {
+    constructor(props: object) {
       super(props);
       makeObservable(this, {
         sortBy: observable,
@@ -43,9 +43,9 @@ export const AllDevices = observer(
       try {
         const result = await grpc.users.listUsers({});
         return result.items;
-      } catch (error: any) {
+      } catch (error) {
         console.error('An error occurred:', error);
-        AppState.loadingError = error.message;
+        AppState.loadingError = errorMessage(error);
         return null;
       }
     });
@@ -54,9 +54,9 @@ export const AllDevices = observer(
       try {
         const res = await grpc.devices.listAllDevices({});
         return res.items;
-      } catch (error: any) {
+      } catch (error) {
         console.error('An error occurred:', error);
-        AppState.loadingError = error.message;
+        AppState.loadingError = errorMessage(error);
         return null;
       }
     });
@@ -72,9 +72,17 @@ export const AllDevices = observer(
 
       const devices = [...this.devices.current];
 
+      // sortBy also covers the derived columns handled below, which are not
+      // keys of Device.AsObject, so look the value up dynamically and keep only
+      // what the comparisons further down can actually handle.
+      const valueOf = (device: Device.AsObject): string | number | undefined => {
+        const raw = (device as unknown as Record<string, unknown>)[this.sortBy];
+        return typeof raw === 'string' || typeof raw === 'number' ? raw : undefined;
+      };
+
       return devices.sort((a, b) => {
-        let aValue: any = (a as any)[this.sortBy];
-        let bValue: any = (b as any)[this.sortBy];
+        let aValue = valueOf(a);
+        let bValue = valueOf(b);
 
         if (this.sortBy === 'lastHandshakeTime') {
           aValue = a.lastHandshakeTime ? a.lastHandshakeTime.seconds : 0;
