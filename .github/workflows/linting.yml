@@ -42,6 +42,6 @@ jobs: # Docs: <https://git.io/JvxXE>
       - name: Run linter
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.5 # without patch version
+          version: v2.13 # without patch version
           only-new-issues: false # show only new issues if it's a pull request
           args: --timeout 4m # the default of 1m didn't suffice occasionally

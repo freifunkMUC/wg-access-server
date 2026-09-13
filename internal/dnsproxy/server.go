@@ -34,14 +34,13 @@ func New(opts DNSServerOpts) (*DNSServer, error) {
 	dnsServer := &DNSServer{
 		servers: []*dns.Server{},
 		proxy: &DNSProxy{
+			// SingleInflight is intentionally unset
 			udpClient: &dns.Client{
-				SingleInflight: true,
-				Timeout:        5 * time.Second,
+				Timeout: 5 * time.Second,
 			},
 			tcpClient: &dns.Client{
-				Net:            "tcp",
-				SingleInflight: true,
-				Timeout:        5 * time.Second,
+				Net:     "tcp",
+				Timeout: 5 * time.Second,
 			},
 			cache:    cache.New(10*time.Minute, 10*time.Minute),
 			upstream: opts.Upstream,
