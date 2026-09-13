@@ -16,7 +16,11 @@ func newGormWatcherTestDB(t *testing.T) (*gorm.DB, *GormWatcher) {
 	if err != nil {
 		t.Fatalf("failed to open in-memory sqlite: %v", err)
 	}
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("failed to close in-memory sqlite: %v", err)
+		}
+	})
 
 	// every pooled connection would get its own private :memory: database,
 	// so restrict the pool to a single connection
