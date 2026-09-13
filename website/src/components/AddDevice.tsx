@@ -268,7 +268,7 @@ export const AddDevice = observer(
                     aria-describedby="device-name-text"
                   />
                 </FormControl>
-                <Box mt={2} mb={2}>
+                <Box sx={{ mt: 2, mb: 2 }}>
                   <Accordion>
                     <AccordionSummary
                       expandIcon={<ExpandMoreIcon />}
@@ -380,7 +380,7 @@ export const AddDevice = observer(
               </form>
             </CardContent>
           </Card>
-          <Dialog disableEscapeKeyDown maxWidth="xl" open={this.dialogOpen} onClose={handleClose}>
+          <Dialog maxWidth="xl" open={this.dialogOpen} onClose={handleClose}>
             <DialogTitle>
               Get Connected
               <Info>

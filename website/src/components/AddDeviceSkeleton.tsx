@@ -30,7 +30,7 @@ export function AddDeviceSkeleton() {
           </InputLabel>
           <Input id="device-name" aria-describedby="device-name-text" />
         </FormControl>
-        <Box mt={2} mb={2}>
+        <Box sx={{ mt: 2, mb: 2 }}>
           <Accordion>
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
