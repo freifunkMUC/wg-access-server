@@ -51,7 +51,7 @@ export const App = observer(
           <ThemeProvider theme={darkLightTheme}>
             <CssBaseline />
             <Navigation />
-            <Box component="div" m={2}>
+            <Box component="div" sx={{ m: 2 }}>
               {this.pageContent()}
             </Box>
           </ThemeProvider>

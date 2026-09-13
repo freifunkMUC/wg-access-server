@@ -5,14 +5,16 @@ export function Loading() {
   return (
     <Box
       component="div"
-      m={4}
-      display="flex"
-      flexDirection="column"
-      justifyContent="center"
-      alignItems="center"
-      minHeight="50vh"
+      sx={{
+        m: 4,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '50vh',
+      }}
     >
-      <Box mb={5}>Loading...</Box>
+      <Box sx={{ mb: 5 }}>Loading...</Box>
       <CircularProgress color="primary" />
     </Box>
   );
