@@ -79,7 +79,7 @@ function DarkModeToggle() {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 
   useEffect(() => {
-    let customDarkMode = localStorage.getItem(CUSTOM_DARK_MODE_KEY);
+    const customDarkMode = localStorage.getItem(CUSTOM_DARK_MODE_KEY);
     if (customDarkMode) {
       AppState.setDarkMode(JSON.parse(customDarkMode));
     } else {

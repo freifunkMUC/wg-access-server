@@ -139,8 +139,8 @@ export const AddDevice = observer(
       event.preventDefault();
 
       const keypair = box_keyPair();
-      var publicKey: string;
-      var privateKey: string;
+      let publicKey: string;
+      let privateKey: string;
       if (this.devicePublickey) {
         publicKey = this.devicePublickey;
         privateKey = 'pleaseReplaceThisPrivatekey';

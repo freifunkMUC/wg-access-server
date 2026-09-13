@@ -3,7 +3,7 @@ import { InfoRes } from './sdk/server_pb';
 
 class GlobalAppState {
   info?: InfoRes.AsObject;
-  loadingError?: String;
+  loadingError?: string;
   darkMode: boolean;
 
   constructor() {
@@ -31,7 +31,7 @@ class GlobalAppState {
     });
   }
 
-  setLoadingError(error: String){
+  setLoadingError(error: string){
     runInAction(() => {
       this.loadingError = error;
     });
