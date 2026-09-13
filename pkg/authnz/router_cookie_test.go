@@ -18,9 +18,19 @@ const sessionCookieName = "auth-session"
 // resulting Set-Cookie header.
 func newBasicAuthMiddleware(t *testing.T, username, password string) *AuthMiddleware {
 	t.Helper()
+	return newBasicAuthMiddlewareWithSessionStore(t, username, password, nil)
+}
+
+// newBasicAuthMiddlewareWithSessionStore is newBasicAuthMiddleware with an
+// explicit sessionStore config, so tests can cover the opt-in Secure flag.
+func newBasicAuthMiddlewareWithSessionStore(t *testing.T, username, password string,
+	sessionStore *authconfig.SessionStoreConfig) *AuthMiddleware {
+
+	t.Helper()
 	hash := sha1.Sum([]byte(password))
 	htpasswdEntry := fmt.Sprintf("%s:{SHA}%s", username, base64.StdEncoding.EncodeToString(hash[:]))
 	m, err := New(authconfig.AuthConfig{
+		SessionStore: sessionStore,
 		ProviderConfig: authconfig.ProviderConfig{
 			Basic: &authconfig.BasicAuthConfig{
 				Users: []string{htpasswdEntry},
@@ -63,8 +73,10 @@ func TestSessionCookieAttributes(t *testing.T) {
 	if !cookie.HttpOnly {
 		t.Error("session cookie is missing the HttpOnly attribute")
 	}
-	if !cookie.Secure {
-		t.Error("session cookie is missing the Secure attribute")
+	// Secure is opt-in: the web UI is also served over plain HTTP on `port`,
+	// so defaulting it on would silently break login for those deployments.
+	if cookie.Secure {
+		t.Error("session cookie has the Secure attribute set without auth.sessionStore.secure")
 	}
 	if cookie.SameSite != http.SameSiteLaxMode {
 		t.Errorf("session cookie SameSite = %v, want SameSite=Lax (%v)", cookie.SameSite, http.SameSiteLaxMode)
@@ -93,5 +105,25 @@ func TestSignoutStillExpiresSessionCookie(t *testing.T) {
 	}
 	if !cookie.HttpOnly {
 		t.Error("signout session cookie is missing the HttpOnly attribute")
+	}
+}
+
+// TestSessionCookieSecureOptIn verifies that auth.sessionStore.secure turns on
+// the Secure attribute for deployments that serve the UI over HTTPS only.
+func TestSessionCookieSecureOptIn(t *testing.T) {
+	m := newBasicAuthMiddlewareWithSessionStore(t, "admin", "s3cret",
+		&authconfig.SessionStoreConfig{Secure: true})
+
+	req := httptest.NewRequest("POST", "/signin/0", nil)
+	req.SetBasicAuth("admin", "s3cret")
+	rr := httptest.NewRecorder()
+	m.Middleware(http.NotFoundHandler()).ServeHTTP(rr, req)
+
+	cookie := findSessionCookie(t, rr)
+	if !cookie.Secure {
+		t.Error("session cookie is missing the Secure attribute despite auth.sessionStore.secure=true")
+	}
+	if !cookie.HttpOnly {
+		t.Error("session cookie is missing the HttpOnly attribute")
 	}
 }

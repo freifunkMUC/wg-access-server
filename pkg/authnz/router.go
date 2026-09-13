@@ -65,7 +65,9 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 		MaxAge: 86400 * 30,
 		// prevent JavaScript from reading the session cookie (XSS hardening)
 		HttpOnly: true,
-		Secure:   true,
+		// only opt-in: the web UI is also served over plain HTTP on `port`,
+		// where a Secure cookie would silently break login
+		Secure: config.SessionStore != nil && config.SessionStore.Secure,
 		// Lax still sends the cookie on top-level GET navigations, so the
 		// OIDC redirect callback keeps working while cross-site subrequests
 		// no longer carry the session cookie (CSRF hardening)

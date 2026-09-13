@@ -44,6 +44,11 @@ auth:
     # 32 random bytes in hexadecimal encoding (64 chars) used to sign session cookies. It's generated randomly
     # if not present. Need to be set when running in HA setup (more than one replica)
     secret: "<session store secret>"
+    # Mark the session cookie as Secure so browsers only send it over HTTPS.
+    # Defaults to false, because the web UI is also served over plain HTTP on
+    # `port` - enabling this while users reach the UI over http:// silently
+    # breaks login. Turn it on when the UI is only reachable via HTTPS.
+    secure: false
   simple:
     # Users is a list of htpasswd encoded username:password pairs
     # supports BCrypt, Sha, Ssha, Md5

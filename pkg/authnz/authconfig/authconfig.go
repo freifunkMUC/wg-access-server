@@ -15,11 +15,18 @@ type AuthConfig struct {
 	SessionStore *SessionStoreConfig `yaml:"sessionStore"`
 	// Embed ProviderConfig for backwards compatibility
 	ProviderConfig `yaml:",inline"`
-	Multiple map[string]*ProviderConfig `yaml:"multiple"`
+	Multiple       map[string]*ProviderConfig `yaml:"multiple"`
 }
 
 type SessionStoreConfig struct {
 	Secret string `yaml:"secret"`
+	// Secure marks the session cookie as Secure, so browsers only send it
+	// over HTTPS. It defaults to false because the web UI is also served
+	// over plain HTTP on `port` (see cmd/serve), which is the documented
+	// setup when TLS is terminated by a reverse proxy in front of
+	// wg-access-server. Turn it on whenever the UI is reachable over
+	// HTTPS only.
+	Secure bool `yaml:"secure"`
 }
 
 func (c *AuthConfig) IsEnabled() bool {
