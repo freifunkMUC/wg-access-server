@@ -5,6 +5,13 @@
 import * as jspb from 'google-protobuf';
 import * as grpcWeb from 'grpc-web';
 
+// grpc-web >= 2 types a MethodDescriptor's message classes as
+// new (...args: unknown[]) => T, while the classes emitted by protoc-gen-js
+// take an optional jspb.Message.MessageArray. The two are not assignable under
+// strictFunctionTypes, so the constructors are bridged through this alias.
+// It changes types only - the values handed to grpc-web are unchanged.
+type MessageCtor<T> = new (...args: unknown[]) => T;
+
 import * as googleProtobufWrappers from 'google-protobuf/google/protobuf/wrappers_pb';
 import * as googleProtobufTimestamp from 'google-protobuf/google/protobuf/timestamp_pb';
 import * as googleProtobufEmpty from 'google-protobuf/google/protobuf/empty_pb';
@@ -17,36 +24,36 @@ export class Devices {
 
 	private methodInfoAddDevice = new grpcWeb.MethodDescriptor<AddDeviceReq, Device>(
 		"AddDevice",
-		null,
-		AddDeviceReq,
-		Device,
+		'unary',
+		AddDeviceReq as unknown as MessageCtor<AddDeviceReq>,
+		Device as unknown as MessageCtor<Device>,
 		(req: AddDeviceReq) => req.serializeBinary(),
 		Device.deserializeBinary
 	);
 
 	private methodInfoListDevices = new grpcWeb.MethodDescriptor<ListDevicesReq, ListDevicesRes>(
 		"ListDevices",
-		null,
-		ListDevicesReq,
-		ListDevicesRes,
+		'unary',
+		ListDevicesReq as unknown as MessageCtor<ListDevicesReq>,
+		ListDevicesRes as unknown as MessageCtor<ListDevicesRes>,
 		(req: ListDevicesReq) => req.serializeBinary(),
 		ListDevicesRes.deserializeBinary
 	);
 
 	private methodInfoDeleteDevice = new grpcWeb.MethodDescriptor<DeleteDeviceReq, googleProtobufEmpty.Empty>(
 		"DeleteDevice",
-		null,
-		DeleteDeviceReq,
-		googleProtobufEmpty.Empty,
+		'unary',
+		DeleteDeviceReq as unknown as MessageCtor<DeleteDeviceReq>,
+		googleProtobufEmpty.Empty as unknown as MessageCtor<googleProtobufEmpty.Empty>,
 		(req: DeleteDeviceReq) => req.serializeBinary(),
 		googleProtobufEmpty.Empty.deserializeBinary
 	);
 
 	private methodInfoListAllDevices = new grpcWeb.MethodDescriptor<ListAllDevicesReq, ListAllDevicesRes>(
 		"ListAllDevices",
-		null,
-		ListAllDevicesReq,
-		ListAllDevicesRes,
+		'unary',
+		ListAllDevicesReq as unknown as MessageCtor<ListAllDevicesReq>,
+		ListAllDevicesRes as unknown as MessageCtor<ListAllDevicesRes>,
 		(req: ListAllDevicesReq) => req.serializeBinary(),
 		ListAllDevicesRes.deserializeBinary
 	);

@@ -5,6 +5,13 @@
 import * as jspb from 'google-protobuf';
 import * as grpcWeb from 'grpc-web';
 
+// grpc-web >= 2 types a MethodDescriptor's message classes as
+// new (...args: unknown[]) => T, while the classes emitted by protoc-gen-js
+// take an optional jspb.Message.MessageArray. The two are not assignable under
+// strictFunctionTypes, so the constructors are bridged through this alias.
+// It changes types only - the values handed to grpc-web are unchanged.
+type MessageCtor<T> = new (...args: unknown[]) => T;
+
 import * as googleProtobufEmpty from 'google-protobuf/google/protobuf/empty_pb';
 
 export class Users {
@@ -15,18 +22,18 @@ export class Users {
 
 	private methodInfoListUsers = new grpcWeb.MethodDescriptor<ListUsersReq, ListUsersRes>(
 		"ListUsers",
-		null,
-		ListUsersReq,
-		ListUsersRes,
+		'unary',
+		ListUsersReq as unknown as MessageCtor<ListUsersReq>,
+		ListUsersRes as unknown as MessageCtor<ListUsersRes>,
 		(req: ListUsersReq) => req.serializeBinary(),
 		ListUsersRes.deserializeBinary
 	);
 
 	private methodInfoDeleteUser = new grpcWeb.MethodDescriptor<DeleteUserReq, googleProtobufEmpty.Empty>(
 		"DeleteUser",
-		null,
-		DeleteUserReq,
-		googleProtobufEmpty.Empty,
+		'unary',
+		DeleteUserReq as unknown as MessageCtor<DeleteUserReq>,
+		googleProtobufEmpty.Empty as unknown as MessageCtor<googleProtobufEmpty.Empty>,
 		(req: DeleteUserReq) => req.serializeBinary(),
 		googleProtobufEmpty.Empty.deserializeBinary
 	);
