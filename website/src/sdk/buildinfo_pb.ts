@@ -5,6 +5,13 @@
 import * as jspb from 'google-protobuf';
 import * as grpcWeb from 'grpc-web';
 
+// grpc-web >= 2 types a MethodDescriptor's message classes as
+// new (...args: unknown[]) => T, while the classes emitted by protoc-gen-js
+// take an optional jspb.Message.MessageArray. The two are not assignable under
+// strictFunctionTypes, so the constructors are bridged through this alias.
+// It changes types only - the values handed to grpc-web are unchanged.
+type MessageCtor<T> = new (...args: unknown[]) => T;
+
 
 
 
