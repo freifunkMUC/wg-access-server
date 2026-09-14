@@ -19,7 +19,10 @@ func NewPgWatcher(connectionString string, table string) (*PgWatcher, error) {
 		return nil, errors.Wrap(err, "failed to open pg listener")
 	}
 
-	if err := listener.Attach(table); err != nil {
+	// Only inserts and deletes are acted on (see OnAdd). Without UPDATE in the
+	// trigger, the metadata sync - one UPDATE per active device every 30s on
+	// every replica - no longer broadcasts each row to all replicas.
+	if err := listener.AttachActions(table, pgevents.Insert, pgevents.Delete); err != nil {
 		return nil, errors.Wrapf(err, "failed to attach listener to table: %s", table)
 	}
 
@@ -33,8 +36,9 @@ func (w *PgWatcher) OnAdd(cb Callback) {
 		// we only emit the "add" event on an insert because wg-access-server
 		// doesn't allow anyone to modify their public key or allowed IPs.
 		// a future change to wg-access-server may require listening to "updates"
-		// if either of those properties become mutable.
-		if event.Action == "INSERT" {
+		// if either of those properties become mutable - and adding UPDATE back to
+		// the trigger in NewPgWatcher.
+		if event.Action == "INSERT" && !event.Truncated {
 			w.emit(cb, event)
 		}
 	})
@@ -42,7 +46,7 @@ func (w *PgWatcher) OnAdd(cb Callback) {
 
 func (w *PgWatcher) OnDelete(cb Callback) {
 	w.OnEvent(func(event *pgevents.TableEvent) {
-		if event.Action == "DELETE" {
+		if event.Action == "DELETE" && !event.Truncated {
 			w.emit(cb, event)
 		}
 	})
@@ -50,6 +54,19 @@ func (w *PgWatcher) OnDelete(cb Callback) {
 
 func (w *PgWatcher) OnReconnect(cb func()) {
 	w.Listener.OnReconnect(cb)
+
+	// A device row too large for a notification (8000 bytes - owner name and
+	// email come unbounded from the identity provider) arrives without its
+	// data, so there is nothing to add or remove directly. Every replica,
+	// including the one that created the device, adds peers only from these
+	// events, so ignoring it would leave the device without a peer anywhere.
+	// Resynchronize instead, as after a reconnect that may have missed events.
+	w.OnEvent(func(event *pgevents.TableEvent) {
+		if event.Truncated {
+			logrus.Warnf("received a %s event on %s without its row - it did not fit into a notification; resynchronizing devices", event.Action, event.Table)
+			cb()
+		}
+	})
 }
 
 func (w *PgWatcher) emit(cb Callback, event *pgevents.TableEvent) {

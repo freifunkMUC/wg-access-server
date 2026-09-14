@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-oidc/v3 v3.21.0
-	github.com/freifunkMUC/pg-events v0.4.9
+	github.com/freifunkMUC/pg-events v0.5.0
 	github.com/freifunkMUC/wg-embed v0.11.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
