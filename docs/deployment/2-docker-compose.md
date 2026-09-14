@@ -187,3 +187,58 @@ volumes:
   wg-access-server-data:
     driver: local
 ```
+
+## With Docker secrets
+
+Instead of passing the admin password and the WireGuard private key as environment
+variables, you can mount them as [Docker secrets](https://docs.docker.com/compose/how-tos/use-secrets/)
+and point wg-access-server at the files. Environment variables are visible in
+`docker inspect` and to every process in the container; secret files are not.
+
+Create the two files first. `wg genkey` writes a trailing newline, which
+wg-access-server strips when it reads the file:
+
+```bash
+mkdir -p secrets
+wg genkey > secrets/wg_private_key
+printf '%s' 'example' > secrets/wg_admin_password
+chmod 600 secrets/*
+```
+
+Then reference them through the `_FILE` variables:
+
+```yaml
+services:
+  wg-access-server:
+    image: ghcr.io/freifunkmuc/wg-access-server:latest
+    container_name: wg-access-server
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - "wg-access-server-data:/data"
+    environment:
+      - "WG_ADMIN_PASSWORD_FILE=/run/secrets/wg_admin_password"
+      - "WG_WIREGUARD_PRIVATE_KEY_FILE=/run/secrets/wg_private_key"
+    secrets:
+      - wg_admin_password
+      - wg_private_key
+    ports:
+      - "8000:8000/tcp"
+      - "51820:51820/udp"
+    devices:
+      - "/dev/net/tun:/dev/net/tun"
+
+secrets:
+  wg_admin_password:
+    file: ./secrets/wg_admin_password
+  wg_private_key:
+    file: ./secrets/wg_private_key
+
+volumes:
+  wg-access-server-data:
+    driver: local
+```
+
+A `_FILE` variable and its direct counterpart are exclusive: if both
+`WG_ADMIN_PASSWORD` and `WG_ADMIN_PASSWORD_FILE` are set - including `adminPassword`
+in a config file - the server refuses to start instead of guessing which one you meant.
