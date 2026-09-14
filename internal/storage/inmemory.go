@@ -36,18 +36,29 @@ func (s *InMemoryStorage) Save(device *Device) error {
 	return nil
 }
 
-func (s *InMemoryStorage) UpdateMetadata(device *Device) error {
+func (s *InMemoryStorage) RecordMetadata(updates []MetadataUpdate) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	existing, ok := s.db[key(device)]
-	if !ok {
-		// the device was deleted in the meantime; don't resurrect it
-		return nil
+
+	byPublicKey := make(map[string]*Device, len(s.db))
+	for _, device := range s.db {
+		byPublicKey[device.PublicKey] = device
 	}
-	existing.Endpoint = device.Endpoint
-	existing.ReceiveBytes = device.ReceiveBytes
-	existing.TransmitBytes = device.TransmitBytes
-	existing.LastHandshakeTime = device.LastHandshakeTime
+
+	for _, update := range updates {
+		device, ok := byPublicKey[update.PublicKey]
+		if !ok {
+			// the device was deleted in the meantime; don't resurrect it
+			continue
+		}
+		device.ReceiveBytes += update.ReceiveBytes
+		device.TransmitBytes += update.TransmitBytes
+		if update.Connection != nil {
+			handshake := update.Connection.LastHandshakeTime
+			device.Endpoint = update.Connection.Endpoint
+			device.LastHandshakeTime = &handshake
+		}
+	}
 	return nil
 }
 

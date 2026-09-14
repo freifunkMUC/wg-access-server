@@ -152,25 +152,53 @@ func (s *SQLStorage) Save(device *Device) error {
 	return nil
 }
 
-func (s *SQLStorage) UpdateMetadata(device *Device) error {
-	logrus.Debugf("updating metadata for device %s", key(device))
-	// Use an explicit UPDATE instead of gorm's Save because in gorm v1
-	// Save falls back to an INSERT when the UPDATE matches 0 rows, which
-	// would re-create (and re-add as a WireGuard peer) a device that was
-	// deleted between the caller's read and this write.
-	q := s.db.Model(&Device{}).
-		Where("owner = ? AND name = ?", device.Owner, device.Name).
-		Updates(map[string]interface{}{
-			"endpoint":            device.Endpoint,
-			"receive_bytes":       device.ReceiveBytes,
-			"transmit_bytes":      device.TransmitBytes,
-			"last_handshake_time": device.LastHandshakeTime,
-		})
-	if q.Error != nil {
-		return errors.Wrapf(q.Error, "failed to update device metadata")
+func (s *SQLStorage) RecordMetadata(updates []MetadataUpdate) error {
+	if len(updates) == 0 {
+		return nil
 	}
-	if q.RowsAffected == 0 {
-		logrus.Debugf("device %s no longer exists - skipped metadata update", key(device))
+
+	// One transaction per sync, so a deployment with many peers commits once
+	// instead of once per device.
+	tx := s.db.Begin()
+	if tx.Error != nil {
+		return errors.Wrap(tx.Error, "failed to begin metadata transaction")
+	}
+
+	for _, update := range updates {
+		columns := map[string]interface{}{}
+		// Add in the database rather than read-modify-write in Go: concurrent
+		// replicas then cannot lose each other's traffic. COALESCE because
+		// rows written by old versions may hold NULL, and NULL + n is NULL.
+		if update.ReceiveBytes != 0 {
+			columns["receive_bytes"] = gorm.Expr("COALESCE(receive_bytes, 0) + ?", update.ReceiveBytes)
+		}
+		if update.TransmitBytes != 0 {
+			columns["transmit_bytes"] = gorm.Expr("COALESCE(transmit_bytes, 0) + ?", update.TransmitBytes)
+		}
+		if update.Connection != nil {
+			columns["endpoint"] = update.Connection.Endpoint
+			columns["last_handshake_time"] = update.Connection.LastHandshakeTime
+		}
+		if len(columns) == 0 {
+			continue
+		}
+
+		// An explicit UPDATE, never Save: in gorm v1 Save falls back to an
+		// INSERT when nothing matches, which would re-create (and re-add as a
+		// WireGuard peer) a device deleted while this sync was running.
+		// UpdateColumns also skips hooks, so no watcher event fires.
+		q := tx.Model(&Device{}).Where("public_key = ?", update.PublicKey).UpdateColumns(columns)
+		if q.Error != nil {
+			tx.Rollback()
+			return errors.Wrap(q.Error, "failed to record device metadata")
+		}
+		if q.RowsAffected == 0 {
+			logrus.Debugf("device with public key %s no longer exists - skipped metadata update", update.PublicKey)
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return errors.Wrap(err, "failed to commit device metadata")
 	}
 	return nil
 }
