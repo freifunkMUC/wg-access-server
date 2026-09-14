@@ -91,13 +91,26 @@ func pgconn(u *url.URL) string {
 
 func mysqlconn(u *url.URL) string {
 	password, _ := u.User.Password()
+
+	// The devices table has time columns, and go-sql-driver/mysql only scans
+	// them into time.Time with parseTime=true (default false). Without it every
+	// device read fails, so require it instead of relying on the connection
+	// string to mention it.
+	query := u.Query()
+	if value := query.Get("parseTime"); value != "true" {
+		if value != "" {
+			logrus.Warnf("mysql: overriding parseTime=%s with parseTime=true, which wg-access-server needs to read devices", value)
+		}
+		query.Set("parseTime", "true")
+	}
+
 	return fmt.Sprintf(
 		"%s:%s@tcp(%s)/%s?%s",
 		u.User.Username(),
 		password,
 		u.Host,
 		strings.TrimLeft(u.Path, "/"),
-		u.RawQuery,
+		query.Encode(),
 	)
 }
 

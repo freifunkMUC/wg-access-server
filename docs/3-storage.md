@@ -52,7 +52,12 @@ compatibility of your favorite flavour.
 
 Example connection string:
 
-- `mysql://user:password@localhost:3306/database?ssl-mode=disabled`
+- `mysql://user:password@localhost:3306/database?tls=false`
+
+Query parameters are passed to the driver as-is, so they must use its names - e.g. `tls` rather
+than `ssl-mode`. The driver runs any parameter it does not know as `SET <name>=<value>` on the
+server, which for `ssl-mode` fails with a syntax error. wg-access-server always sets
+`parseTime=true`, which it needs to read devices.
 
 ### File (removed)
 
