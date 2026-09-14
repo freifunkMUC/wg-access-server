@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,16 +55,23 @@ func metadataBackends(t *testing.T) map[string]string {
 	return backends
 }
 
+// metadataTestOwner prefixes every owner these tests create. The shared test
+// databases also hold devices of other packages' tests running at the same time.
+const metadataTestOwner = "metadata-test-"
+
 func openMetadataBackend(t *testing.T, uri string) Storage {
 	t.Helper()
 	s, err := NewStorage(uri)
 	require.NoError(t, err)
 	require.NoError(t, s.Open())
 	t.Cleanup(func() {
-		// a shared database must not leak devices into the next test
+		// Postgres and MySQL are shared with other test packages, which
+		// `go test ./...` runs in parallel, so only remove this file's devices.
 		if devices, err := s.List(""); err == nil {
 			for _, device := range devices {
-				_ = s.Delete(device)
+				if strings.HasPrefix(device.Owner, metadataTestOwner) {
+					_ = s.Delete(device)
+				}
 			}
 		}
 		_ = s.Close()
@@ -77,7 +85,7 @@ func TestRecordMetadataDoesNotResurrectDeletedDevice(t *testing.T) {
 			require := require.New(t)
 			s := openMetadataBackend(t, uri)
 
-			device := &Device{Owner: "alice", Name: "phone", PublicKey: "pub1", Address: "10.44.0.2/32"}
+			device := &Device{Owner: metadataTestOwner + "alice", Name: "phone", PublicKey: "pub1", Address: "10.44.0.2/32"}
 			require.NoError(s.Save(device))
 
 			// metadata updates on an existing device are persisted
@@ -87,7 +95,7 @@ func TestRecordMetadataDoesNotResurrectDeletedDevice(t *testing.T) {
 				Connection:   &PeerConnection{Endpoint: "192.0.2.1", LastHandshakeTime: time.Now()},
 			}}))
 
-			got, err := s.Get("alice", "phone")
+			got, err := s.Get(metadataTestOwner+"alice", "phone")
 			require.NoError(err)
 			require.Equal(int64(42), got.ReceiveBytes)
 			require.Equal("192.0.2.1", got.Endpoint)
@@ -97,10 +105,10 @@ func TestRecordMetadataDoesNotResurrectDeletedDevice(t *testing.T) {
 			require.NoError(s.Delete(device))
 			require.NoError(s.RecordMetadata([]MetadataUpdate{{PublicKey: "pub1", ReceiveBytes: 1}}))
 
-			_, err = s.Get("alice", "phone")
+			_, err = s.Get(metadataTestOwner+"alice", "phone")
 			require.Error(err)
 
-			devices, err := s.List("")
+			devices, err := s.List(metadataTestOwner + "alice")
 			require.NoError(err)
 			require.Empty(devices)
 		})
@@ -115,7 +123,7 @@ func TestRecordMetadataAccumulatesAcrossReplicas(t *testing.T) {
 			require := require.New(t)
 			s := openMetadataBackend(t, uri)
 
-			require.NoError(s.Save(&Device{Owner: "alice", Name: "phone", PublicKey: "pub1", Address: "10.44.0.2/32"}))
+			require.NoError(s.Save(&Device{Owner: metadataTestOwner + "alice", Name: "phone", PublicKey: "pub1", Address: "10.44.0.2/32"}))
 
 			handshake := time.Now().Truncate(time.Second)
 			// replica A served the client for a while
@@ -134,7 +142,7 @@ func TestRecordMetadataAccumulatesAcrossReplicas(t *testing.T) {
 				PublicKey: "pub1", ReceiveBytes: 25, TransmitBytes: 5,
 			}}))
 
-			got, err := s.Get("alice", "phone")
+			got, err := s.Get(metadataTestOwner+"alice", "phone")
 			require.NoError(err)
 			require.Equal(int64(1525), got.ReceiveBytes, "receive totals must add up")
 			require.Equal(int64(155), got.TransmitBytes, "transmit totals must add up")
@@ -156,7 +164,7 @@ func TestRecordMetadataAppliesABatch(t *testing.T) {
 			var updates []MetadataUpdate
 			for i := 0; i < count; i++ {
 				key := fmt.Sprintf("pub%d", i)
-				require.NoError(s.Save(&Device{Owner: "bob", Name: fmt.Sprintf("dev%d", i), PublicKey: key, Address: fmt.Sprintf("10.44.1.%d/32", i+1)}))
+				require.NoError(s.Save(&Device{Owner: metadataTestOwner + "bob", Name: fmt.Sprintf("dev%d", i), PublicKey: key, Address: fmt.Sprintf("10.44.1.%d/32", i+1)}))
 				updates = append(updates, MetadataUpdate{PublicKey: key, ReceiveBytes: int64(i + 1)})
 			}
 			// an update for an unknown key must not abort the rest of the batch
@@ -164,7 +172,7 @@ func TestRecordMetadataAppliesABatch(t *testing.T) {
 
 			require.NoError(s.RecordMetadata(updates))
 
-			devices, err := s.List("bob")
+			devices, err := s.List(metadataTestOwner + "bob")
 			require.NoError(err)
 			require.Len(devices, count)
 			var sum int64
@@ -232,13 +240,13 @@ func TestRecordMetadataCountsFromNull(t *testing.T) {
 			require := require.New(t)
 			s := openMetadataBackend(t, uri)
 
-			require.NoError(s.Save(&Device{Owner: "carol", Name: "old", PublicKey: "pub-null", Address: "10.44.2.2/32"}))
+			require.NoError(s.Save(&Device{Owner: metadataTestOwner + "carol", Name: "old", PublicKey: "pub-null", Address: "10.44.2.2/32"}))
 			db := s.(*SQLStorage).db
 			require.NoError(db.Exec("UPDATE devices SET receive_bytes = NULL, transmit_bytes = NULL WHERE public_key = ?", "pub-null").Error)
 
 			require.NoError(s.RecordMetadata([]MetadataUpdate{{PublicKey: "pub-null", ReceiveBytes: 9, TransmitBytes: 3}}))
 
-			got, err := s.Get("carol", "old")
+			got, err := s.Get(metadataTestOwner+"carol", "old")
 			require.NoError(err)
 			require.Equal(int64(9), got.ReceiveBytes)
 			require.Equal(int64(3), got.TransmitBytes)

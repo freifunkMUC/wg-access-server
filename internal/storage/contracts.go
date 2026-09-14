@@ -22,6 +22,12 @@ type Storage interface {
 	// meantime are dropped, so a revoked device cannot be resurrected by a
 	// concurrent metadata sync. It also never emits an add event.
 	RecordMetadata(updates []MetadataUpdate) error
+	// WithAllocationLock runs fn while holding a lock that serializes device
+	// creation, so the addresses and names fn finds free are still free when
+	// fn saves the device. For Postgres and MySQL the lock lives in the
+	// database and holds across every server replica sharing it; the other
+	// backends are single-instance and lock within the process.
+	WithAllocationLock(fn func() error) error
 	List(owner string) ([]*Device, error)
 	Get(owner string, name string) (*Device, error)
 	GetByPublicKey(publicKey string) (*Device, error)

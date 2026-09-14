@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/netip"
 	"regexp"
-	"sync"
 	"time"
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
@@ -111,6 +110,35 @@ func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, p
 		return nil, errors.New("Device name must not be empty.")
 	}
 
+	if !wgKeyRegex.MatchString(publicKey) {
+		return nil, errors.New("Public key has invalid format.")
+	}
+
+	// preshared key is optional
+	if len(presharedKey) != 0 && !wgKeyRegex.MatchString(presharedKey) {
+		return nil, errors.New("Pre-shared key has invalid format.")
+	}
+
+	// Checking which names and addresses are taken and saving the new device has
+	// to happen as one step. Otherwise two concurrent requests both see an
+	// address as free and hand it out twice, and a client could hijack another
+	// client's tunnel traffic (GHSA-j62x-qc44-h6pj). The storage makes this lock
+	// hold across every server replica sharing the database, not just this process.
+	var device *storage.Device
+	err := d.storage.WithAllocationLock(func() error {
+		var err error
+		device, err = d.addDeviceLocked(identity, name, publicKey, presharedKey, manualIPAssignment, manualIPv4Address, manualIPv6Address)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return device, nil
+}
+
+// addDeviceLocked does the part of AddDevice that must not overlap with any
+// other device creation. Callers must hold the storage's allocation lock.
+func (d *DeviceManager) addDeviceLocked(identity *authsession.Identity, name string, publicKey string, presharedKey string, manualIPAssignment bool, manualIPv4Address string, manualIPv6Address string) (*storage.Device, error) {
 	nameTaken := false
 	devices, err := d.ListDevices(identity.Subject)
 	if err != nil {
@@ -127,23 +155,6 @@ func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, p
 	if nameTaken {
 		return nil, errors.New("Device name already taken.")
 	}
-
-	if !wgKeyRegex.MatchString(publicKey) {
-		return nil, errors.New("Public key has invalid format.")
-	}
-
-	// preshared key is optional
-	if len(presharedKey) != 0 && !wgKeyRegex.MatchString(presharedKey) {
-		return nil, errors.New("Pre-shared key has invalid format.")
-	}
-
-	// Hold the IP allocation lock from address selection (manual or automatic)
-	// through SaveDevice, so concurrent AddDevice calls cannot both read an
-	// address as free and persist duplicate assignments (TOCTOU).
-	// Note: this mutex is process-local; it does not protect against multiple
-	// server replicas sharing the same Postgres database.
-	nextIPLock.Lock()
-	defer nextIPLock.Unlock()
 
 	clientAddr := ""
 	if manualIPAssignment {
@@ -319,13 +330,8 @@ func (d *DeviceManager) GetByPublicKey(publicKey string) (*storage.Device, error
 	return d.storage.GetByPublicKey(publicKey)
 }
 
-// nextIPLock serializes the "read used addresses -> pick address -> save device"
-// sequence in AddDevice to prevent duplicate IP assignments. It is process-local
-// and does not protect against multiple replicas sharing one Postgres database.
-var nextIPLock = sync.Mutex{}
-
 // nextClientAddressLocked returns the next free client address.
-// Callers must hold nextIPLock.
+// Callers must hold the storage's allocation lock.
 func (d *DeviceManager) nextClientAddressLocked() (string, error) {
 	// TODO: read up on better ways to allocate client's IP
 	// addresses from a configurable CIDR

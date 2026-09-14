@@ -39,6 +39,8 @@ Postgres experimentally supports highly-available deployments of wg-access-serve
 and is the recommended storage backend where possible.
 If you have pgbouncer running in front of PostgreSQL, make sure it is running in "Session pooling" mode,
 as the more aggressive modes like "Transaction Pooling" break LISTEN/NOTIFY which we rely on.
+They also break the session-level advisory lock that keeps replicas from assigning the same VPN
+address to two devices created at the same time.
 
 Example connection string:
 

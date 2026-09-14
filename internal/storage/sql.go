@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -41,6 +42,7 @@ type SQLStorage struct {
 	db               *gorm.DB
 	sqlType          string
 	connectionString string
+	allocationMu     sync.Mutex
 }
 
 func NewSqlStorage(u *url.URL) *SQLStorage {

@@ -9,7 +9,10 @@ import (
 type InMemoryStorage struct {
 	*InProcessWatcher
 	mu sync.RWMutex
-	db map[string]*Device
+	// allocationMu is separate from mu because the function run under it
+	// calls List and Save, which take mu themselves.
+	allocationMu sync.Mutex
+	db           map[string]*Device
 }
 
 func NewMemoryStorage() *InMemoryStorage {
@@ -111,4 +114,12 @@ func (s *InMemoryStorage) Delete(device *Device) error {
 
 func (s *InMemoryStorage) Ping() error {
 	return nil
+}
+
+// WithAllocationLock serializes device creation. An in-memory store only ever
+// has one server instance, so a process lock is enough.
+func (s *InMemoryStorage) WithAllocationLock(fn func() error) error {
+	s.allocationMu.Lock()
+	defer s.allocationMu.Unlock()
+	return fn()
 }
