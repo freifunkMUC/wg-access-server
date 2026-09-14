@@ -63,7 +63,7 @@ func TestParseNameservers(t *testing.T) {
 			want:    []string{"1.1.1.1"},
 		},
 		{
-			name:    "an unparseable address is skipped",
+			name:    "an unparsable address is skipped",
 			content: "nameserver not-an-ip\nnameserver 1.1.1.1\n",
 			want:    []string{"1.1.1.1"},
 		},
