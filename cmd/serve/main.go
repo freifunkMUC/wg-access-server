@@ -13,8 +13,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/docker/docker/libnetwork/resolvconf"
-	"github.com/docker/docker/libnetwork/types"
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -29,6 +27,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/dnsproxy"
 	"github.com/freifunkMUC/wg-access-server/internal/network"
+	"github.com/freifunkMUC/wg-access-server/internal/resolvconf"
 	"github.com/freifunkMUC/wg-access-server/internal/services"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz"
@@ -465,10 +464,7 @@ func splitByCommaAndTrim(s string) []string {
 }
 
 func detectDNSUpstream(ipv4Enabled, ipv6Enabled bool) []string {
-	upstream := []string{}
-	if r, err := resolvconf.Get(); err == nil {
-		upstream = resolvconf.GetNameservers(r.Content, types.IP)
-	}
+	upstream := resolvconf.Nameservers()
 	if len(upstream) == 0 {
 		logrus.Warn("Failed to get nameservers from /etc/resolv.conf defaulting to Cloudflare DNS instead")
 		// If there's no default route for IPv6, lookup fails immediately without delay and we retry using IPv4
