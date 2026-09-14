@@ -22,6 +22,12 @@ updates:
   - package-ecosystem: npm
     directory: /website
     schedule: { interval: monthly }
+    ignore:
+      # typescript-eslint refuses to load under TypeScript 7.0, which would take
+      # the website linter down. Lift this once it supports TS >= 7.1:
+      # https://github.com/typescript-eslint/typescript-eslint/issues/10940
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: pip
     directory: /
