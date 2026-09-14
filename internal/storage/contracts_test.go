@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -243,5 +244,19 @@ func TestRecordMetadataCountsFromNull(t *testing.T) {
 			require.Equal(int64(9), got.ReceiveBytes)
 			require.Equal(int64(3), got.TransmitBytes)
 		})
+	}
+}
+
+func TestMysqlConnectionStringRequiresParseTime(t *testing.T) {
+	tests := map[string]string{
+		"mysql://user:pass@db:3306/wg":                          "user:pass@tcp(db:3306)/wg?parseTime=true",
+		"mysql://user:pass@db:3306/wg?tls=false":                "user:pass@tcp(db:3306)/wg?parseTime=true&tls=false",
+		"mysql://user:pass@db:3306/wg?parseTime=true":           "user:pass@tcp(db:3306)/wg?parseTime=true",
+		"mysql://user:pass@db:3306/wg?parseTime=false&tls=true": "user:pass@tcp(db:3306)/wg?parseTime=true&tls=true",
+	}
+	for uri, want := range tests {
+		u, err := url.Parse(uri)
+		require.NoError(t, err)
+		require.Equal(t, want, mysqlconn(u), uri)
 	}
 }
