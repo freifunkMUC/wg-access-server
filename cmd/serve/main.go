@@ -40,6 +40,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("config", "Path to a wg-access-server config file").Envar("WG_CONFIG").StringVar(&cmd.ConfigFilePath)
 	cli.Flag("admin-username", "Admin username (defaults to admin)").Envar("WG_ADMIN_USERNAME").Default("admin").StringVar(&cmd.AppConfig.AdminUsername)
 	cli.Flag("admin-password", "Admin password (provide plaintext, stored in-memory only)").Envar("WG_ADMIN_PASSWORD").StringVar(&cmd.AppConfig.AdminPassword)
+	cli.Flag("admin-password-file", "Read the admin password from this file (e.g. a Docker secret); exclusive with --admin-password").Envar("WG_ADMIN_PASSWORD_FILE").StringVar(&cmd.AdminPasswordFile)
 	cli.Flag("port", "The port that the web ui server will listen on").Envar("WG_PORT").Default("8000").IntVar(&cmd.AppConfig.Port)
 	cli.Flag("external-host", "The external origin of the server (e.g. https://mydomain.com)").Envar("WG_EXTERNAL_HOST").StringVar(&cmd.AppConfig.ExternalHost)
 	cli.Flag("storage", "The storage backend connection string").Envar("WG_STORAGE").Default("memory://").StringVar(&cmd.AppConfig.Storage)
@@ -60,6 +61,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("wireguard-enabled", "Enable or disable the embedded wireguard server (useful for development)").Envar("WG_WIREGUARD_ENABLED").Default("true").BoolVar(&cmd.AppConfig.WireGuard.Enabled)
 	cli.Flag("wireguard-interface", "Set the wireguard interface name").Default("wg0").Envar("WG_WIREGUARD_INTERFACE").StringVar(&cmd.AppConfig.WireGuard.Interface)
 	cli.Flag("wireguard-private-key", "Wireguard private key").Envar("WG_WIREGUARD_PRIVATE_KEY").StringVar(&cmd.AppConfig.WireGuard.PrivateKey)
+	cli.Flag("wireguard-private-key-file", "Read the Wireguard private key from this file (e.g. a Docker secret); exclusive with --wireguard-private-key").Envar("WG_WIREGUARD_PRIVATE_KEY_FILE").StringVar(&cmd.WireGuardPrivateKeyFile)
 	cli.Flag("wireguard-port", "The port that the Wireguard server will listen on").Envar("WG_WIREGUARD_PORT").Default("51820").IntVar(&cmd.AppConfig.WireGuard.Port)
 	cli.Flag("wireguard-mtu", "The maximum transmission unit (MTU) to be used on the server-side interface.").Envar("WG_WIREGUARD_MTU").Default("1420").IntVar(&cmd.AppConfig.WireGuard.MTU)
 	cli.Flag("vpn-allowed-ips", "A list of networks that VPN clients will be allowed to connect to via the VPN").Envar("WG_VPN_ALLOWED_IPS").Default("0.0.0.0/0", "::/0").StringsVar(&cmd.AppConfig.VPN.AllowedIPs)
@@ -81,8 +83,10 @@ func Register(app *kingpin.Application) *servecmd {
 }
 
 type servecmd struct {
-	ConfigFilePath string
-	AppConfig      config.AppConfig
+	ConfigFilePath          string
+	AdminPasswordFile       string
+	WireGuardPrivateKeyFile string
+	AppConfig               config.AppConfig
 }
 
 func (cmd *servecmd) Name() string {
@@ -367,6 +371,10 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 				logrus.Fatal(errors.Wrap(err, "failed to bind configuration file"))
 			}
 		}
+	}
+
+	if err := cmd.loadSecretFiles(); err != nil {
+		logrus.Fatal(err)
 	}
 
 	if cmd.AppConfig.LogLevel != "" {
