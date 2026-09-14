@@ -13,12 +13,15 @@ type Storage interface {
 	Watcher
 	Pingable
 	Save(device *Device) error
-	// UpdateMetadata updates the metadata fields of an existing device.
-	// Unlike Save it never inserts: if the device has been deleted in the
-	// meantime the call is a no-op, so a revoked device cannot be
-	// resurrected by a concurrent metadata update. It also never emits an
-	// add event.
-	UpdateMetadata(device *Device) error
+	// RecordMetadata applies what one metadata sync observed. Traffic is
+	// added to the stored totals, so several server replicas and restarts
+	// accumulate instead of overwriting each other. Endpoint and last
+	// handshake are replaced only where an update carries a Connection.
+	//
+	// Unlike Save it never inserts: updates for a device deleted in the
+	// meantime are dropped, so a revoked device cannot be resurrected by a
+	// concurrent metadata sync. It also never emits an add event.
+	RecordMetadata(updates []MetadataUpdate) error
 	List(owner string) ([]*Device, error)
 	Get(owner string, name string) (*Device, error)
 	GetByPublicKey(publicKey string) (*Device, error)
@@ -41,6 +44,27 @@ type Pingable interface {
 
 type Callback func(device *Device)
 
+// MetadataUpdate is what one server replica observed about a peer since its
+// previous metadata sync.
+type MetadataUpdate struct {
+	PublicKey string
+	// ReceiveBytes and TransmitBytes are the traffic seen since the previous
+	// sync, not WireGuard's absolute counters. Every replica only sees the
+	// traffic of its own interface, so only deltas can be combined.
+	ReceiveBytes  int64
+	TransmitBytes int64
+	// Connection is set only by the replica currently serving the peer; nil
+	// leaves the stored endpoint and last handshake untouched.
+	Connection *PeerConnection
+}
+
+// PeerConnection is the connection state reported by the replica a peer is
+// currently talking to.
+type PeerConnection struct {
+	Endpoint          string
+	LastHandshakeTime time.Time
+}
+
 type Device struct {
 	Owner         string    `json:"owner" gorm:"type:varchar(100);unique_index:key;primary_key"`
 	OwnerName     string    `json:"owner_name"`
@@ -58,7 +82,8 @@ type Device struct {
 	 * from the config file.
 	 */
 
-	// metadata about the device during the current session
+	// Traffic is the total across all server replicas and restarts; endpoint
+	// and last handshake come from the replica that served the peer last.
 	LastHandshakeTime *time.Time `json:"last_handshake_time"`
 	ReceiveBytes      int64      `json:"received_bytes"`
 	TransmitBytes     int64      `json:"transmit_bytes"`

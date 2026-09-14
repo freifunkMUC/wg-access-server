@@ -258,12 +258,10 @@ func (d *DeviceManager) SaveDevice(device *storage.Device) error {
 	return d.storage.Save(device)
 }
 
-// UpdateDeviceMetadata persists the metadata fields of an existing device.
-// It is a no-op if the device no longer exists, e.g. because it was
-// deleted while a metadata sync was in flight, so it can never
-// re-create a revoked device.
-func (d *DeviceManager) UpdateDeviceMetadata(device *storage.Device) error {
-	return d.storage.UpdateMetadata(device)
+// RecordMetadata stores what a metadata sync observed. See
+// storage.Storage.RecordMetadata for how updates are combined.
+func (d *DeviceManager) RecordMetadata(updates []storage.MetadataUpdate) error {
+	return d.storage.RecordMetadata(updates)
 }
 
 func (d *DeviceManager) sync() error {
