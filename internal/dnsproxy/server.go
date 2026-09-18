@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/miekg/dns"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -15,6 +16,9 @@ type DNSServerOpts struct {
 	Domain     string
 	ListenAddr []string
 	Upstream   []string
+	// CacheSize is how many responses are kept in the cache. Zero or less
+	// turns caching off.
+	CacheSize int
 }
 
 type DNSServer struct {
@@ -30,9 +34,15 @@ func New(opts DNSServerOpts) (*DNSServer, error) {
 		return nil, errors.New("At least 1 upstream dns server is required for the dns proxy server to function")
 	}
 
-	responseCache, err := newResponseCache(dnsCacheSize)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create the dns response cache")
+	var responseCache *lru.Cache[string, cachedResponse]
+	if opts.CacheSize > 0 {
+		var err error
+		responseCache, err = newResponseCache(opts.CacheSize)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create the dns response cache")
+		}
+	} else {
+		logrus.Info("DNS response caching is disabled")
 	}
 
 	dnsServer := &DNSServer{

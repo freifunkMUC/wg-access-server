@@ -14,7 +14,7 @@ import (
 // testCache returns a response cache for tests.
 func testCache(t *testing.T) *lru.Cache[string, cachedResponse] {
 	t.Helper()
-	c, err := newResponseCache(dnsCacheSize)
+	c, err := newResponseCache(DefaultCacheSize)
 	if err != nil {
 		t.Fatal(err)
 	}

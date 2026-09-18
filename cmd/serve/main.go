@@ -8,6 +8,7 @@ import (
 	"net/netip"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -74,6 +75,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("vpn-disable-iptables", "Disable iptables configuration completely").Envar("WG_VPN_DISABLE_IPTABLES").Default("false").BoolVar(&cmd.AppConfig.VPN.DisableIPTables)
 	cli.Flag("dns-enabled", "Enable or disable the embedded dns proxy server (useful for development)").Envar("WG_DNS_ENABLED").Default("true").BoolVar(&cmd.AppConfig.DNS.Enabled)
 	cli.Flag("dns-upstream", "An upstream DNS server to proxy DNS traffic to. Defaults to resolvconf with Cloudflare DNS as fallback").Envar("WG_DNS_UPSTREAM").StringsVar(&cmd.AppConfig.DNS.Upstream)
+	cli.Flag("dns-cache-size", "How many DNS responses the embedded DNS proxy caches (0 disables caching)").Envar("WG_DNS_CACHE_SIZE").Default(strconv.Itoa(dnsproxy.DefaultCacheSize)).IntVar(&cmd.AppConfig.DNS.CacheSize)
 	cli.Flag("dns-domain", "A domain to serve configured device names authoritatively").Envar("WG_DNS_DOMAIN").StringVar(&cmd.AppConfig.DNS.Domain)
 	cli.Flag("clientconfig-dns-servers", "DNS servers (one or more IPs, comma separated) to write into the client configuration file").Envar("WG_CLIENTCONFIG_DNS_SERVERS").StringsVar(&cmd.AppConfig.ClientConfig.DNSServers)
 	cli.Flag("clientconfig-dns-search-domain", "DNS search domain to write into the client configuration file").Envar("WG_CLIENTCONFIG_DNS_SEARCH_DOMAIN").StringVar(&cmd.AppConfig.ClientConfig.DNSSearchDomain)
@@ -215,6 +217,7 @@ func (cmd *servecmd) Run() {
 			Upstream:   conf.DNS.Upstream,
 			Domain:     conf.DNS.Domain,
 			ListenAddr: listenAddr,
+			CacheSize:  conf.DNS.CacheSize,
 		})
 		if err != nil {
 			logrus.Error(errors.Wrap(err, "failed to create dns server"))

@@ -19,11 +19,12 @@ import (
 // can shorten it.
 var upstreamCooldown = 30 * time.Second
 
-// dnsCacheSize bounds how many responses are cached. The cache is filled by
-// whatever the VPN clients ask for, so it needs a limit: without one a client
-// can grow it without end by querying random names. Least recently used
-// entries are dropped once it is full.
-const dnsCacheSize = 10000
+// DefaultCacheSize bounds how many responses are cached unless the operator
+// configures another size. The cache is filled by whatever the VPN clients
+// ask for, so it needs a limit: without one a client can grow it without end
+// by querying random names. Least recently used entries are dropped once it
+// is full.
+const DefaultCacheSize = 10000
 
 // cachedResponse is a cached upstream response together with the time it
 // stops being valid. The expiry is per entry because it comes from the TTLs
@@ -102,15 +103,17 @@ func (d *DNSProxy) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 func (d *DNSProxy) Lookup(m *dns.Msg) (*dns.Msg, error) {
 	key := makekey(m)
 
-	// check the cache first
-	if entry, found := d.cache.Get(key); found {
-		if time.Now().Before(entry.expiresAt) {
-			logrus.Debugf("dns cache hit %s", prettyPrintMsg(m))
-			return entry.response.Copy(), nil
+	// check the cache first, unless caching is turned off
+	if d.cache != nil {
+		if entry, found := d.cache.Get(key); found {
+			if time.Now().Before(entry.expiresAt) {
+				logrus.Debugf("dns cache hit %s", prettyPrintMsg(m))
+				return entry.response.Copy(), nil
+			}
+			// The LRU has no janitor of its own, so drop what has expired
+			// when we come across it.
+			d.cache.Remove(key)
 		}
-		// The LRU has no janitor of its own, so drop what has expired when we
-		// come across it.
-		d.cache.Remove(key)
 	}
 
 	// fallback to upstream exchange
@@ -212,6 +215,9 @@ func (d *DNSProxy) markHealthy(upstream string) {
 // means the response must not be cached at all (e.g. DNS failover setups rely
 // on that).
 func (d *DNSProxy) cacheResponse(key string, response *dns.Msg) {
+	if d.cache == nil {
+		return
+	}
 	if len(response.Answer) == 0 {
 		return
 	}
