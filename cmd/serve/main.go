@@ -492,13 +492,23 @@ func detectDefaultInterface() string {
 		logrus.Warn(errors.Wrap(err, "failed to list network interfaces"))
 		return ""
 	}
+	return defaultInterfaceName(links, netlink.RouteList)
+}
+
+// defaultInterfaceName returns the name of the first link that carries a
+// default route. routeList is netlink.RouteList in production and a stub in
+// the tests.
+func defaultInterfaceName(links []netlink.Link, routeList func(netlink.Link, int) ([]netlink.Route, error)) string {
 	for _, link := range links {
 		// First try IPv4, then IPv6, hope both have the same default interface
-		for family := range []int{4, 6} {
-			routes, err := netlink.RouteList(link, family)
+		for _, family := range []int{netlink.FAMILY_V4, netlink.FAMILY_V6} {
+			routes, err := routeList(link, family)
 			if err != nil {
+				// One interface whose routes cannot be read (e.g. it went away
+				// while we were listing) must not hide the default route of
+				// every interface still to come.
 				logrus.Warn(errors.Wrapf(err, "failed to list routes for interface %s", link.Attrs().Name))
-				return ""
+				continue
 			}
 			for _, route := range routes {
 				if route.Dst != nil && route.Dst.IP.IsUnspecified() {
