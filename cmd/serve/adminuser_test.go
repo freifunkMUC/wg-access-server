@@ -6,6 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authconfig"
 )
@@ -20,6 +21,18 @@ func adminConfig(t *testing.T, users []string) *servecmd {
 	cmd.AppConfig.AdminPassword = "hunter2"
 	cmd.AppConfig.Auth.Simple = &authconfig.SimpleAuthConfig{Users: users}
 	return cmd
+}
+
+// testHash hashes password with bcrypt. Generated instead of pasted in as a
+// literal: a hash is random base64-ish text and sooner or later contains
+// something the spell checker reports as a typo.
+func testHash(t *testing.T, password string) string {
+	t.Helper()
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(hash)
 }
 
 func warnings(hook *test.Hook) []string {
@@ -39,7 +52,7 @@ func TestReadConfigWarnsWhenAdminUsernameIsAlreadyTaken(t *testing.T) {
 	hook := test.NewGlobal()
 	defer hook.Reset()
 
-	adminConfig(t, []string{"admin:$2a$04$1GFdp9fn4fMjbPGnvDXAdORiwZIJmlRFzwhcHqCPtDlYuoK105KE."}).ReadConfig()
+	adminConfig(t, []string{"admin:" + testHash(t, "hunter2")}).ReadConfig()
 
 	var found bool
 	for _, message := range warnings(hook) {
@@ -56,7 +69,7 @@ func TestReadConfigDoesNotWarnForOtherUsers(t *testing.T) {
 	hook := test.NewGlobal()
 	defer hook.Reset()
 
-	adminConfig(t, []string{"alice:$2a$04$1GFdp9fn4fMjbPGnvDXAdORiwZIJmlRFzwhcHqCPtDlYuoK105KE."}).ReadConfig()
+	adminConfig(t, []string{"alice:" + testHash(t, "hunter2")}).ReadConfig()
 
 	for _, message := range warnings(hook) {
 		if strings.Contains(message, "auth.simple") {
