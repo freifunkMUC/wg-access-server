@@ -6,9 +6,20 @@ import (
 	"testing"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru/v2"
+
 	"github.com/miekg/dns"
-	"github.com/patrickmn/go-cache"
 )
+
+// testCache returns a response cache for tests.
+func testCache(t *testing.T) *lru.Cache[string, cachedResponse] {
+	t.Helper()
+	c, err := newResponseCache(dnsCacheSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
 
 var ffmucUpstreams, _ = net.LookupHost("dns.ffmuc.net")
 
@@ -64,14 +75,14 @@ func TestDNSProxy_Lookup(t *testing.T) {
 	proxy := &DNSProxy{
 		udpClient: &dns.Client{Net: "udp"},
 		tcpClient: &dns.Client{Net: "tcp"},
-		cache:     cache.New(5*time.Minute, 10*time.Minute),
+		cache:     testCache(t),
 		upstream:  ffmucUpstreams,
 	}
 
 	t.Run("Cache hit", func(t *testing.T) {
 		msg := new(dns.Msg)
 		msg.SetQuestion("example.com.", dns.TypeA)
-		proxy.cache.Set(makekey(msg), msg, cache.DefaultExpiration)
+		proxy.cache.Add(makekey(msg), cachedResponse{response: msg, expiresAt: time.Now().Add(time.Minute)})
 
 		resp, err := proxy.Lookup(msg)
 		if err != nil {
@@ -91,7 +102,7 @@ func TestDNSProxy_CacheResponse(t *testing.T) {
 		}
 	}
 	newProxy := func() *DNSProxy {
-		return &DNSProxy{cache: cache.New(10*time.Minute, 10*time.Minute)}
+		return &DNSProxy{cache: testCache(t)}
 	}
 	newResponse := func(name string, ttls ...uint32) (string, *dns.Msg) {
 		query := new(dns.Msg)
@@ -132,11 +143,11 @@ func TestDNSProxy_CacheResponse(t *testing.T) {
 
 		proxy.cacheResponse(key, response)
 
-		_, expiration, found := proxy.cache.GetWithExpiration(key)
+		entry, found := proxy.cache.Get(key)
 		if !found {
 			t.Fatal("expected response to be cached")
 		}
-		remaining := time.Until(expiration)
+		remaining := time.Until(entry.expiresAt)
 		if remaining > 30*time.Second {
 			t.Fatalf("cache TTL %v exceeds minimum record TTL of 30s", remaining)
 		}
@@ -293,7 +304,7 @@ func TestDNSProxy_ServeDNSKeepsUpstreamRcode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			proxy := &DNSProxy{cache: cache.New(time.Minute, time.Minute)}
+			proxy := &DNSProxy{cache: testCache(t)}
 
 			query := new(dns.Msg)
 			query.SetQuestion("example.com.", dns.TypeA)
@@ -301,7 +312,7 @@ func TestDNSProxy_ServeDNSKeepsUpstreamRcode(t *testing.T) {
 			// Serve the answer from the cache so the test needs no upstream.
 			upstream := new(dns.Msg)
 			upstream.SetRcode(query, tt.rcode)
-			proxy.cache.Set(makekey(query), upstream, cache.DefaultExpiration)
+			proxy.cache.Add(makekey(query), cachedResponse{response: upstream, expiresAt: time.Now().Add(time.Minute)})
 
 			recorder := &responseRecorder{}
 			proxy.ServeDNS(recorder, query)

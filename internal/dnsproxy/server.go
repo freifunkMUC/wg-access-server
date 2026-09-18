@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -31,6 +30,11 @@ func New(opts DNSServerOpts) (*DNSServer, error) {
 		return nil, errors.New("At least 1 upstream dns server is required for the dns proxy server to function")
 	}
 
+	responseCache, err := newResponseCache(dnsCacheSize)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create the dns response cache")
+	}
+
 	dnsServer := &DNSServer{
 		servers: []*dns.Server{},
 		proxy: &DNSProxy{
@@ -42,7 +46,7 @@ func New(opts DNSServerOpts) (*DNSServer, error) {
 				Net:     "tcp",
 				Timeout: 5 * time.Second,
 			},
-			cache:    cache.New(10*time.Minute, 10*time.Minute),
+			cache:    responseCache,
 			upstream: opts.Upstream,
 		},
 		auth: &DNSAuth{
