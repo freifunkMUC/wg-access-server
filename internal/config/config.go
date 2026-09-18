@@ -26,6 +26,12 @@ type AppConfig struct {
 	// HTTP listen host
 	// Defaults to "" (all hosts)
 	HttpHost string `yaml:"httpHost"`
+	// HttpEnabled controls whether the web UI is also served over plain
+	// HTTP on Port. Turn it off to serve the UI over HTTPS only - the web UI
+	// hands out client configurations including private keys, so anything
+	// reaching it over HTTP sends them unencrypted.
+	// Defaults to true
+	HttpEnabled bool `yaml:"httpEnabled"`
 	// ExternalHost is the address that clients
 	// use to connect to the WireGuard interface
 	// By default, this will be empty and the web ui

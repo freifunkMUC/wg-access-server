@@ -58,6 +58,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("https-port", "Port for HTTPS server").Envar("WG_HTTPS_PORT").Default("8443").IntVar(&cmd.AppConfig.HTTPS.Port)
 	cli.Flag("https-host", "Listen host for HTTPS server").Envar("WG_HTTPS_HOST").Default("").StringVar(&cmd.AppConfig.HTTPS.Host)
 	cli.Flag("http-host", "Listen host for HTTP server").Envar("WG_HTTP_HOST").Default("").StringVar(&cmd.AppConfig.HttpHost)
+	cli.Flag("http-enabled", "Serve the web UI over plain HTTP as well. Disable to serve it over HTTPS only").Envar("WG_HTTP_ENABLED").Default("true").BoolVar(&cmd.AppConfig.HttpEnabled)
 	cli.Flag("wireguard-enabled", "Enable or disable the embedded wireguard server (useful for development)").Envar("WG_WIREGUARD_ENABLED").Default("true").BoolVar(&cmd.AppConfig.WireGuard.Enabled)
 	cli.Flag("wireguard-interface", "Set the wireguard interface name").Default("wg0").Envar("WG_WIREGUARD_INTERFACE").StringVar(&cmd.AppConfig.WireGuard.Interface)
 	cli.Flag("wireguard-private-key", "Wireguard private key").Envar("WG_WIREGUARD_PRIVATE_KEY").StringVar(&cmd.AppConfig.WireGuard.PrivateKey)
@@ -251,6 +252,7 @@ func (cmd *servecmd) Run() {
 	router := mux.NewRouter()
 	router.Use(services.TracesMiddleware)
 	router.Use(services.RecoveryMiddleware)
+	router.Use(services.SecurityHeadersMiddleware)
 
 	// Health check endpoint
 	router.PathPrefix("/health").Handler(services.HealthEndpoint(deviceManager))
@@ -290,22 +292,25 @@ func (cmd *servecmd) Run() {
 	errChan := make(chan error)
 
 	// Listen
-	address := fmt.Sprintf("%s:%d", conf.HttpHost, conf.Port)
+	var httpSrv *http.Server
+	if conf.HttpEnabled {
+		address := fmt.Sprintf("%s:%d", conf.HttpHost, conf.Port)
 
-	// Create a new HTTP server
-	httpSrv := &http.Server{
-		Addr:    address,
-		Handler: publicRouter,
-	}
-
-	// Start HTTP server
-	go func() {
-		logrus.Infof("Web UI listening on http://%v", address)
-		err := httpSrv.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errChan <- errors.Wrap(err, "unable to start http server")
+		// Create a new HTTP server
+		httpSrv = &http.Server{
+			Addr:    address,
+			Handler: publicRouter,
 		}
-	}()
+
+		// Start HTTP server
+		go func() {
+			logrus.Infof("Web UI listening on http://%v", address)
+			err := httpSrv.ListenAndServe()
+			if err != nil && !errors.Is(err, http.ErrServerClosed) {
+				errChan <- errors.Wrap(err, "unable to start http server")
+			}
+		}()
+	}
 
 	// Start HTTPS server if enabled
 	var httpsSrv *http.Server
@@ -350,8 +355,10 @@ func (cmd *servecmd) Run() {
 		logrus.Info("shutting down server...")
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := httpSrv.Shutdown(ctx); err != nil {
-			logrus.Error(errors.Wrap(err, "unable to shutdown http server"))
+		if httpSrv != nil {
+			if err := httpSrv.Shutdown(ctx); err != nil {
+				logrus.Error(errors.Wrap(err, "unable to shutdown http server"))
+			}
 		}
 		if httpsSrv != nil {
 			if err := httpsSrv.Shutdown(ctx); err != nil {
@@ -398,6 +405,18 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	}
 	if cmd.AppConfig.EnableMetadata && cmd.AppConfig.EnableDeviceMetrics && cmd.AppConfig.Metrics.MaxDeviceSeries != 0 && !metricsAuthEnabled {
 		logrus.Warn("Per-device metrics are exposed on the unauthenticated /metrics endpoint: device names and owner identities are readable by anyone who can reach it")
+	}
+
+	if !cmd.AppConfig.HttpEnabled && !cmd.AppConfig.HTTPS.Enabled {
+		logrus.Fatal("Both the HTTP and the HTTPS listener are disabled - the web UI would not be reachable at all")
+	}
+	if !cmd.AppConfig.HttpEnabled && (cmd.AppConfig.Auth.SessionStore == nil || !cmd.AppConfig.Auth.SessionStore.Secure) {
+		logrus.Info("The web UI is served over HTTPS only: consider setting auth.sessionStore.secure to keep browsers from ever sending the session cookie over plain HTTP")
+	}
+	if cmd.AppConfig.HttpEnabled && cmd.AppConfig.HTTPS.Enabled {
+		// Info, not a warning: serving plain HTTP behind a TLS terminating
+		// proxy is a perfectly normal setup.
+		logrus.Infof("The web UI is also served over plain HTTP on port %d. Unless something in front of it terminates TLS, client configurations and their private keys travel unencrypted - disable it with --no-http-enabled", cmd.AppConfig.Port)
 	}
 
 	if !cmd.AppConfig.Auth.IsEnabled() {
