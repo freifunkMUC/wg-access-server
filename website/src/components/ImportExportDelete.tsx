@@ -10,6 +10,7 @@ import { grpc } from '../Api';
 import { toast } from './Toast';
 import { confirm } from './Present';
 import { errorMessage } from '../Util';
+import { ExportedDevice, parseExportedAddresses } from './ImportDevices';
 
 
 export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
@@ -39,34 +40,75 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
 
     try {
       const text = await file.text();
-      const devices = JSON.parse(text);
-      
+      const parsed: unknown = JSON.parse(text);
+
       // Validate the imported data
-      if (!Array.isArray(devices)) {
+      if (!Array.isArray(parsed)) {
         throw new Error('Invalid format: expected an array of devices');
       }
+      const devices = parsed as ExportedDevice[];
 
       // Import each device, continue on errors and collect failures
       const failed: string[] = [];
+      const reassigned: string[] = [];
       let imported = 0;
       for (const device of devices) {
-        try {
-          await grpc.devices.addDevice({
-            name: device.name,
-            publicKey: device.publicKey,
-            presharedKey: device.presharedKey || '',
-            manualIpAssignment: device.manualIpAssignment || false,
-            manualIpv4Address: device.manualIpv4Address || '',
-            manualIpv6Address: device.manualIpv6Address || '',
-          });
-          imported++;
-        } catch (err) {
-          failed.push(`${device.name || device.publicKey}: ${errorMessage(err)}`);
+        const label = device.name || device.publicKey || 'unnamed device';
+        const exported = parseExportedAddresses(device.address);
+        const wantedIpv4 = device.manualIpv4Address || exported.ipv4;
+        const wantedIpv6 = device.manualIpv6Address || exported.ipv6;
+        const base = {
+          name: device.name ?? '',
+          publicKey: device.publicKey ?? '',
+          presharedKey: device.presharedKey || '',
+        };
+
+        // Keep the address the device had, so an imported configuration file
+        // still matches the device on the server.
+        let added = false;
+        let manualFailed = false;
+        if (wantedIpv4 || wantedIpv6) {
+          try {
+            await grpc.devices.addDevice({
+              ...base,
+              manualIpAssignment: true,
+              manualIpv4Address: wantedIpv4,
+              manualIpv6Address: wantedIpv6,
+            });
+            added = true;
+            imported++;
+          } catch {
+            // The address may be taken or outside of the server's subnet now.
+            manualFailed = true;
+          }
+        }
+
+        if (!added) {
+          try {
+            await grpc.devices.addDevice({
+              ...base,
+              manualIpAssignment: false,
+              manualIpv4Address: '',
+              manualIpv6Address: '',
+            });
+            imported++;
+            if (manualFailed) {
+              reassigned.push(label);
+            }
+          } catch (err) {
+            failed.push(`${label}: ${errorMessage(err)}`);
+          }
         }
       }
 
+      const reassignedNote = reassigned.length > 0 ? `, ${reassigned.length} got a new address (${reassigned.join(', ')})` : '';
       if (failed.length > 0) {
-        toast({ text: `Imported ${imported} devices, failed ${failed.length}: ${failed.join('; ')}`, intent: 'warning' });
+        toast({
+          text: `Imported ${imported} devices${reassignedNote}, failed ${failed.length}: ${failed.join('; ')}`,
+          intent: 'warning',
+        });
+      } else if (reassigned.length > 0) {
+        toast({ text: `Imported ${imported} devices${reassignedNote}`, intent: 'warning' });
       } else {
         toast({ text: 'Devices imported successfully', intent: 'success' });
       }
