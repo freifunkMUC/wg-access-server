@@ -5,6 +5,7 @@ import (
 	"math"
 	"net"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/miekg/dns"
@@ -12,11 +13,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// upstreamCooldown is how long an upstream that failed is passed over. Long
+// enough that a dead resolver does not cost every client another timeout,
+// short enough to pick it up again quickly once it is back. A var so tests
+// can shorten it.
+var upstreamCooldown = 30 * time.Second
+
 type DNSProxy struct {
 	udpClient *dns.Client
 	tcpClient *dns.Client
 	cache     *cache.Cache
 	upstream  []string
+
+	// failedAt remembers when an upstream last failed, so the next queries
+	// skip it instead of waiting for its timeout again.
+	mu       sync.Mutex
+	failedAt map[string]time.Time
 }
 
 // ServeDNS is called by the mux from the listening servers.
@@ -79,36 +91,97 @@ func (d *DNSProxy) Lookup(m *dns.Msg) (*dns.Msg, error) {
 	}
 
 	// fallback to upstream exchange
-	// TODO disable upstream after certain amount of failures?
 	var response *dns.Msg
 	var firstErr error
-	for _, upstream := range d.upstream {
-		target := net.JoinHostPort(upstream, "53")
-		resp, _, err := d.udpClient.Exchange(m, target)
-		if err != nil && firstErr == nil {
+	for _, upstream := range d.orderedUpstreams() {
+		resp, err := d.exchange(m, upstream)
+		if err != nil {
 			logrus.Warnf("DNS lookup failed for upstream %s: %v", upstream, err)
-			firstErr = err
-		} else if err == nil {
-			// Retry truncated responses over TCP
-			if resp.Truncated {
-				resp, _, err = d.tcpClient.Exchange(m, target)
-				if err != nil && firstErr == nil {
-					logrus.Warnf("DNS lookup failed over TCP for upstream %s: %v", upstream, err)
-					firstErr = err
-					continue
-				}
+			d.markFailed(upstream)
+			if firstErr == nil {
+				firstErr = err
 			}
-			response = resp
-			break
+			continue
 		}
+		d.markHealthy(upstream)
+		response = resp
+		break
 	}
 	if response == nil {
-		return nil, fmt.Errorf("no response from upstream servers")
+		if firstErr != nil {
+			return nil, fmt.Errorf("no response from upstream servers: %w", firstErr)
+		}
+		return nil, fmt.Errorf("no upstream servers configured")
 	}
 
 	d.cacheResponse(key, response)
 
 	return response.Copy(), nil
+}
+
+// exchange sends the query to one upstream, retrying over TCP when the
+// response comes back truncated.
+func (d *DNSProxy) exchange(m *dns.Msg, upstream string) (*dns.Msg, error) {
+	target := upstreamAddr(upstream)
+
+	response, _, err := d.udpClient.Exchange(m, target)
+	if err != nil {
+		return nil, err
+	}
+	if !response.Truncated {
+		return response, nil
+	}
+
+	response, _, err = d.tcpClient.Exchange(m, target)
+	if err != nil {
+		return nil, fmt.Errorf("retry over TCP failed: %w", err)
+	}
+	return response, nil
+}
+
+// upstreamAddr adds the default DNS port to an upstream that does not name
+// one, so "192.0.2.1", "192.0.2.1:5353", "2001:db8::1" and "[2001:db8::1]:5353"
+// all work.
+func upstreamAddr(upstream string) string {
+	if _, _, err := net.SplitHostPort(upstream); err == nil {
+		return upstream
+	}
+	return net.JoinHostPort(upstream, "53")
+}
+
+// orderedUpstreams returns the upstreams to try, in order: the ones that are
+// not in their cooldown first, the rest behind them. Failing upstreams are
+// passed over rather than dropped - when every upstream is in its cooldown,
+// answering slowly still beats answering not at all.
+func (d *DNSProxy) orderedUpstreams() []string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	healthy := make([]string, 0, len(d.upstream))
+	var cooling []string
+	for _, upstream := range d.upstream {
+		if failed, ok := d.failedAt[upstream]; ok && time.Since(failed) < upstreamCooldown {
+			cooling = append(cooling, upstream)
+			continue
+		}
+		healthy = append(healthy, upstream)
+	}
+	return append(healthy, cooling...)
+}
+
+func (d *DNSProxy) markFailed(upstream string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.failedAt == nil {
+		d.failedAt = map[string]time.Time{}
+	}
+	d.failedAt[upstream] = time.Now()
+}
+
+func (d *DNSProxy) markHealthy(upstream string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	delete(d.failedAt, upstream)
 }
 
 // cacheResponse stores a response using the minimum TTL across all of its

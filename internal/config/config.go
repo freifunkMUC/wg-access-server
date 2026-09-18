@@ -127,7 +127,11 @@ type AppConfig struct {
 		Enabled bool `yaml:"enabled"`
 		// Upstream configures the addresses of upstream
 		// DNS servers to which client DNS requests will be sent to.
-		// NOTE: currently wg-access-server will always prefer the first upstream and fall back on failures.
+		// An address may name a port ("192.0.2.1:5353", "[2001:db8::1]:5353"),
+		// otherwise port 53 is used.
+		// NOTE: wg-access-server prefers the first upstream and falls back on
+		// failures. An upstream that fails is skipped for a short while, so a
+		// dead resolver does not slow down every query.
 		// Defaults the host's upstream DNS servers (via resolvconf)
 		// or Cloudflare DNS if resolvconf cannot be used.
 		Upstream []string `yaml:"upstream"`
