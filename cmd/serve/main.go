@@ -531,14 +531,10 @@ func generateZone(deviceManager *devices.DeviceManager, vpnips []netip.Addr) dns
 	for _, device := range devs {
 		owner := device.Owner
 		name := device.Name
-		addressStrings := network.SplitAddresses(device.Address)
-		addresses := make([]netip.Addr, 0, 2)
-		for _, str := range addressStrings {
-			pref, err := netip.ParsePrefix(str)
-			if err != nil {
-				continue
-			}
-			addresses = append(addresses, pref.Addr())
+		addresses, unusable := network.ParseAddresses(device.Address)
+		if len(unusable) > 0 {
+			logrus.Warnf("device '%s' of user '%s' has an address that cannot be parsed ('%s') - it is left out of the DNS zone",
+				name, owner, strings.Join(unusable, ", "))
 		}
 		zone[dnsproxy.ZoneKey{Owner: owner, Name: name}] = addresses
 	}
