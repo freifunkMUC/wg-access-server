@@ -265,3 +265,57 @@ func TestMinTTL(t *testing.T) {
 		}
 	})
 }
+
+// responseRecorder captures the message a handler writes back to the client.
+type responseRecorder struct {
+	dns.ResponseWriter
+	msg *dns.Msg
+}
+
+func (r *responseRecorder) WriteMsg(m *dns.Msg) error { r.msg = m; return nil }
+
+func (r *responseRecorder) RemoteAddr() net.Addr {
+	return &net.UDPAddr{IP: net.IPv6loopback, Port: 40000}
+}
+
+// The client must see the response code the upstream sent. Answering an
+// upstream NXDOMAIN with NOERROR makes a name that does not exist look like a
+// name without records, which breaks search domain resolution on the clients.
+func TestDNSProxy_ServeDNSKeepsUpstreamRcode(t *testing.T) {
+	tests := []struct {
+		name  string
+		rcode int
+	}{
+		{name: "NXDOMAIN", rcode: dns.RcodeNameError},
+		{name: "REFUSED", rcode: dns.RcodeRefused},
+		{name: "NOERROR", rcode: dns.RcodeSuccess},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			proxy := &DNSProxy{cache: cache.New(time.Minute, time.Minute)}
+
+			query := new(dns.Msg)
+			query.SetQuestion("example.com.", dns.TypeA)
+
+			// Serve the answer from the cache so the test needs no upstream.
+			upstream := new(dns.Msg)
+			upstream.SetRcode(query, tt.rcode)
+			proxy.cache.Set(makekey(query), upstream, cache.DefaultExpiration)
+
+			recorder := &responseRecorder{}
+			proxy.ServeDNS(recorder, query)
+
+			if recorder.msg == nil {
+				t.Fatal("no response written")
+			}
+			if recorder.msg.Rcode != tt.rcode {
+				t.Errorf("client got %s, upstream sent %s",
+					dns.RcodeToString[recorder.msg.Rcode], dns.RcodeToString[tt.rcode])
+			}
+			if recorder.msg.Id != query.Id || !recorder.msg.Response {
+				t.Error("response header does not match the query")
+			}
+		})
+	}
+}

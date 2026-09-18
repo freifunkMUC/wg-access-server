@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"github.com/tg123/go-htpasswd"
 
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
@@ -83,12 +84,15 @@ func checkCreds(users []string, username string, password string) bool {
 	return false
 }
 
+// parsehtpassword splits an "username:hash" entry. An entry without a colon
+// is not a credential at all, so it is rejected rather than indexed into.
 func parsehtpassword(user string) (string, string, bool) {
-	segments := strings.SplitN(user, ":", 2)
-	if len(segments) >= 1 {
-		return segments[0], segments[1], true
+	username, hash, ok := strings.Cut(user, ":")
+	if !ok || username == "" || hash == "" {
+		logrus.Warnf("ignoring malformed user entry %q: expected the htpasswd format 'username:hash'", user)
+		return "", "", false
 	}
-	return "", "", false
+	return username, hash, true
 }
 
 func checkhtpasswd(required string, given string) bool {

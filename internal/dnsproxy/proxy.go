@@ -43,7 +43,13 @@ func (d *DNSProxy) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 			HandleFailed(w, r)
 			return
 		}
+		// SetReply adopts the client's header (id, question, rd/cd bits) but
+		// also resets the response code to NOERROR, which would turn an
+		// upstream NXDOMAIN into an empty NOERROR answer and hide SERVFAIL
+		// and REFUSED from the client. Put the upstream's code back.
+		rcode := m.Rcode
 		m.SetReply(r)
+		m.Rcode = rcode
 		truncateIfRequired(m, r, w.RemoteAddr().Network())
 		err = w.WriteMsg(m)
 		if err != nil {
