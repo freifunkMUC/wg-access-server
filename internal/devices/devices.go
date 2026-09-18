@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/netip"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
@@ -91,9 +92,14 @@ func (d *DeviceManager) usedAddresses() (map[netip.Addr]bool, map[netip.Addr]boo
 
 	// Check what IP addresses are already occupied
 	for _, device := range devices {
-		addresses := network.SplitAddresses(device.Address)
+		addresses, unusable := network.ParseAddresses(device.Address)
+		if len(unusable) > 0 {
+			// Don't fail: one broken row would otherwise stop every user from
+			// adding a device. It cannot be reserved either, so say so.
+			logrus.Warnf("device '%s' of user '%s' has an address that cannot be parsed ('%s') - it is not reserved for that device",
+				device.Name, device.Owner, strings.Join(unusable, ", "))
+		}
 		for _, addr := range addresses {
-			addr := netip.MustParsePrefix(addr).Addr()
 			if addr.Is4() {
 				usedIPv4s[addr] = true
 			} else {

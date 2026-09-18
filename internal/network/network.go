@@ -57,6 +57,30 @@ func StringJoinIPs(a, b netip.Prefix) string {
 	return ""
 }
 
+// ParseAddresses parses the comma-separated addresses stored for a device.
+// An entry is accepted both as a prefix ("10.44.0.2/32") and as a bare
+// address ("10.44.0.2"), because rows written by an older version, by the
+// migrate command or by hand may hold either. Entries that are neither are
+// returned as the second result, so a single unusable row makes the caller
+// report it instead of failing for every device.
+func ParseAddresses(addresses string) ([]netip.Addr, []string) {
+	split := SplitAddresses(addresses)
+	parsed := make([]netip.Addr, 0, len(split))
+	var unusable []string
+	for _, addr := range split {
+		if prefix, err := netip.ParsePrefix(addr); err == nil {
+			parsed = append(parsed, prefix.Addr())
+			continue
+		}
+		if ip, err := netip.ParseAddr(addr); err == nil {
+			parsed = append(parsed, ip)
+			continue
+		}
+		unusable = append(unusable, addr)
+	}
+	return parsed, unusable
+}
+
 // SplitAddresses splits multiple comma-separated addresses into a slice of address strings
 func SplitAddresses(addresses string) []string {
 	split := strings.Split(addresses, ",")

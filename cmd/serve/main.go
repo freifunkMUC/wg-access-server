@@ -418,9 +418,11 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 			cmd.AppConfig.Auth.Simple.Users = append(cmd.AppConfig.Auth.Simple.Users, fmt.Sprintf("%s:%s", cmd.AppConfig.AdminUsername, string(pw)))
 		} else if cmd.AppConfig.Auth.Simple != nil {
 			// there already exists a simple auth section, set a simple auth entry for the admin user
+			warnIfUserExists(cmd.AppConfig.Auth.Simple.Users, cmd.AppConfig.AdminUsername, "auth.simple")
 			cmd.AppConfig.Auth.Simple.Users = append(cmd.AppConfig.Auth.Simple.Users, fmt.Sprintf("%s:%s", cmd.AppConfig.AdminUsername, string(pw)))
 		} else {
 			// there already exists a basic auth section, set a basic auth entry for the admin user
+			warnIfUserExists(cmd.AppConfig.Auth.Basic.Users, cmd.AppConfig.AdminUsername, "auth.basic")
 			cmd.AppConfig.Auth.Basic.Users = append(cmd.AppConfig.Auth.Basic.Users, fmt.Sprintf("%s:%s", cmd.AppConfig.AdminUsername, string(pw)))
 		}
 	}
@@ -461,6 +463,21 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	}
 
 	return &cmd.AppConfig
+}
+
+// warnIfUserExists reports a user list that already carries an entry for the
+// admin username. The login check stops at the first entry whose username
+// matches, and the admin entry is appended behind the configured ones, so the
+// existing entry decides the password while the admin password set through
+// the environment, a flag or the config file quietly does nothing. The user
+// still gets admin rights - those follow the username, not the entry.
+func warnIfUserExists(users []string, username, section string) {
+	for _, user := range users {
+		if name, _, ok := strings.Cut(user, ":"); ok && name == username {
+			logrus.Warnf("%s already contains a user '%s': that entry decides the password and the configured admin password has no effect - remove one of the two", section, username)
+			return
+		}
+	}
 }
 
 func splitByCommaAndTrim(s string) []string {
@@ -531,14 +548,10 @@ func generateZone(deviceManager *devices.DeviceManager, vpnips []netip.Addr) dns
 	for _, device := range devs {
 		owner := device.Owner
 		name := device.Name
-		addressStrings := network.SplitAddresses(device.Address)
-		addresses := make([]netip.Addr, 0, 2)
-		for _, str := range addressStrings {
-			pref, err := netip.ParsePrefix(str)
-			if err != nil {
-				continue
-			}
-			addresses = append(addresses, pref.Addr())
+		addresses, unusable := network.ParseAddresses(device.Address)
+		if len(unusable) > 0 {
+			logrus.Warnf("device '%s' of user '%s' has an address that cannot be parsed ('%s') - it is left out of the DNS zone",
+				name, owner, strings.Join(unusable, ", "))
 		}
 		zone[dnsproxy.ZoneKey{Owner: owner, Name: name}] = addresses
 	}
