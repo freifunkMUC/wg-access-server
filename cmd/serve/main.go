@@ -321,7 +321,7 @@ func (cmd *servecmd) Run() {
 		}
 
 		// Load TLS certificate
-		tlsConfig, err := services.LoadTLSCert(certPath, keyPath)
+		tlsConfig, err := services.LoadTLSCert(certPath, keyPath, services.CertHosts(conf.ExternalHost))
 		if err != nil {
 			logrus.Error(errors.Wrap(err, "failed to load TLS certificate"))
 			return
