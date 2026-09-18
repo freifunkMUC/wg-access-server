@@ -418,9 +418,11 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 			cmd.AppConfig.Auth.Simple.Users = append(cmd.AppConfig.Auth.Simple.Users, fmt.Sprintf("%s:%s", cmd.AppConfig.AdminUsername, string(pw)))
 		} else if cmd.AppConfig.Auth.Simple != nil {
 			// there already exists a simple auth section, set a simple auth entry for the admin user
+			warnIfUserExists(cmd.AppConfig.Auth.Simple.Users, cmd.AppConfig.AdminUsername, "auth.simple")
 			cmd.AppConfig.Auth.Simple.Users = append(cmd.AppConfig.Auth.Simple.Users, fmt.Sprintf("%s:%s", cmd.AppConfig.AdminUsername, string(pw)))
 		} else {
 			// there already exists a basic auth section, set a basic auth entry for the admin user
+			warnIfUserExists(cmd.AppConfig.Auth.Basic.Users, cmd.AppConfig.AdminUsername, "auth.basic")
 			cmd.AppConfig.Auth.Basic.Users = append(cmd.AppConfig.Auth.Basic.Users, fmt.Sprintf("%s:%s", cmd.AppConfig.AdminUsername, string(pw)))
 		}
 	}
@@ -461,6 +463,21 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	}
 
 	return &cmd.AppConfig
+}
+
+// warnIfUserExists reports a user list that already carries an entry for the
+// admin username. The login check stops at the first entry whose username
+// matches, and the admin entry is appended behind the configured ones, so the
+// existing entry decides the password while the admin password set through
+// the environment, a flag or the config file quietly does nothing. The user
+// still gets admin rights - those follow the username, not the entry.
+func warnIfUserExists(users []string, username, section string) {
+	for _, user := range users {
+		if name, _, ok := strings.Cut(user, ":"); ok && name == username {
+			logrus.Warnf("%s already contains a user '%s': that entry decides the password and the configured admin password has no effect - remove one of the two", section, username)
+			return
+		}
+	}
 }
 
 func splitByCommaAndTrim(s string) []string {
