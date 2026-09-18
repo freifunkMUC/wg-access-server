@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/patrickmn/go-cache"
 )
 
 // fakeUpstream is a DNS server on a random port that counts the queries it
@@ -63,11 +62,12 @@ func (f *fakeUpstream) queryCount() int {
 	return f.queries
 }
 
-func newTestProxy(upstreams ...string) *DNSProxy {
+func newTestProxy(t *testing.T, upstreams ...string) *DNSProxy {
+	t.Helper()
 	return &DNSProxy{
 		udpClient: &dns.Client{Timeout: 100 * time.Millisecond},
 		tcpClient: &dns.Client{Net: "tcp", Timeout: 100 * time.Millisecond},
-		cache:     cache.New(time.Minute, time.Minute),
+		cache:     testCache(t),
 		upstream:  upstreams,
 	}
 }
@@ -88,7 +88,7 @@ func lookup(t *testing.T, proxy *DNSProxy, name string) *dns.Msg {
 func TestLookupSkipsAFailingUpstream(t *testing.T) {
 	dead := newFakeUpstream(t, false)
 	alive := newFakeUpstream(t, true)
-	proxy := newTestProxy(dead.addr, alive.addr)
+	proxy := newTestProxy(t, dead.addr, alive.addr)
 
 	lookup(t, proxy, "first.example.com.")
 	if dead.queryCount() != 1 {
@@ -116,7 +116,7 @@ func TestLookupRetriesAfterTheCooldown(t *testing.T) {
 
 	dead := newFakeUpstream(t, false)
 	alive := newFakeUpstream(t, true)
-	proxy := newTestProxy(dead.addr, alive.addr)
+	proxy := newTestProxy(t, dead.addr, alive.addr)
 
 	lookup(t, proxy, "first.example.com.")
 	time.Sleep(5 * time.Millisecond)
@@ -130,7 +130,7 @@ func TestLookupRetriesAfterTheCooldown(t *testing.T) {
 // With every upstream in its cooldown, answering slowly still beats not
 // answering at all.
 func TestOrderedUpstreamsKeepsAllUpstreams(t *testing.T) {
-	proxy := newTestProxy("192.0.2.1", "192.0.2.2")
+	proxy := newTestProxy(t, "192.0.2.1", "192.0.2.2")
 	proxy.markFailed("192.0.2.1")
 	proxy.markFailed("192.0.2.2")
 
@@ -140,7 +140,7 @@ func TestOrderedUpstreamsKeepsAllUpstreams(t *testing.T) {
 }
 
 func TestOrderedUpstreamsPutsFailingOnesLast(t *testing.T) {
-	proxy := newTestProxy("192.0.2.1", "192.0.2.2", "192.0.2.3")
+	proxy := newTestProxy(t, "192.0.2.1", "192.0.2.2", "192.0.2.3")
 	proxy.markFailed("192.0.2.1")
 
 	got := proxy.orderedUpstreams()
@@ -155,7 +155,7 @@ func TestOrderedUpstreamsPutsFailingOnesLast(t *testing.T) {
 // A successful answer clears an earlier failure, so a resolver that flaps
 // does not stay at the back of the queue forever.
 func TestSuccessClearsAFailure(t *testing.T) {
-	proxy := newTestProxy("192.0.2.1", "192.0.2.2")
+	proxy := newTestProxy(t, "192.0.2.1", "192.0.2.2")
 	proxy.markFailed("192.0.2.1")
 	proxy.markHealthy("192.0.2.1")
 

@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/miekg/dns"
-	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,10 +19,28 @@ import (
 // can shorten it.
 var upstreamCooldown = 30 * time.Second
 
+// dnsCacheSize bounds how many responses are cached. The cache is filled by
+// whatever the VPN clients ask for, so it needs a limit: without one a client
+// can grow it without end by querying random names. Least recently used
+// entries are dropped once it is full.
+const dnsCacheSize = 10000
+
+// cachedResponse is a cached upstream response together with the time it
+// stops being valid. The expiry is per entry because it comes from the TTLs
+// of the records in that response.
+type cachedResponse struct {
+	response  *dns.Msg
+	expiresAt time.Time
+}
+
+func newResponseCache(size int) (*lru.Cache[string, cachedResponse], error) {
+	return lru.New[string, cachedResponse](size)
+}
+
 type DNSProxy struct {
 	udpClient *dns.Client
 	tcpClient *dns.Client
-	cache     *cache.Cache
+	cache     *lru.Cache[string, cachedResponse]
 	upstream  []string
 
 	// failedAt remembers when an upstream last failed, so the next queries
@@ -85,9 +103,14 @@ func (d *DNSProxy) Lookup(m *dns.Msg) (*dns.Msg, error) {
 	key := makekey(m)
 
 	// check the cache first
-	if item, found := d.cache.Get(key); found {
-		logrus.Debugf("dns cache hit %s", prettyPrintMsg(m))
-		return item.(*dns.Msg).Copy(), nil
+	if entry, found := d.cache.Get(key); found {
+		if time.Now().Before(entry.expiresAt) {
+			logrus.Debugf("dns cache hit %s", prettyPrintMsg(m))
+			return entry.response.Copy(), nil
+		}
+		// The LRU has no janitor of its own, so drop what has expired when we
+		// come across it.
+		d.cache.Remove(key)
 	}
 
 	// fallback to upstream exchange
@@ -186,16 +209,15 @@ func (d *DNSProxy) markHealthy(upstream string) {
 
 // cacheResponse stores a response using the minimum TTL across all of its
 // records so the cache never serves a record past its TTL. A minimum TTL of 0
-// means "do not cache": passing a zero duration to go-cache would make it use
-// the cache's DefaultExpiration instead, pinning deliberately uncacheable
-// records (e.g. DNS failover) for minutes.
+// means the response must not be cached at all (e.g. DNS failover setups rely
+// on that).
 func (d *DNSProxy) cacheResponse(key string, response *dns.Msg) {
 	if len(response.Answer) == 0 {
 		return
 	}
 	if ttl := minTTL(response); ttl > 0 {
 		logrus.Debugf("caching dns response for %s for %v", prettyPrintMsg(response), ttl)
-		d.cache.Set(key, response, ttl)
+		d.cache.Add(key, cachedResponse{response: response, expiresAt: time.Now().Add(ttl)})
 	} else {
 		logrus.Debugf("not caching dns response for %s: minimum record TTL is 0", prettyPrintMsg(response))
 	}
