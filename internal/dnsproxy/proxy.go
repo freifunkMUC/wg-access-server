@@ -5,6 +5,7 @@ import (
 	"math"
 	"net"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/miekg/dns"
@@ -12,11 +13,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// upstreamCooldown is how long an upstream that failed is passed over. Long
+// enough that a dead resolver does not cost every client another timeout,
+// short enough to pick it up again quickly once it is back. A var so tests
+// can shorten it.
+var upstreamCooldown = 30 * time.Second
+
 type DNSProxy struct {
 	udpClient *dns.Client
 	tcpClient *dns.Client
 	cache     *cache.Cache
 	upstream  []string
+
+	// failedAt remembers when an upstream last failed, so the next queries
+	// skip it instead of waiting for its timeout again.
+	mu       sync.Mutex
+	failedAt map[string]time.Time
 }
 
 // ServeDNS is called by the mux from the listening servers.
@@ -81,15 +93,17 @@ func (d *DNSProxy) Lookup(m *dns.Msg) (*dns.Msg, error) {
 	// fallback to upstream exchange
 	var response *dns.Msg
 	var firstErr error
-	for _, upstream := range d.upstream {
+	for _, upstream := range d.orderedUpstreams() {
 		resp, err := d.exchange(m, upstream)
 		if err != nil {
 			logrus.Warnf("DNS lookup failed for upstream %s: %v", upstream, err)
+			d.markFailed(upstream)
 			if firstErr == nil {
 				firstErr = err
 			}
 			continue
 		}
+		d.markHealthy(upstream)
 		response = resp
 		break
 	}
@@ -133,6 +147,41 @@ func upstreamAddr(upstream string) string {
 		return upstream
 	}
 	return net.JoinHostPort(upstream, "53")
+}
+
+// orderedUpstreams returns the upstreams to try, in order: the ones that are
+// not in their cooldown first, the rest behind them. Failing upstreams are
+// passed over rather than dropped - when every upstream is in its cooldown,
+// answering slowly still beats answering not at all.
+func (d *DNSProxy) orderedUpstreams() []string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	healthy := make([]string, 0, len(d.upstream))
+	var cooling []string
+	for _, upstream := range d.upstream {
+		if failed, ok := d.failedAt[upstream]; ok && time.Since(failed) < upstreamCooldown {
+			cooling = append(cooling, upstream)
+			continue
+		}
+		healthy = append(healthy, upstream)
+	}
+	return append(healthy, cooling...)
+}
+
+func (d *DNSProxy) markFailed(upstream string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.failedAt == nil {
+		d.failedAt = map[string]time.Time{}
+	}
+	d.failedAt[upstream] = time.Now()
+}
+
+func (d *DNSProxy) markHealthy(upstream string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	delete(d.failedAt, upstream)
 }
 
 // cacheResponse stores a response using the minimum TTL across all of its
