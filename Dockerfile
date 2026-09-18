@@ -33,6 +33,10 @@ FROM alpine:3.24.1
 RUN apk add --no-cache iptables ip6tables wireguard-tools curl openssl
 ENV WG_CONFIG="/config.yaml"
 ENV WG_STORAGE="sqlite3:///data/db.sqlite3"
+# Keep the generated self-signed certificate on the data volume, otherwise a
+# recreated container serves a new certificate and every browser warns again
+ENV WG_HTTPS_CERT_FILE="/data/wg-access-server.crt"
+ENV WG_HTTPS_KEY_FILE="/data/wg-access-server.key"
 COPY --from=server /code/wg-access-server /usr/local/bin/wg-access-server
 COPY --from=website /code/build /website/build
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
