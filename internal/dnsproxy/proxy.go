@@ -79,36 +79,60 @@ func (d *DNSProxy) Lookup(m *dns.Msg) (*dns.Msg, error) {
 	}
 
 	// fallback to upstream exchange
-	// TODO disable upstream after certain amount of failures?
 	var response *dns.Msg
 	var firstErr error
 	for _, upstream := range d.upstream {
-		target := net.JoinHostPort(upstream, "53")
-		resp, _, err := d.udpClient.Exchange(m, target)
-		if err != nil && firstErr == nil {
+		resp, err := d.exchange(m, upstream)
+		if err != nil {
 			logrus.Warnf("DNS lookup failed for upstream %s: %v", upstream, err)
-			firstErr = err
-		} else if err == nil {
-			// Retry truncated responses over TCP
-			if resp.Truncated {
-				resp, _, err = d.tcpClient.Exchange(m, target)
-				if err != nil && firstErr == nil {
-					logrus.Warnf("DNS lookup failed over TCP for upstream %s: %v", upstream, err)
-					firstErr = err
-					continue
-				}
+			if firstErr == nil {
+				firstErr = err
 			}
-			response = resp
-			break
+			continue
 		}
+		response = resp
+		break
 	}
 	if response == nil {
-		return nil, fmt.Errorf("no response from upstream servers")
+		if firstErr != nil {
+			return nil, fmt.Errorf("no response from upstream servers: %w", firstErr)
+		}
+		return nil, fmt.Errorf("no upstream servers configured")
 	}
 
 	d.cacheResponse(key, response)
 
 	return response.Copy(), nil
+}
+
+// exchange sends the query to one upstream, retrying over TCP when the
+// response comes back truncated.
+func (d *DNSProxy) exchange(m *dns.Msg, upstream string) (*dns.Msg, error) {
+	target := upstreamAddr(upstream)
+
+	response, _, err := d.udpClient.Exchange(m, target)
+	if err != nil {
+		return nil, err
+	}
+	if !response.Truncated {
+		return response, nil
+	}
+
+	response, _, err = d.tcpClient.Exchange(m, target)
+	if err != nil {
+		return nil, fmt.Errorf("retry over TCP failed: %w", err)
+	}
+	return response, nil
+}
+
+// upstreamAddr adds the default DNS port to an upstream that does not name
+// one, so "192.0.2.1", "192.0.2.1:5353", "2001:db8::1" and "[2001:db8::1]:5353"
+// all work.
+func upstreamAddr(upstream string) string {
+	if _, _, err := net.SplitHostPort(upstream); err == nil {
+		return upstream
+	}
+	return net.JoinHostPort(upstream, "53")
 }
 
 // cacheResponse stores a response using the minimum TTL across all of its
