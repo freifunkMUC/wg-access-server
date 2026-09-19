@@ -93,3 +93,47 @@ func TestLookupServesAnEntryThatIsStillValid(t *testing.T) {
 		t.Error("a valid entry must stay in the cache")
 	}
 }
+
+func TestNewHonoursTheConfiguredCacheSize(t *testing.T) {
+	server, err := New(DNSServerOpts{Upstream: []string{"192.0.2.1"}, CacheSize: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxy := server.proxy
+
+	if proxy.cache == nil {
+		t.Fatal("caching is off although a cache size was configured")
+	}
+	for _, name := range []string{"a.example.com.", "b.example.com.", "c.example.com."} {
+		key, response := responseWithTTL(name, 300)
+		proxy.cacheResponse(key, response)
+	}
+	if proxy.cache.Len() != 2 {
+		t.Errorf("cache holds %d entries, want the configured 2", proxy.cache.Len())
+	}
+}
+
+// Size 0 turns caching off - every query then goes to the upstream, which is
+// what an operator running their own resolver in front of us may want.
+func TestNewWithoutCaching(t *testing.T) {
+	server, err := New(DNSServerOpts{Upstream: []string{"192.0.2.1"}, CacheSize: 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxy := server.proxy
+
+	if proxy.cache != nil {
+		t.Fatal("expected no cache")
+	}
+
+	// neither storing nor looking up may touch the missing cache
+	key, response := responseWithTTL("a.example.com.", 300)
+	proxy.cacheResponse(key, response)
+
+	query := new(dns.Msg)
+	query.SetQuestion("a.example.com.", dns.TypeA)
+	proxy.upstream = nil
+	if _, err := proxy.Lookup(query); err == nil {
+		t.Error("a lookup without upstreams and without a cache must fail")
+	}
+}

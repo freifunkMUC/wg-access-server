@@ -141,6 +141,12 @@ type AppConfig struct {
 		// Defaults the host's upstream DNS servers (via resolvconf)
 		// or Cloudflare DNS if resolvconf cannot be used.
 		Upstream []string `yaml:"upstream"`
+		// CacheSize sets how many DNS responses the embedded DNS proxy keeps
+		// in its cache. The cache is filled by what the clients query, so it
+		// is bounded: the least recently used entries are dropped once it is
+		// full. Set to 0 to disable caching.
+		// Defaults to 10000.
+		CacheSize int `yaml:"cacheSize"`
 		// Domain sets a domain that the embedded dns server should serve authoritatively for device addresses.
 		// A and AAAA queries for names in the format <device>.<user>.<domain> will be answered with the IP addresses
 		// of the according device. Queries for <domain> will be answered with the VPN server address.
