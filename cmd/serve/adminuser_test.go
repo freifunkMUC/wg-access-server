@@ -17,6 +17,9 @@ func adminConfig(t *testing.T, users []string) *servecmd {
 	t.Helper()
 	cmd := &servecmd{}
 	cmd.AppConfig.Storage = "memory://"
+	// as kingpin's defaults would have it, so ReadConfig does not stop
+	// because no listener is enabled
+	cmd.AppConfig.HttpEnabled = true
 	cmd.AppConfig.AdminUsername = "admin"
 	cmd.AppConfig.AdminPassword = "hunter2"
 	cmd.AppConfig.Auth.Simple = &authconfig.SimpleAuthConfig{Users: users}
