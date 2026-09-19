@@ -20,6 +20,9 @@ import (
 type fakeWgInterface struct {
 	mu    sync.Mutex
 	peers []wgtypes.Peer
+	// listPeerCalls counts ListPeers calls, so a test can tell whether a
+	// background loop is still running.
+	listPeerCalls int
 }
 
 var _ wgembed.WireGuardInterface = (*fakeWgInterface)(nil)
@@ -33,7 +36,14 @@ func (f *fakeWgInterface) AddPeer(publicKey string, presharedKey string, address
 func (f *fakeWgInterface) ListPeers() ([]wgtypes.Peer, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.listPeerCalls++
 	return append([]wgtypes.Peer{}, f.peers...), nil
+}
+
+func (f *fakeWgInterface) listCalls() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.listPeerCalls
 }
 
 func (f *fakeWgInterface) RemovePeer(publicKey string) error { return nil }

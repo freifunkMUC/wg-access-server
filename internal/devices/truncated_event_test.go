@@ -67,7 +67,7 @@ func TestDeviceWithOversizedRowGetsAPeer(t *testing.T) {
 	s := openTruncatedTestStorage(t, uri)
 	wg := &recordingInterface{WireGuardInterface: wgembed.NewNoOpInterface(), peers: map[string]bool{}}
 	manager := New(wg, s, "10.88.0.0/16", "")
-	require.NoError(t, manager.StartSync(false, false, 0))
+	require.NoError(t, manager.StartSync(t.Context(), false, false, 0))
 
 	owner := "truncated-event-test"
 	t.Cleanup(func() {

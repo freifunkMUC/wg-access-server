@@ -1,6 +1,7 @@
 package devices
 
 import (
+	"context"
 	"fmt"
 	"net/netip"
 	"regexp"
@@ -35,7 +36,10 @@ func New(wg wgembed.WireGuardInterface, s storage.Storage, cidr, cidrv6 string) 
 	return &DeviceManager{wg, s, cidr, cidrv6}
 }
 
-func (d *DeviceManager) StartSync(enableMetadataCollection, enableInactiveDeviceDeletion bool, inactiveDeviceGracePeriod time.Duration) error {
+// StartSync keeps the WireGuard peers in sync with storage and starts the
+// background loops. They run until ctx is cancelled, so a shutdown does not
+// leave a metadata sync or a deletion pass running against a closed database.
+func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection, enableInactiveDeviceDeletion bool, inactiveDeviceGracePeriod time.Duration) error {
 	// Start listening to the device add/remove events
 	d.storage.OnAdd(func(device *storage.Device) {
 		logrus.Infof("Storage event: add device '%s' (public key: '%s') for user: %s %s", device.Name, device.PublicKey, device.OwnerName, device.Owner)
@@ -65,7 +69,7 @@ func (d *DeviceManager) StartSync(enableMetadataCollection, enableInactiveDevice
 	// start the metrics loop
 	if enableMetadataCollection {
 		logrus.Info("Start collecting device metadata")
-		go metadataLoop(d)
+		go metadataLoop(ctx, d)
 	}
 
 	// start inactive devices loop
@@ -74,7 +78,7 @@ func (d *DeviceManager) StartSync(enableMetadataCollection, enableInactiveDevice
 			logrus.Infof("Ignoring the automatic device deletion because the metadata collection is disabled and it is based on device metadata.")
 		} else {
 			logrus.Infof("Start looking for inactive devices. Inactive device grace period is set to %s", inactiveDeviceGracePeriod.String())
-			go inactiveLoop(d, inactiveDeviceGracePeriod)
+			go inactiveLoop(ctx, d, inactiveDeviceGracePeriod)
 		}
 	}
 
