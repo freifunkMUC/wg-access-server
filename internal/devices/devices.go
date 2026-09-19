@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"github.com/pkg/errors"
@@ -31,6 +33,31 @@ type User struct {
 
 // https://lists.zx2c4.com/pipermail/wireguard/2020-December/006222.html
 var wgKeyRegex = regexp.MustCompile("^[A-Za-z0-9+/]{42}[A|E|I|M|Q|U|Y|c|g|k|o|s|w|4|8|0]=$")
+
+// maxDeviceNameLength matches the size of the name column. A longer name is
+// rejected here rather than at the database: MySQL outside of strict mode
+// truncates it instead of failing, and a truncated name can collide with a
+// device that already exists.
+const maxDeviceNameLength = 100
+
+// validateDeviceName rejects names that the rest of the system cannot carry.
+// It deliberately allows everything else, including dots and spaces, because
+// devices with such names already exist.
+func validateDeviceName(name string) error {
+	if strings.TrimSpace(name) == "" {
+		return errors.New("Device name must not be empty.")
+	}
+	// The column counts characters, not bytes, so an umlaut must not count twice.
+	if utf8.RuneCountInString(name) > maxDeviceNameLength {
+		return fmt.Errorf("Device name must be at most %d characters long.", maxDeviceNameLength)
+	}
+	for _, r := range name {
+		if unicode.IsControl(r) {
+			return errors.New("Device name must not contain control characters.")
+		}
+	}
+	return nil
+}
 
 func New(wg wgembed.WireGuardInterface, s storage.Storage, cidr, cidrv6 string) *DeviceManager {
 	return &DeviceManager{wg, s, cidr, cidrv6}
@@ -116,8 +143,8 @@ func (d *DeviceManager) usedAddresses() (map[netip.Addr]bool, map[netip.Addr]boo
 }
 
 func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, publicKey string, presharedKey string, manualIPAssignment bool, manualIPv4Address string, manualIPv6Address string) (*storage.Device, error) {
-	if name == "" {
-		return nil, errors.New("Device name must not be empty.")
+	if err := validateDeviceName(name); err != nil {
+		return nil, err
 	}
 
 	if !wgKeyRegex.MatchString(publicKey) {
