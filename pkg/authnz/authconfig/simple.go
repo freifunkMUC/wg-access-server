@@ -26,6 +26,9 @@ type SimpleAuthConfig struct {
 const postURL = "/signin/simpleauth"
 
 func (c *SimpleAuthConfig) Provider() *authruntime.Provider {
+	// One throttle per provider, created once: Providers() is called when the
+	// auth middleware is built and the result is kept for the process.
+	throttle := newLoginThrottle()
 	return &authruntime.Provider{
 		Type: SimpleAuthProvider,
 		Name: SimpleAuthProvider,
@@ -36,7 +39,7 @@ func (c *SimpleAuthConfig) Provider() *authruntime.Provider {
 			simpleAuthLogin()(w, r)
 		},
 		RegisterRoutes: func(router *mux.Router, runtime *authruntime.ProviderRuntime) error {
-			router.HandleFunc(postURL, simpleAuthPostEndpoint(c, runtime))
+			router.HandleFunc(postURL, simpleAuthPostEndpoint(c, runtime, throttle))
 			return nil
 		},
 	}
@@ -54,7 +57,7 @@ func simpleAuthLogin() http.HandlerFunc {
 	}
 }
 
-func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRuntime) http.HandlerFunc {
+func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRuntime, throttle *loginThrottle) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -67,7 +70,17 @@ func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRu
 		}
 		u := r.PostForm.Get("username")
 		p := r.PostForm.Get("password")
-		if u != "" && p != "" && checkCreds(c.Users, u, p) {
+
+		// An empty form is not an attempt at a password.
+		attempted := u != "" && p != ""
+		if attempted {
+			throttle.wait(u)
+		}
+		credentialsOK := false
+
+		if attempted && checkCreds(c.Users, u, p) {
+			credentialsOK = true
+			throttle.recordSuccess(u)
 			err = runtime.SetSession(w, r, &authsession.AuthSession{
 				Identity: &authsession.Identity{
 					Provider: SimpleAuthProvider,
@@ -80,6 +93,11 @@ func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRu
 				runtime.Done(w, r)
 				return
 			}
+		}
+
+		if attempted && !credentialsOK {
+			throttle.recordFailure(u)
+			logrus.Warnf("Failed login attempt for user '%s' (simple auth, remote address: %s)", u, r.RemoteAddr)
 		}
 
 		w.WriteHeader(http.StatusForbidden)

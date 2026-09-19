@@ -23,16 +23,19 @@ type BasicAuthConfig struct {
 }
 
 func (c *BasicAuthConfig) Provider() *authruntime.Provider {
+	// One throttle per provider, created once: Providers() is called when the
+	// auth middleware is built and the result is kept for the process.
+	throttle := newLoginThrottle()
 	return &authruntime.Provider{
 		Type: BasicAuthProvider,
 		Name: BasicAuthProvider,
 		Invoke: func(w http.ResponseWriter, r *http.Request, runtime *authruntime.ProviderRuntime) {
-			basicAuthLogin(c, runtime)(w, r)
+			basicAuthLogin(c, runtime, throttle)(w, r)
 		},
 	}
 }
 
-func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime) http.HandlerFunc {
+func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime, throttle *loginThrottle) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// accept standard basic auth challenges
 		u, p, isBasic := r.BasicAuth()
@@ -44,7 +47,17 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime) ht
 			p = r.FormValue("password")
 		}
 
+		// A request without any credentials is the browser asking for the
+		// challenge, not a failed attempt.
+		attempted := u != ""
+		if attempted {
+			throttle.wait(u)
+		}
+		credentialsOK := false
+
 		if ok := checkCreds(c.Users, u, p); ok {
+			credentialsOK = true
+			throttle.recordSuccess(u)
 			err := runtime.SetSession(w, r, &authsession.AuthSession{
 				Identity: &authsession.Identity{
 					Provider: BasicAuthProvider,
@@ -57,6 +70,11 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime) ht
 				runtime.Done(w, r)
 				return
 			}
+		}
+
+		if attempted && !credentialsOK {
+			throttle.recordFailure(u)
+			logrus.Warnf("Failed login attempt for user '%s' (basic auth, remote address: %s)", u, r.RemoteAddr)
 		}
 
 		if !isBasic {

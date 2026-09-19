@@ -109,6 +109,21 @@ auth:
       - example.com
 ```
 
+## Login throttling
+
+Failed logins to the Simple Auth and Basic Auth backends are slowed down: after a wrong password the
+next attempt for that username waits, and the wait doubles with every further failure, up to 10 seconds.
+A successful login clears it, and a username that has not been tried for 15 minutes is forgotten.
+Failed attempts are logged with the username and the remote address.
+
+There is deliberately no lockout after N attempts: it would let anyone keep the admin account locked
+simply by failing to log in on purpose. The counters are also kept per username rather than per client
+address, because wg-access-server is commonly reached through a reverse proxy where every user shares
+one address - and trusting `X-Forwarded-For` would let a client pick its own key and skip the throttle.
+
+The counters live in the process, so in an HA setup every replica keeps its own. OIDC and GitLab logins
+are handled by the identity provider and are not affected.
+
 ## OIDC Provider specifics
 
 ### Active Directory Federation Services (ADFS)
