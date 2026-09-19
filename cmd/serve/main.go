@@ -247,7 +247,12 @@ func (cmd *servecmd) Run() {
 	}
 
 	// Services
-	if err := deviceManager.StartSync(conf.EnableMetadata, conf.EnableInactiveDeviceDeletion, conf.InactiveDeviceGracePeriod); err != nil {
+	// Cancelled on shutdown, which stops the background loops of the device
+	// manager before the storage backend is closed under them.
+	backgroundCtx, stopBackground := context.WithCancel(context.Background())
+	defer stopBackground()
+
+	if err := deviceManager.StartSync(backgroundCtx, conf.EnableMetadata, conf.EnableInactiveDeviceDeletion, conf.InactiveDeviceGracePeriod); err != nil {
 		logrus.Error(errors.Wrap(err, "failed to sync"))
 		return
 	}
@@ -356,6 +361,7 @@ func (cmd *servecmd) Run() {
 	case <-signalChan:
 		// Shutdown logic
 		logrus.Info("shutting down server...")
+		stopBackground()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if httpSrv != nil {

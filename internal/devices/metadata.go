@@ -1,6 +1,7 @@
 package devices
 
 import (
+	"context"
 	"time"
 
 	"github.com/pkg/errors"
@@ -10,11 +11,22 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
 )
 
-func metadataLoop(d *DeviceManager) {
+// metadataSyncInterval is how often the peer counters are read. A var so
+// tests can shorten it.
+var metadataSyncInterval = 30 * time.Second
+
+func metadataLoop(ctx context.Context, d *DeviceManager) {
 	tracker := newTrafficTracker()
+	ticker := time.NewTicker(metadataSyncInterval)
+	defer ticker.Stop()
 	for {
 		syncMetrics(d, tracker)
-		time.Sleep(30 * time.Second)
+		select {
+		case <-ctx.Done():
+			logrus.Debug("stopping metadata sync")
+			return
+		case <-ticker.C:
+		}
 	}
 }
 

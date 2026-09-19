@@ -202,12 +202,17 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 					traces.Logger(r.Context()).Error(errors.Wrap(err, "authnz middleware failure"))
 					if lerr, ok := err.(*LoginError); ok {
 						switch lerr.code {
-						case NotAuthenticated:
-							http.Redirect(w, r, "/signin", http.StatusUnauthorized)
 						case NotAuthorized:
-							http.Redirect(w, r, "/signin", http.StatusForbidden)
+							// The user is signed in, their account just may
+							// not use this server. Sending them back to the
+							// sign-in page would look like the login failed,
+							// so tell them what happened instead.
+							notAuthorized(w)
 						default:
-							http.Redirect(w, r, "/signin", http.StatusBadRequest)
+							// A redirect needs a 3xx status: with anything
+							// else the browser ignores the Location header
+							// and shows an empty page.
+							http.Redirect(w, r, "/signin", http.StatusSeeOther)
 						}
 						return
 					}
@@ -222,6 +227,16 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		}
 	})
+}
+
+// notAuthorized tells a signed in user that their account has no access. It
+// deliberately does not redirect: the session is valid, so the sign-in page
+// has nothing to offer them except signing in as somebody else.
+func notAuthorized(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusForbidden)
+	_, _ = fmt.Fprint(w, "Your account is not allowed to access this server.\n\n"+
+		"To sign in with a different account, go to /signout\n")
 }
 
 func RequireAuthentication(next http.Handler) http.Handler {

@@ -1,6 +1,7 @@
 package devices
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,10 +9,21 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func inactiveLoop(d *DeviceManager, inactiveDeviceGracePeriod time.Duration) {
+// inactiveCheckInterval is how often devices are checked for inactivity. A
+// var so tests can shorten it.
+var inactiveCheckInterval = 30 * time.Second
+
+func inactiveLoop(ctx context.Context, d *DeviceManager, inactiveDeviceGracePeriod time.Duration) {
+	ticker := time.NewTicker(inactiveCheckInterval)
+	defer ticker.Stop()
 	for {
 		checkAndRemove(d, inactiveDeviceGracePeriod)
-		time.Sleep(30 * time.Second)
+		select {
+		case <-ctx.Done():
+			logrus.Debug("stopping inactive device check")
+			return
+		case <-ticker.C:
+		}
 	}
 }
 

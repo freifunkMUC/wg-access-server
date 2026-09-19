@@ -1,11 +1,14 @@
 package devices
 
 import (
+	"context"
 	"fmt"
 	"net/netip"
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"github.com/pkg/errors"
@@ -31,11 +34,39 @@ type User struct {
 // https://lists.zx2c4.com/pipermail/wireguard/2020-December/006222.html
 var wgKeyRegex = regexp.MustCompile("^[A-Za-z0-9+/]{42}[A|E|I|M|Q|U|Y|c|g|k|o|s|w|4|8|0]=$")
 
+// maxDeviceNameLength matches the size of the name column. A longer name is
+// rejected here rather than at the database: MySQL outside of strict mode
+// truncates it instead of failing, and a truncated name can collide with a
+// device that already exists.
+const maxDeviceNameLength = 100
+
+// validateDeviceName rejects names that the rest of the system cannot carry.
+// It deliberately allows everything else, including dots and spaces, because
+// devices with such names already exist.
+func validateDeviceName(name string) error {
+	if strings.TrimSpace(name) == "" {
+		return errors.New("Device name must not be empty.")
+	}
+	// The column counts characters, not bytes, so an umlaut must not count twice.
+	if utf8.RuneCountInString(name) > maxDeviceNameLength {
+		return fmt.Errorf("Device name must be at most %d characters long.", maxDeviceNameLength)
+	}
+	for _, r := range name {
+		if unicode.IsControl(r) {
+			return errors.New("Device name must not contain control characters.")
+		}
+	}
+	return nil
+}
+
 func New(wg wgembed.WireGuardInterface, s storage.Storage, cidr, cidrv6 string) *DeviceManager {
 	return &DeviceManager{wg, s, cidr, cidrv6}
 }
 
-func (d *DeviceManager) StartSync(enableMetadataCollection, enableInactiveDeviceDeletion bool, inactiveDeviceGracePeriod time.Duration) error {
+// StartSync keeps the WireGuard peers in sync with storage and starts the
+// background loops. They run until ctx is cancelled, so a shutdown does not
+// leave a metadata sync or a deletion pass running against a closed database.
+func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection, enableInactiveDeviceDeletion bool, inactiveDeviceGracePeriod time.Duration) error {
 	// Start listening to the device add/remove events
 	d.storage.OnAdd(func(device *storage.Device) {
 		logrus.Infof("Storage event: add device '%s' (public key: '%s') for user: %s %s", device.Name, device.PublicKey, device.OwnerName, device.Owner)
@@ -65,7 +96,7 @@ func (d *DeviceManager) StartSync(enableMetadataCollection, enableInactiveDevice
 	// start the metrics loop
 	if enableMetadataCollection {
 		logrus.Info("Start collecting device metadata")
-		go metadataLoop(d)
+		go metadataLoop(ctx, d)
 	}
 
 	// start inactive devices loop
@@ -74,7 +105,7 @@ func (d *DeviceManager) StartSync(enableMetadataCollection, enableInactiveDevice
 			logrus.Infof("Ignoring the automatic device deletion because the metadata collection is disabled and it is based on device metadata.")
 		} else {
 			logrus.Infof("Start looking for inactive devices. Inactive device grace period is set to %s", inactiveDeviceGracePeriod.String())
-			go inactiveLoop(d, inactiveDeviceGracePeriod)
+			go inactiveLoop(ctx, d, inactiveDeviceGracePeriod)
 		}
 	}
 
@@ -112,8 +143,8 @@ func (d *DeviceManager) usedAddresses() (map[netip.Addr]bool, map[netip.Addr]boo
 }
 
 func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, publicKey string, presharedKey string, manualIPAssignment bool, manualIPv4Address string, manualIPv6Address string) (*storage.Device, error) {
-	if name == "" {
-		return nil, errors.New("Device name must not be empty.")
+	if err := validateDeviceName(name); err != nil {
+		return nil, err
 	}
 
 	if !wgKeyRegex.MatchString(publicKey) {
@@ -428,17 +459,35 @@ func (d *DeviceManager) ListUsers() ([]*User, error) {
 	return users, nil
 }
 
+// DeleteDevicesForUser removes every device of a user.
+//
+// The devices are deleted one by one rather than in one transaction: the
+// WireGuard peers are removed from the storage's delete events, and a bulk
+// delete hands GormWatcher.emit a value it cannot map back to a device. One
+// device that cannot be deleted therefore does not stop the others - leaving
+// half of a revoked user's devices in place would be the worse outcome - and
+// the returned error names what is left behind.
 func (d *DeviceManager) DeleteDevicesForUser(user string) error {
 	devices, err := d.ListDevices(user)
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve devices")
 	}
 
+	var failed []string
+	var firstErr error
 	for _, dev := range devices {
-		// TODO not transactional
-		if err := d.DeleteDevice(user, dev.Name); err != nil {
-			return errors.Wrap(err, "failed to delete device")
+		if err := d.storage.Delete(dev); err != nil {
+			logrus.Error(errors.Wrapf(err, "failed to delete device '%s' of user '%s'", dev.Name, user))
+			failed = append(failed, dev.Name)
+			if firstErr == nil {
+				firstErr = err
+			}
 		}
+	}
+
+	if len(failed) > 0 {
+		return errors.Wrapf(firstErr, "%d of %d devices of user '%s' could not be deleted (%s)",
+			len(failed), len(devices), user, strings.Join(failed, ", "))
 	}
 
 	return nil
