@@ -432,17 +432,35 @@ func (d *DeviceManager) ListUsers() ([]*User, error) {
 	return users, nil
 }
 
+// DeleteDevicesForUser removes every device of a user.
+//
+// The devices are deleted one by one rather than in one transaction: the
+// WireGuard peers are removed from the storage's delete events, and a bulk
+// delete hands GormWatcher.emit a value it cannot map back to a device. One
+// device that cannot be deleted therefore does not stop the others - leaving
+// half of a revoked user's devices in place would be the worse outcome - and
+// the returned error names what is left behind.
 func (d *DeviceManager) DeleteDevicesForUser(user string) error {
 	devices, err := d.ListDevices(user)
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve devices")
 	}
 
+	var failed []string
+	var firstErr error
 	for _, dev := range devices {
-		// TODO not transactional
-		if err := d.DeleteDevice(user, dev.Name); err != nil {
-			return errors.Wrap(err, "failed to delete device")
+		if err := d.storage.Delete(dev); err != nil {
+			logrus.Error(errors.Wrapf(err, "failed to delete device '%s' of user '%s'", dev.Name, user))
+			failed = append(failed, dev.Name)
+			if firstErr == nil {
+				firstErr = err
+			}
 		}
+	}
+
+	if len(failed) > 0 {
+		return errors.Wrapf(firstErr, "%d of %d devices of user '%s' could not be deleted (%s)",
+			len(failed), len(devices), user, strings.Join(failed, ", "))
 	}
 
 	return nil
