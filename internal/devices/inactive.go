@@ -7,6 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	"github.com/freifunkMUC/wg-access-server/internal/audit"
 )
 
 // inactiveCheckInterval is how often devices are checked for inactivity. A
@@ -17,7 +19,7 @@ func inactiveLoop(ctx context.Context, d *DeviceManager, inactiveDeviceGracePeri
 	ticker := time.NewTicker(inactiveCheckInterval)
 	defer ticker.Stop()
 	for {
-		checkAndRemove(d, inactiveDeviceGracePeriod)
+		checkAndRemove(ctx, d, inactiveDeviceGracePeriod)
 		select {
 		case <-ctx.Done():
 			logrus.Debug("stopping inactive device check")
@@ -27,7 +29,7 @@ func inactiveLoop(ctx context.Context, d *DeviceManager, inactiveDeviceGracePeri
 	}
 }
 
-func checkAndRemove(d *DeviceManager, inactiveDeviceGracePeriod time.Duration) {
+func checkAndRemove(ctx context.Context, d *DeviceManager, inactiveDeviceGracePeriod time.Duration) {
 	logrus.Debug("Inactive check executing")
 
 	devices, err := d.ListAllDevices()
@@ -54,6 +56,13 @@ func checkAndRemove(d *DeviceManager, inactiveDeviceGracePeriod time.Duration) {
 				logrus.Error(errors.Wrap(err, fmt.Sprintf("failed to delete device: %s/%s", dev.Owner, dev.Name)))
 				continue
 			}
+			// No user asked for this, so it is recorded as a change by the
+			// server itself.
+			audit.Log(ctx, audit.DeviceDelete, logrus.Fields{
+				"device": dev.Name,
+				"owner":  dev.Owner,
+				"reason": "inactive",
+			})
 		}
 	}
 }
