@@ -86,7 +86,8 @@ func TestPgWatcherIgnoresMetadataUpdates(t *testing.T) {
 // UPDATE. Opening the storage must replace it, or the change does nothing there.
 func TestPgWatcherReplacesTriggerOfOlderVersions(t *testing.T) {
 	s, _ := openPgStorage(t)
-	table := s.db.NewScope(&Device{}).TableName()
+	table, err := deviceTable(s.db)
+	require.NoError(t, err)
 	// what pg-events v0.4.x installed
 	require.NoError(t, s.db.Exec("DROP TRIGGER IF EXISTS "+table+"_events ON "+table).Error)
 	require.NoError(t, s.db.Exec("CREATE TRIGGER "+table+"_events AFTER INSERT OR UPDATE OR DELETE ON "+table+" FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event()").Error)

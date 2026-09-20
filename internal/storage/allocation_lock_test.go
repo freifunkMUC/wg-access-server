@@ -47,11 +47,13 @@ func openLockStorage(t *testing.T, uri string) *SQLStorage {
 // heldDatabaseLocks counts allocation locks currently held in the database.
 func heldDatabaseLocks(t *testing.T, s *SQLStorage) int {
 	t.Helper()
+	db, err := s.sqlDB()
+	require.NoError(t, err)
 	var n int
 	switch s.sqlType {
 	case "postgres":
 		// a bigint advisory key is split into classid (high) and objid (low)
-		rows, err := s.db.DB().Query("SELECT classid::bigint, objid::bigint FROM pg_locks WHERE locktype = 'advisory' AND granted AND objsubid = 1")
+		rows, err := db.Query("SELECT classid::bigint, objid::bigint FROM pg_locks WHERE locktype = 'advisory' AND granted AND objsubid = 1")
 		require.NoError(t, err)
 		defer rows.Close()
 		for rows.Next() {
@@ -64,7 +66,7 @@ func heldDatabaseLocks(t *testing.T, s *SQLStorage) int {
 		require.NoError(t, rows.Err())
 	case "mysql":
 		var owner *int64
-		require.NoError(t, s.db.DB().QueryRow("SELECT IS_USED_LOCK(?)", allocationLockName).Scan(&owner))
+		require.NoError(t, db.QueryRow("SELECT IS_USED_LOCK(?)", allocationLockName).Scan(&owner))
 		if owner != nil {
 			n = 1
 		}

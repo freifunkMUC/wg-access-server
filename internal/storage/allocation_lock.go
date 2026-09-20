@@ -108,7 +108,12 @@ func (s *SQLStorage) WithAllocationLock(fn func() error) error {
 	// Session-level locks belong to one database connection. database/sql
 	// hands out an arbitrary pooled connection per statement, so reserve one
 	// for the lock's whole lifetime; otherwise the unlock could run elsewhere.
-	conn, err := s.db.DB().Conn(ctx)
+	db, err := s.sqlDB()
+	if err != nil {
+		return errors.Wrap(err, "failed to reserve a database connection for the IP allocation lock")
+	}
+
+	conn, err := db.Conn(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to reserve a database connection for the IP allocation lock")
 	}

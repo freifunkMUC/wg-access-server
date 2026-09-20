@@ -31,6 +31,14 @@ Example connection string:
 - Relative path: `sqlite3://path/to/db.sqlite3`
 - Absolute path: `sqlite3:///absolute/path/to/db.sqlite3`
 
+!!! note "Upgrading an existing SQLite database"
+
+    v1.3.0 moved to a newer database library, which spells a few column types differently
+    (`text` instead of `varchar(255)`, `integer` instead of `bigint`). SQLite treats them
+    the same, but it cannot change a column type in place, so the first start after the
+    upgrade rebuilds the `devices` table once. The data is carried over, and later starts
+    leave the table alone. PostgreSQL and MySQL schemas are unchanged.
+
 ### PostgreSQL
 
 This backend requires an external Postgres database to be deployed.
