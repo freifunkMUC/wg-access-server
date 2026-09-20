@@ -90,6 +90,20 @@ type AppConfig struct {
 		// The maximum transmission unit (MTU) used on the server-side.
 		// Empty by default.
 		MTU int `yaml:"mtu"`
+		// PreUp, PostUp, PreDown and PostDown are shell commands run around
+		// the lifecycle of the WireGuard interface, like the options of the
+		// same name in a wg-quick configuration. '%i' is replaced with the
+		// interface name, which is also passed as $WG_INTERFACE.
+		//
+		// They run as the user the server runs as, which is usually root, so
+		// they can only be set in the config file - never through a flag or
+		// an environment variable - and the file must not be writable by
+		// anyone but its owner.
+		// Empty by default.
+		PreUp    []string `yaml:"preUp"`
+		PostUp   []string `yaml:"postUp"`
+		PreDown  []string `yaml:"preDown"`
+		PostDown []string `yaml:"postDown"`
 	} `yaml:"wireguard"`
 	// Configure VPN related settings (networking)
 	VPN struct {
