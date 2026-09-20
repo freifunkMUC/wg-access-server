@@ -4,10 +4,12 @@ import (
 	"context"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
@@ -30,6 +32,12 @@ func (d *DeviceService) AddDevice(ctx context.Context, req *proto.AddDeviceReq) 
 		ctxlogrus.Extract(ctx).Error(err)
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
+
+	audit.Log(ctx, audit.DeviceCreate, logrus.Fields{
+		"device":  device.Name,
+		"owner":   device.Owner,
+		"address": device.Address,
+	})
 
 	return mapDevice(device), nil
 }
@@ -70,6 +78,11 @@ func (d *DeviceService) DeleteDevice(ctx context.Context, req *proto.DeleteDevic
 		ctxlogrus.Extract(ctx).Error(err)
 		return nil, status.Errorf(codes.Internal, "failed to delete device: %v", err)
 	}
+
+	audit.Log(ctx, audit.DeviceDelete, logrus.Fields{
+		"device": req.GetName(),
+		"owner":  deviceOwner,
+	})
 
 	return &emptypb.Empty{}, nil
 }

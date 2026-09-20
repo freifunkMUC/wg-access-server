@@ -24,6 +24,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/freifunkMUC/wg-access-server/buildinfo"
+	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/dnsproxy"
@@ -261,6 +262,7 @@ func (cmd *servecmd) Run() {
 	router.Use(services.TracesMiddleware)
 	router.Use(services.RecoveryMiddleware)
 	router.Use(services.SecurityHeadersMiddleware)
+	router.Use(audit.Middleware)
 
 	// Health check endpoint
 	router.PathPrefix("/health").Handler(services.HealthEndpoint(deviceManager))

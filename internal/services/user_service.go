@@ -4,10 +4,12 @@ import (
 	"context"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/proto/proto"
@@ -53,6 +55,8 @@ func (d *UserService) DeleteUser(ctx context.Context, req *proto.DeleteUserReq) 
 		ctxlogrus.Extract(ctx).Error(err)
 		return nil, status.Errorf(codes.Internal, "failed to delete user")
 	}
+
+	audit.Log(ctx, audit.UserDelete, logrus.Fields{"target_user": req.Name})
 
 	return &emptypb.Empty{}, nil
 }
