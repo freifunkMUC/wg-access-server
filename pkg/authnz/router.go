@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/traces"
@@ -57,12 +59,17 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 			return nil, errors.New("Session store secret must be 32 bytes long")
 		}
 	}
+	maxAge, err := sessionMaxAge(config.SessionStore)
+	if err != nil {
+		return nil, err
+	}
+
 	store := sessions.NewCookieStore(storeSecret)
 	store.Options = &sessions.Options{
 		Path: "/",
-		// keep the gorilla/sessions default session lifetime of 30 days
+		// how long a session stays valid, 30 days unless configured
 		// (ClearSession relies on mutating MaxAge to -1 to delete the cookie)
-		MaxAge: 86400 * 30,
+		MaxAge: maxAge,
 		// prevent JavaScript from reading the session cookie (XSS hardening)
 		HttpOnly: true,
 		// only opt-in: the web UI is also served over plain HTTP on `port`,
@@ -122,6 +129,30 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 		router,
 		runtime,
 	}, nil
+}
+
+// DefaultSessionMaxAge is how long a session stays valid unless the operator
+// configures something else. It is also how long it takes for access revoked
+// at the identity provider to take effect, because the claims of a session
+// are not re-checked after the login.
+const DefaultSessionMaxAge = 30 * 24 * time.Hour
+
+// sessionMaxAge reads the configured session lifetime in seconds.
+func sessionMaxAge(config *authconfig.SessionStoreConfig) (int, error) {
+	if config == nil || config.MaxAge == "" {
+		return int(DefaultSessionMaxAge.Seconds()), nil
+	}
+
+	maxAge, err := time.ParseDuration(config.MaxAge)
+	if err != nil {
+		return 0, errors.Wrapf(err, "auth.sessionStore.maxAge is not a duration such as \"24h\": %q", config.MaxAge)
+	}
+	if maxAge <= 0 {
+		return 0, errors.Errorf("auth.sessionStore.maxAge must be positive, got %q", config.MaxAge)
+	}
+
+	logrus.Infof("Web sessions expire after %s", maxAge)
+	return int(maxAge.Seconds()), nil
 }
 
 func NewMiddleware(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware) (mux.MiddlewareFunc, error) {

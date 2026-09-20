@@ -44,6 +44,14 @@ auth:
     # 32 random bytes in hexadecimal encoding (64 chars) used to sign session cookies. It's generated randomly
     # if not present. Need to be set when running in HA setup (more than one replica)
     secret: "<session store secret>"
+    # How long a web session stays valid, as a duration such as "24h".
+    # Defaults to 720h (30 days). The claims of a session - whether the user
+    # is an admin and whether they still have access - are taken from the
+    # identity provider at login and are not re-checked afterwards, and there
+    # is no server-side session store to invalidate. This value is therefore
+    # also how long it takes for access revoked at the provider to take
+    # effect, so shorten it if that matters to you.
+    maxAge: "720h"
     # Mark the session cookie as Secure so browsers only send it over HTTPS.
     # Defaults to false, because the web UI is also served over plain HTTP on
     # `port` - enabling this while users reach the UI over http:// silently

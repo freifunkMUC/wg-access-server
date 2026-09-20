@@ -27,6 +27,14 @@ type SessionStoreConfig struct {
 	// wg-access-server. Turn it on whenever the UI is reachable over
 	// HTTPS only.
 	Secure bool `yaml:"secure"`
+	// MaxAge is how long a session stays valid, as a duration such as "24h".
+	// The claims of a session - including whether the user is an admin and
+	// whether they still have access - are taken from the identity provider
+	// when the session is created and are not re-checked afterwards, so this
+	// is also how long it takes for access revoked at the provider to take
+	// effect. There is no server-side session store to invalidate.
+	// Defaults to 720h (30 days).
+	MaxAge string `yaml:"maxAge"`
 }
 
 func (c *AuthConfig) IsEnabled() bool {
