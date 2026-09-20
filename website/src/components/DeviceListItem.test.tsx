@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { DeviceListItem } from './DeviceListItem';
 import { Device } from '../sdk/devices_pb';
 import { grpc } from '../Api';
@@ -13,10 +13,13 @@ vi.mock('../Api', async () => {
     grpc: {
       devices: {
         deleteDevice: vi.fn().mockResolvedValue({}),
+        renameDevice: vi.fn().mockResolvedValue({}),
       },
     },
   };
 });
+
+vi.mock('./Toast', () => ({ toast: vi.fn() }));
 
 function testDevice(overrides: Partial<Device.AsObject> = {}): Device.AsObject {
   return {
@@ -38,38 +41,78 @@ function testDevice(overrides: Partial<Device.AsObject> = {}): Device.AsObject {
 
 describe('DeviceListItem', () => {
   it('shows the device name and its public key', () => {
-    render(<DeviceListItem device={testDevice()} onRemove={() => {}} />);
+    render(<DeviceListItem device={testDevice()} onChange={() => {}} />);
 
     expect(screen.getByText('laptop')).toBeDefined();
     expect(screen.getByText('Public key')).toBeDefined();
   });
 
   it('reports a device that has never connected as never seen', () => {
-    render(<DeviceListItem device={testDevice()} onRemove={() => {}} />);
+    render(<DeviceListItem device={testDevice()} onChange={() => {}} />);
 
     expect(screen.getByText(/Last seen: Never/)).toBeDefined();
   });
 
   it('deletes the device once the question is confirmed', async () => {
-    const onRemove = vi.fn();
-    render(<DeviceListItem device={testDevice()} onRemove={onRemove} />);
+    const onChange = vi.fn();
+    render(<DeviceListItem device={testDevice()} onChange={onChange} />);
 
     fireEvent.click(screen.getByTitle('Delete Device'));
-    fireEvent.click(await screen.findByText('Ok'));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByText('Ok'));
 
     await waitFor(() => expect(grpc.devices.deleteDevice).toHaveBeenCalledWith({ name: 'laptop' }));
-    await waitFor(() => expect(onRemove).toHaveBeenCalled());
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
   });
 
   // deleting a device cannot be undone, so a cancelled dialog must do nothing
   it('keeps the device when the question is cancelled', async () => {
-    const onRemove = vi.fn();
-    render(<DeviceListItem device={testDevice()} onRemove={onRemove} />);
+    const onChange = vi.fn();
+    render(<DeviceListItem device={testDevice()} onChange={onChange} />);
 
     fireEvent.click(screen.getByTitle('Delete Device'));
-    fireEvent.click(await screen.findByText('Cancel'));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByText('Cancel'));
 
     await waitFor(() => expect(grpc.devices.deleteDevice).not.toHaveBeenCalled());
-    expect(onRemove).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('renames the device and reloads the list', async () => {
+    const onChange = vi.fn();
+    render(<DeviceListItem device={testDevice()} onChange={onChange} />);
+
+    fireEvent.click(screen.getByTitle('Rename Device'));
+
+    // the dialog title and the field carry the same text, so query by role
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'work laptop' } });
+    fireEvent.click(within(dialog).getByText('Ok'));
+
+    await waitFor(() =>
+      expect(grpc.devices.renameDevice).toHaveBeenCalledWith({ name: 'laptop', newName: 'work laptop' }),
+    );
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+  });
+
+  // an unchanged name is not worth a request
+  it('does not rename when the name is left as it is', async () => {
+    const onChange = vi.fn();
+    render(<DeviceListItem device={testDevice()} onChange={onChange} />);
+
+    fireEvent.click(screen.getByTitle('Rename Device'));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByText('Ok'));
+
+    await waitFor(() => expect(grpc.devices.renameDevice).not.toHaveBeenCalled());
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('does not rename when the dialog is cancelled', async () => {
+    render(<DeviceListItem device={testDevice()} onChange={() => {}} />);
+
+    fireEvent.click(screen.getByTitle('Rename Device'));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByText('Cancel'));
+
+    await waitFor(() => expect(grpc.devices.renameDevice).not.toHaveBeenCalled());
   });
 });
