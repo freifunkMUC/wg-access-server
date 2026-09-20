@@ -8,6 +8,8 @@
     "build": "npx tsc && vite build",
     "preview": "vite preview --port 5000",
     "lint": "npx eslint . --report-unused-disable-directives --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prettier": "npx prettier \"./src/**/*.{ts,tsx}\" --write"
   },
   "dependencies": {
@@ -30,6 +32,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@freifunkmuc/grpc-ts-web": "^0.3.1",
+    "@testing-library/react": "^16.3.3",
     "@types/common-tags": "^1.8.4",
     "@types/google-protobuf": "^3.15.12",
     "@types/numeral": "^2.0.5",
@@ -41,11 +44,13 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "fork-ts-checker-webpack-plugin": "^9.1.0",
     "grpc-web": "^2.1.1",
+    "jsdom": "^30.1.0",
     "prettier": "^3.9.6",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.0",
     "vite": "^8.0.16",
-    "vite-plugin-svgr": "^5.2.0"
+    "vite-plugin-svgr": "^5.2.0",
+    "vitest": "^5.0.1"
   },
   "browserslist": {
     "production": [
