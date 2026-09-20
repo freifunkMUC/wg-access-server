@@ -3,8 +3,8 @@ package storage
 import (
 	"testing"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 // newGormWatcherTestDB opens an in-memory sqlite database and wires a
@@ -12,34 +12,43 @@ import (
 func newGormWatcherTestDB(t *testing.T) (*gorm.DB, *GormWatcher) {
 	t.Helper()
 
-	db, err := gorm.Open("sqlite3", ":memory:")
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("failed to open in-memory sqlite: %v", err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("failed to get the database handle: %v", err)
+	}
 	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
+		if err := sqlDB.Close(); err != nil {
 			t.Errorf("failed to close in-memory sqlite: %v", err)
 		}
 	})
 
 	// every pooled connection would get its own private :memory: database,
 	// so restrict the pool to a single connection
-	db.DB().SetMaxOpenConns(1)
+	sqlDB.SetMaxOpenConns(1)
 
-	if err := db.AutoMigrate(&Device{}).Error; err != nil {
+	if err := db.AutoMigrate(&Device{}); err != nil {
 		t.Fatalf("failed to migrate schema: %v", err)
 	}
 
-	return db, NewGormWatcher(db, db.NewScope(&Device{}).TableName())
+	table, err := deviceTable(db)
+	if err != nil {
+		t.Fatalf("failed to determine the table name: %v", err)
+	}
+
+	return db, NewGormWatcher(db, table)
 }
 
 func deviceCount(t *testing.T, db *gorm.DB) int {
 	t.Helper()
-	count := 0
+	var count int64
 	if err := db.Model(&Device{}).Count(&count).Error; err != nil {
 		t.Fatalf("failed to count devices: %v", err)
 	}
-	return count
+	return int(count)
 }
 
 func TestGormWatcherEmitsAddOnSuccessfulCreate(t *testing.T) {

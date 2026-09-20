@@ -87,17 +87,17 @@ type Device struct {
 	// redundant - and it broke the schema on MySQL, where "key" is a
 	// reserved word: the CREATE INDEX failed with a syntax error and took
 	// the unique index on public_key with it (see SQLStorage.Open).
-	Owner         string `json:"owner" gorm:"type:varchar(100);primary_key"`
+	Owner         string `json:"owner" gorm:"type:varchar(100);primaryKey"`
 	OwnerName     string `json:"owner_name"`
 	OwnerEmail    string `json:"owner_email"`
 	OwnerProvider string `json:"owner_provider"`
-	Name          string `json:"name" gorm:"type:varchar(100);primary_key"`
+	Name          string `json:"name" gorm:"type:varchar(100);primaryKey"`
 	// The WireGuard peer is identified by its public key, so two devices
 	// must never share one: adding the second replaces the allowed
 	// addresses and the pre-shared key of the peer the first one uses, and
 	// deleting it removes that peer altogether. The unique index is what
 	// enforces that.
-	PublicKey    string    `json:"public_key" gorm:"unique_index"`
+	PublicKey    string    `json:"public_key" gorm:"uniqueIndex:uix_devices_public_key"`
 	PresharedKey string    `json:"preshared_key" gorm:"type:varchar(100)"`
 	Address      string    `json:"address"`
 	CreatedAt    time.Time `json:"created_at" gorm:"column:created_at"`

@@ -1,18 +1,21 @@
 package storage
 
 import (
+	"database/sql"
 	"fmt"
 	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 // migrationFailed explains the failure an operator is most likely to hit:
@@ -28,25 +31,24 @@ WireGuard peer is identified by it - so find them:
 
 and delete all but one device per key, then start the server again`
 
-// GormLogger is a custom logger for Gorm, making it use logrus.
-type GormLogger struct{}
+// gormLogWriter hands what gorm wants to log to logrus, at debug level: the
+// statements are useful when chasing a problem and noise otherwise.
+type gormLogWriter struct{}
 
-// Print handles log events from Gorm for the custom logger.
-func (*GormLogger) Print(v ...interface{}) {
-	switch v[0] {
-	case "sql":
-		logrus.WithFields(
-			logrus.Fields{
-				"module":  "gorm",
-				"type":    "sql",
-				"rows":    v[5],
-				"src_ref": v[1],
-				"values":  v[4],
-			},
-		).Debug(v[3])
-	case "logrus":
-		logrus.WithFields(logrus.Fields{"module": "gorm", "type": "logrus"}).Print(v[2])
-	}
+func (gormLogWriter) Printf(format string, args ...interface{}) {
+	logrus.WithField("module", "gorm").Debugf(format, args...)
+}
+
+func newGormLogger() gormlogger.Interface {
+	return gormlogger.New(gormLogWriter{}, gormlogger.Config{
+		SlowThreshold: 200 * time.Millisecond,
+		// Info makes gorm report every statement; the writer above decides
+		// that they are debug output.
+		LogLevel: gormlogger.Info,
+		// a device that does not exist is an answer, not a failure
+		IgnoreRecordNotFoundError: true,
+		Colorful:                  false,
+	})
 }
 
 // implements Storage interface
@@ -133,26 +135,55 @@ func sqlite3conn(u *url.URL) string {
 	return filepath.Join(u.Host, u.Path)
 }
 
+// dialector picks the driver for the configured backend.
+func (s *SQLStorage) dialector() (gorm.Dialector, error) {
+	switch s.sqlType {
+	case "postgres":
+		return postgres.Open(s.connectionString), nil
+	case "mysql":
+		return mysql.New(mysql.Config{
+			DSN: s.connectionString,
+			// Without a default size a string column becomes longtext, which
+			// cannot carry the unique index on public_key. varchar(255) is
+			// also what the schema has held since the beginning.
+			DefaultStringSize: 255,
+			// The driver would otherwise migrate every datetime column of
+			// existing installations to datetime(3).
+			DisableDatetimePrecision: true,
+		}), nil
+	case "sqlite3":
+		return sqlite.Open(s.connectionString), nil
+	}
+	return nil, errors.Errorf("unknown sql storage backend %s", s.sqlType)
+}
+
 func (s *SQLStorage) Open() error {
-	db, err := gorm.Open(s.sqlType, s.connectionString)
+	dialector, err := s.dialector()
+	if err != nil {
+		return err
+	}
+
+	db, err := gorm.Open(dialector, &gorm.Config{Logger: newGormLogger()})
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to connect to %s", s.sqlType))
 	}
 	s.db = db
 
-	db.SetLogger(&GormLogger{})
-	db.LogMode(true)
-
 	// Migrate the schema. The error matters: a failed migration used to be
 	// swallowed here, which is how MySQL ended up without the unique index
 	// on public_key for years.
-	if err := s.db.AutoMigrate(&Device{}).Error; err != nil {
+	if err := s.db.AutoMigrate(&Device{}); err != nil {
 		return errors.Wrap(err, migrationFailed)
+	}
+
+	table, err := deviceTable(db)
+	if err != nil {
+		return err
 	}
 
 	switch s.sqlType {
 	case "postgres":
-		watcher, err := NewPgWatcher(s.connectionString, db.NewScope(&Device{}).TableName())
+		watcher, err := NewPgWatcher(s.connectionString, table)
 		if err != nil {
 			return errors.Wrap(err, "failed to create pg watcher")
 		}
@@ -160,7 +191,7 @@ func (s *SQLStorage) Open() error {
 	case "mysql":
 		fallthrough
 	case "sqlite3":
-		s.Watcher = NewGormWatcher(db, db.NewScope(&Device{}).TableName())
+		s.Watcher = NewGormWatcher(db, table)
 	default:
 		s.Watcher = NewInProcessWatcher()
 	}
@@ -168,17 +199,65 @@ func (s *SQLStorage) Open() error {
 	return nil
 }
 
-func (s *SQLStorage) Close() error {
-	if s.db != nil {
-		return s.db.Close()
+// deviceTable returns the table name gorm uses for a Device.
+func deviceTable(db *gorm.DB) (string, error) {
+	stmt := &gorm.Statement{DB: db}
+	if err := stmt.Parse(&Device{}); err != nil {
+		return "", errors.Wrap(err, "failed to determine the devices table name")
 	}
-	return nil
+	return stmt.Schema.Table, nil
+}
+
+// sqlDB returns the underlying database handle, for the things gorm does not
+// do itself: pinging and the session-level allocation lock.
+func (s *SQLStorage) sqlDB() (*sql.DB, error) {
+	if s.db == nil {
+		return nil, errors.New("storage is not open")
+	}
+	return s.db.DB()
+}
+
+func (s *SQLStorage) Close() error {
+	if s.db == nil {
+		return nil
+	}
+	db, err := s.sqlDB()
+	if err != nil {
+		return err
+	}
+	return db.Close()
 }
 
 func (s *SQLStorage) Save(device *Device) error {
 	logrus.Debugf("saving device %s", key(device))
-	if err := s.db.Save(&device).Error; err != nil {
-		return errors.Wrapf(err, "failed to write device")
+
+	// Deliberately not gorm's Save: that one falls back to
+	// "INSERT ... ON CONFLICT UPDATE ALL", which on MySQL becomes
+	// "INSERT ... ON DUPLICATE KEY UPDATE" - a statement that does not care
+	// which unique index was violated. A device carrying another device's
+	// public key would then overwrite that other device's row instead of
+	// being refused, which is exactly what the unique index is there to
+	// prevent. Looking first and then inserting or updating keeps a
+	// violation a violation on every backend.
+	var existing int64
+	if err := s.db.Model(&Device{}).
+		Where("owner = ? AND name = ?", device.Owner, device.Name).
+		Count(&existing).Error; err != nil {
+		return errors.Wrap(err, "failed to look up the device")
+	}
+
+	if existing == 0 {
+		if err := s.db.Create(device).Error; err != nil {
+			return errors.Wrap(err, "failed to write device")
+		}
+		s.EmitAdd(device)
+		return nil
+	}
+
+	// Select("*") so that zeroed fields are written too - clearing the
+	// endpoint of a device that went away has to stick.
+	if err := s.db.Model(device).Select("*").Updates(device).Error; err != nil {
+		return errors.Wrap(err, "failed to write device")
 	}
 	s.EmitAdd(device)
 	return nil
@@ -288,7 +367,7 @@ func (s *SQLStorage) GetByPublicKey(publicKey string) (*Device, error) {
 }
 
 func (s *SQLStorage) Delete(device *Device) error {
-	if err := s.db.Delete(&device).Error; err != nil {
+	if err := s.db.Delete(device).Error; err != nil {
 		return errors.Wrap(err, "failed to delete device file")
 	}
 	s.EmitDelete(device)
@@ -296,9 +375,9 @@ func (s *SQLStorage) Delete(device *Device) error {
 }
 
 func (s *SQLStorage) Ping() error {
-	db := s.db.DB()
-	if db == nil {
-		return errors.New("failed to get db")
+	db, err := s.sqlDB()
+	if err != nil {
+		return errors.Wrap(err, "failed to get db")
 	}
 
 	if err := db.Ping(); err != nil {
