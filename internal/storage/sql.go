@@ -181,9 +181,14 @@ func (s *SQLStorage) Open() error {
 		return err
 	}
 
+	sqlDB, err := s.sqlDB()
+	if err != nil {
+		return err
+	}
+
 	switch s.sqlType {
 	case "postgres":
-		watcher, err := NewPgWatcher(s.connectionString, table)
+		watcher, err := NewPgWatcher(sqlDB, s.connectionString, table)
 		if err != nil {
 			return errors.Wrap(err, "failed to create pg watcher")
 		}
@@ -331,6 +336,12 @@ func (s *SQLStorage) Rename(device *Device, newName string) (*Device, error) {
 
 	renamed := *device
 	renamed.Name = newName
+
+	// Postgres learns about this from its own trigger, so that every replica
+	// hears about it; the other backends are single-instance and are told
+	// here (EmitUpdate is a no-op for the pg watcher).
+	s.EmitUpdate(&renamed)
+
 	return &renamed, nil
 }
 

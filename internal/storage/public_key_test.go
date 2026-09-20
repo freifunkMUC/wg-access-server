@@ -29,9 +29,12 @@ func TestPublicKeyIsUniquePerBackend(t *testing.T) {
 			if err := s.Open(); err != nil {
 				t.Fatal(err)
 			}
-			defer s.Close()
+			// registered before the cleanup that deletes the devices, so it
+			// runs after it: a deferred Close would run first and the rows
+			// would stay behind
+			t.Cleanup(func() { _ = s.Close() })
 
-			key := "dupkey-test-" + name
+			key := testKey("dupkey-" + name)
 			first := &Device{Owner: "dupkey-alice", Name: "laptop", PublicKey: key, Address: "10.44.0.2/32", CreatedAt: time.Now()}
 			second := &Device{Owner: "dupkey-mallory", Name: "stolen", PublicKey: key, Address: "10.44.0.3/32", CreatedAt: time.Now()}
 			t.Cleanup(func() {
