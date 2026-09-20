@@ -5,11 +5,14 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/tg123/go-htpasswd"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authutil"
 )
 
 const BasicAuthProvider = "basic"
@@ -91,6 +94,20 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime, th
 	}
 }
 
+// dummyHash is what an unknown user is checked against, so that a wrong
+// username costs the same bcrypt round as a wrong password does. Without it
+// the response time tells an attacker which accounts exist. It is generated
+// from a random password, so nothing can ever match it - and the result is
+// discarded anyway.
+var dummyHash = func() string {
+	hash, err := bcrypt.GenerateFromPassword([]byte(authutil.RandomString(32)), bcrypt.DefaultCost)
+	if err != nil {
+		logrus.Error(errors.Wrap(err, "failed to prepare the login timing hash"))
+		return ""
+	}
+	return string(hash)
+}()
+
 func checkCreds(users []string, username string, password string) bool {
 	for _, user := range users {
 		if u, p, ok := parsehtpassword(user); ok {
@@ -99,6 +116,9 @@ func checkCreds(users []string, username string, password string) bool {
 			}
 		}
 	}
+
+	// no such user: spend the same time a real password check would
+	checkhtpasswd(dummyHash, password)
 	return false
 }
 
