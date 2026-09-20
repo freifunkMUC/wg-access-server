@@ -74,7 +74,7 @@ auth:
     # /callback is recommended.
     redirectURL: "https://wg-access-server.example.com/callback"
     # List of scopes to request claims for. Must include 'openid'.
-    # Must include 'email' if 'emailDomains' is used. Can include 'profile' to show the user's name in the UI.
+    # 'email' is added automatically when 'emailDomains' is used. Can include 'profile' to show the user's name in the UI.
     # Add custom ones if required for 'claimMapping'.
     # Defaults to ["openid"]
     scopes:
@@ -82,8 +82,14 @@ auth:
       - profile
       - email
     # You can optionally restrict access to users with an email address
-    # that matches an allowed domain.
+    # that matches an allowed domain. The comparison ignores case.
     # If empty or omitted then all email domains will be allowed.
+    # Setting this adds the 'email' scope to the request if it is missing,
+    # because the provider only sends the address when it was asked for.
+    # A login is refused if the provider reports the address as unverified
+    # ('email_verified: false'). Providers that say nothing about it are
+    # accepted - the restriction is then only as good as whatever the
+    # provider does about verification.
     emailDomains:
       - example.com
     # This is an advanced feature that allows you to define OIDC claim mapping expressions.
