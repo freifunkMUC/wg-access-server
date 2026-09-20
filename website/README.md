@@ -9,4 +9,5 @@ The `website/` package now runs on Vite 8 with Rolldown and Oxc handling all bun
 - `npm run preview` – Serves the production build locally (default port 5000).
 - `npm run lint` / `npm run prettier` – Static analysis and formatting helpers.
 - `npm run codegen` – Regenerates the gRPC TypeScript SDK from `../proto/*.proto`.
+- `npm test` – Runs the tests once (Vitest, jsdom). `npm run test:watch` keeps them running.
 
