@@ -34,8 +34,14 @@ jobs:
           restore-keys: |
             go-mod-${{ runner.os }}-${{ matrix.go }}-
 
+      # the end-to-end test for the Connect API drives the real binary
+      - name: Build the server
+        run: go build -o /tmp/wg-access-server .
+
       - name: Run tests
         run: go test -v ./...
+        env:
+          WG_BINARY: /tmp/wg-access-server
 
   test-website:
     runs-on: ubuntu-latest

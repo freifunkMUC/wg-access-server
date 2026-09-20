@@ -13,6 +13,7 @@ RUN apk add --no-cache protobuf protobuf-dev
 WORKDIR /code
 RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6
+RUN go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.19.0
 # Mount ./proto to /code/proto
 COPY ./codegen.sh ./
 CMD ["./codegen.sh"]

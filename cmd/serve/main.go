@@ -333,12 +333,21 @@ func (cmd *servecmd) Run() {
 	site := router.PathPrefix("/").Subrouter()
 	site.Use(authnz.RequireAuthentication)
 
-	// Grpc api
-	site.PathPrefix("/api").Handler(services.ApiRouter(&services.ApiServices{
+	apiServices := &services.ApiServices{
 		Config:        conf,
 		DeviceManager: deviceManager,
 		Wg:            wg,
-	}))
+	}
+
+	// Grpc api
+	site.PathPrefix("/api").Handler(services.ApiRouter(apiServices))
+
+	// The same API through connectrpc, which serves the gRPC-Web protocol
+	// itself. It runs next to the one above while the replacement of the
+	// archived grpc-web wrapper is being tried out.
+	site.PathPrefix("/connect").Handler(
+		http.StripPrefix("/connect", services.ConnectRouter(apiServices)),
+	)
 
 	// Static website
 	site.PathPrefix("/").Handler(services.WebsiteRouter())
