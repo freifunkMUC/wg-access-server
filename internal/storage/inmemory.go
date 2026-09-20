@@ -33,6 +33,18 @@ func (s *InMemoryStorage) Close() error {
 
 func (s *InMemoryStorage) Save(device *Device) error {
 	s.mu.Lock()
+	// The SQL backends have a unique index on the public key. Without the
+	// same check here, a second user could register someone else's key and
+	// take over their WireGuard peer - the peer is keyed by it. An empty key
+	// is not a peer identity and only ever turns up in tests.
+	if device.PublicKey != "" {
+		for storedKey, stored := range s.db {
+			if stored.PublicKey == device.PublicKey && storedKey != key(device) {
+				s.mu.Unlock()
+				return errors.New("public key is already in use by another device")
+			}
+		}
+	}
 	s.db[key(device)] = device
 	s.mu.Unlock()
 	s.EmitAdd(device)

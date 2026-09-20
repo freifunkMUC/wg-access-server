@@ -48,6 +48,21 @@ type User struct {
 // https://lists.zx2c4.com/pipermail/wireguard/2020-December/006222.html
 var wgKeyRegex = regexp.MustCompile("^[A-Za-z0-9+/]{42}[A|E|I|M|Q|U|Y|c|g|k|o|s|w|4|8|0]=$")
 
+// ValidationError carries a message meant for the user: it says what they got
+// wrong, not how the server works. Everything else that goes wrong stays in
+// the log, so a client never sees storage or schema details.
+type ValidationError struct {
+	msg string
+}
+
+func (e *ValidationError) Error() string {
+	return e.msg
+}
+
+func invalid(format string, args ...interface{}) error {
+	return &ValidationError{msg: fmt.Sprintf(format, args...)}
+}
+
 // maxDeviceNameLength matches the size of the name column. A longer name is
 // rejected here rather than at the database: MySQL outside of strict mode
 // truncates it instead of failing, and a truncated name can collide with a
@@ -59,17 +74,17 @@ const maxDeviceNameLength = 100
 // devices with such names already exist.
 func validateDeviceName(name string) error {
 	if strings.TrimSpace(name) == "" {
-		return errors.New("Device name must not be empty.")
+		return invalid("Device name must not be empty.")
 	}
 	// The column counts characters, not bytes, so an umlaut must not count twice.
 	if utf8.RuneCountInString(name) > maxDeviceNameLength {
 		// errors.Errorf, not fmt.Errorf, to match the sentence style of the
 		// other validation messages: they are shown to the user in the web UI.
-		return errors.Errorf("Device name must be at most %d characters long.", maxDeviceNameLength)
+		return invalid("Device name must be at most %d characters long.", maxDeviceNameLength)
 	}
 	for _, r := range name {
 		if unicode.IsControl(r) {
-			return errors.New("Device name must not contain control characters.")
+			return invalid("Device name must not contain control characters.")
 		}
 	}
 	return nil
@@ -168,12 +183,12 @@ func (d *DeviceManager) AddDevice(identity *authsession.Identity, name string, p
 	}
 
 	if !wgKeyRegex.MatchString(publicKey) {
-		return nil, errors.New("Public key has invalid format.")
+		return nil, invalid("Public key has invalid format.")
 	}
 
 	// preshared key is optional
 	if len(presharedKey) != 0 && !wgKeyRegex.MatchString(presharedKey) {
-		return nil, errors.New("Pre-shared key has invalid format.")
+		return nil, invalid("Pre-shared key has invalid format.")
 	}
 
 	// Checking which names and addresses are taken and saving the new device has
@@ -210,19 +225,19 @@ func (d *DeviceManager) addDeviceLocked(identity *authsession.Identity, name str
 	}
 
 	if nameTaken {
-		return nil, errors.New("Device name already taken.")
+		return nil, invalid("Device name already taken.")
 	}
 
 	// Checked under the allocation lock together with the name, so two
 	// requests at the same time cannot both slip past the limit.
 	if d.maxDevicesPerUser > 0 && len(devices) >= d.maxDevicesPerUser {
-		return nil, errors.Errorf("You already have %d devices, which is the maximum allowed. Delete one to add another.", d.maxDevicesPerUser)
+		return nil, invalid("You already have %d devices, which is the maximum allowed. Delete one to add another.", d.maxDevicesPerUser)
 	}
 
 	clientAddr := ""
 	if manualIPAssignment {
 		if manualIPv4Address == "" && manualIPv6Address == "" {
-			return nil, errors.New("Manual IP assignment enabled but no IP address provided.")
+			return nil, invalid("Manual IP assignment enabled but no IP address provided.")
 		}
 
 		usedIPv4s, usedIPv6s, err := d.usedAddresses()
@@ -234,30 +249,30 @@ func (d *DeviceManager) addDeviceLocked(identity *authsession.Identity, name str
 
 		if manualIPv4Address != "" {
 			if d.cidr == "" {
-				return nil, errors.New("Manual IPv4 assignment not possible, IPv4 subnet is not configured.")
+				return nil, invalid("Manual IPv4 assignment not possible, IPv4 subnet is not configured.")
 			}
 
 			ipv4, err := netip.ParseAddr(manualIPv4Address)
 			if err != nil {
-				return nil, errors.Wrap(err, "invalid manual IPv4 address")
+				return nil, invalid("Manual IPv4 address is not a valid address.")
 			}
 			if !ipv4.Is4() {
-				return nil, errors.New("manual IPv4 address is not a valid IPv4 address")
+				return nil, invalid("Manual IPv4 address is not a valid IPv4 address.")
 			}
 
 			vpnsubnetv4 := netip.MustParsePrefix(d.cidr)
 			if !vpnsubnetv4.Contains(ipv4) {
-				return nil, fmt.Errorf("manual IPv4 address %s is not in the configured subnet %s", manualIPv4Address, d.cidr)
+				return nil, invalid("Manual IPv4 address %s is not in the configured subnet %s.", manualIPv4Address, d.cidr)
 			}
 
 			// also check for server and network address
 			startIPv4 := vpnsubnetv4.Masked().Addr()
 			if ipv4 == startIPv4 || ipv4 == startIPv4.Next() {
-				return nil, fmt.Errorf("manual IPv4 address %s is reserved", manualIPv4Address)
+				return nil, invalid("Manual IPv4 address %s is reserved.", manualIPv4Address)
 			}
 
 			if usedIPv4s[ipv4] {
-				return nil, fmt.Errorf("manual IPv4 address %s is already in use", manualIPv4Address)
+				return nil, invalid("Manual IPv4 address %s is already in use.", manualIPv4Address)
 			}
 
 			ipv4Addr = netip.PrefixFrom(ipv4, 32).String()
@@ -265,30 +280,30 @@ func (d *DeviceManager) addDeviceLocked(identity *authsession.Identity, name str
 
 		if manualIPv6Address != "" {
 			if d.cidrv6 == "" {
-				return nil, errors.New("Manual IPv6 assignment not possible, IPv6 subnet is not configured.")
+				return nil, invalid("Manual IPv6 assignment not possible, IPv6 subnet is not configured.")
 			}
 
 			ipv6, err := netip.ParseAddr(manualIPv6Address)
 			if err != nil {
-				return nil, errors.Wrap(err, "invalid manual IPv6 address")
+				return nil, invalid("Manual IPv6 address is not a valid address.")
 			}
 			if !ipv6.Is6() {
-				return nil, errors.New("manual IPv6 address is not a valid IPv6 address")
+				return nil, invalid("Manual IPv6 address is not a valid IPv6 address.")
 			}
 
 			vpnsubnetv6 := netip.MustParsePrefix(d.cidrv6)
 			if !vpnsubnetv6.Contains(ipv6) {
-				return nil, fmt.Errorf("manual IPv6 address %s is not in the configured subnet %s", manualIPv6Address, d.cidrv6)
+				return nil, invalid("Manual IPv6 address %s is not in the configured subnet %s.", manualIPv6Address, d.cidrv6)
 			}
 
 			// also check for server and network address
 			startIPv6 := vpnsubnetv6.Masked().Addr()
 			if ipv6 == startIPv6 || ipv6 == startIPv6.Next() {
-				return nil, fmt.Errorf("manual IPv6 address %s is reserved", manualIPv6Address)
+				return nil, invalid("Manual IPv6 address %s is reserved.", manualIPv6Address)
 			}
 
 			if usedIPv6s[ipv6] {
-				return nil, fmt.Errorf("manual IPv6 address %s is already in use", manualIPv6Address)
+				return nil, invalid("Manual IPv6 address %s is already in use.", manualIPv6Address)
 			}
 
 			ipv6Addr = netip.PrefixFrom(ipv6, 128).String()
@@ -403,7 +418,7 @@ func (d *DeviceManager) RenameDevice(user string, name string, newName string) (
 		}
 		for _, existing := range devices {
 			if existing.Name == newName {
-				return errors.New("Device name already taken.")
+				return invalid("Device name already taken.")
 			}
 		}
 
