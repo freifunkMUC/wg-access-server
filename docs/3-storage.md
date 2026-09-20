@@ -56,6 +56,23 @@ Example connection string:
 
 - `mysql://user:password@localhost:3306/database?tls=false`
 
+!!! warning "Upgrading an older MySQL installation"
+
+    Up to and including v1.2.0 the schema migration failed silently on MySQL, which left the
+    database without the unique index on `public_key`. Two devices could then share a public
+    key. The WireGuard peer is identified by that key, so the device added last replaces the
+    allowed addresses and the pre-shared key of the one added first, and that first device
+    stops working. From v1.3.0 on the index is created when the server starts. If the table
+    already holds devices sharing a key, the server refuses to start and tells you how to
+    find them:
+
+    ```sql
+    SELECT public_key, COUNT(*) FROM devices GROUP BY public_key HAVING COUNT(*) > 1;
+    ```
+
+    Delete all but one device per key - they cannot all work anyway - and start the server again.
+    PostgreSQL and SQLite were never affected.
+
 Query parameters are passed to the driver as-is, so they must use its names - e.g. `tls` rather
 than `ssl-mode`. The driver runs any parameter it does not know as `SET <name>=<value>` on the
 server, which for `ssl-mode` fails with a syntax error. wg-access-server always sets
