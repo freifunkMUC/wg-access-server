@@ -55,6 +55,11 @@ type AppConfig struct {
 	// devices are automatically deleted
 	// Defaults to 1 year
 	InactiveDeviceGracePeriod time.Duration `yaml:"inactiveDeviceGracePeriod"`
+	// MaxDevicesPerUser limits how many devices a single user may create.
+	// Admins are not exempt - the limit is about the addresses in the VPN
+	// subnet, not about trust.
+	// Defaults to 0 (no limit)
+	MaxDevicesPerUser int `yaml:"maxDevicesPerUser"`
 	// The name of the WireGuard configuration file that can
 	// be downloaded through the web UI after adding a device.
 	// Do not include the '.conf' extension

@@ -53,6 +53,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("metrics-max-device-series", "Maximum number of devices exported as individual series on /metrics (negative: unlimited, 0: aggregates only)").Envar("WG_METRICS_MAX_DEVICE_SERIES").Default("1000").IntVar(&cmd.AppConfig.Metrics.MaxDeviceSeries)
 	cli.Flag("enable-inactive-device-deletion", "Enable inactive device deletion").Envar("WG_ENABLE_INACTIVE_DEVICE_DELETION").Default("false").BoolVar(&cmd.AppConfig.EnableInactiveDeviceDeletion)
 	cli.Flag("inactive-device-grace-period", "Duration after inactive device are deleted").Envar("WG_INACTIVE_DEVICE_GRACE_PERIOD").Default((1 * config.Year).String()).DurationVar(&cmd.AppConfig.InactiveDeviceGracePeriod)
+	cli.Flag("max-devices-per-user", "Maximum number of devices a single user may create (0: no limit)").Envar("WG_MAX_DEVICES_PER_USER").Default("0").IntVar(&cmd.AppConfig.MaxDevicesPerUser)
 	cli.Flag("filename", "The configuration filename (e.g. WireGuard-Home)").Envar("WG_FILENAME").StringVar(&cmd.AppConfig.Filename)
 	cli.Flag("https-enabled", "Enable HTTPS for the web UI").Envar("WG_HTTPS_ENABLED").Default("true").BoolVar(&cmd.AppConfig.HTTPS.Enabled)
 	cli.Flag("https-cert-file", "Path to the TLS certificate file").Envar("WG_HTTPS_CERT_FILE").StringVar(&cmd.AppConfig.HTTPS.CertFile)
@@ -204,7 +205,8 @@ func (cmd *servecmd) Run() {
 	defer storageBackend.Close()
 
 	// Device manager
-	deviceManager := devices.New(wg, storageBackend, conf.VPN.CIDR, conf.VPN.CIDRv6)
+	deviceManager := devices.New(wg, storageBackend, conf.VPN.CIDR, conf.VPN.CIDRv6,
+		devices.WithMaxDevicesPerUser(conf.MaxDevicesPerUser))
 
 	// DNS Server
 	if conf.DNS.Enabled {
