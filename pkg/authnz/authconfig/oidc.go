@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -46,9 +47,7 @@ func (c *OIDCConfig) Provider() *authruntime.Provider {
 	}
 	verifier := provider.Verifier(&oidc.Config{ClientID: c.ClientID})
 
-	if c.Scopes == nil {
-		c.Scopes = []string{"openid"}
-	}
+	c.Scopes = ensureScopes(c.Scopes, c.EmailDomains)
 
 	oauthConfig := &oauth2.Config{
 		RedirectURL:  c.RedirectURL,
@@ -174,6 +173,19 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 		}
 
 		email, _ := oidcClaims["email"].(string)
+		if len(c.EmailDomains) > 0 {
+			verified, stated := emailVerified(oidcClaims)
+			if stated && !verified {
+				logrus.Warnf("Refusing login of '%s': the identity provider reports the email address as unverified", email)
+				http.Error(w, "Email address is not verified", http.StatusForbidden)
+				return
+			}
+			if !stated {
+				// Worth saying out loud: the domain restriction is then only
+				// as good as whatever the provider does about verification.
+				logrus.Warnf("The identity provider did not state whether the email address of '%s' is verified", email)
+			}
+		}
 		if msg, valid := verifyEmailDomain(c.EmailDomains, email); !valid {
 			http.Error(w, msg, http.StatusForbidden)
 			return
@@ -216,6 +228,36 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 	}
 }
 
+// ensureScopes returns the scopes to request from the provider. Restricting
+// access by email domain needs the email claim, and a provider only sends it
+// when the email scope was asked for - without it every single login would be
+// refused for not having an address.
+func ensureScopes(configured []string, emailDomains []string) []string {
+	scopes := configured
+	if len(scopes) == 0 {
+		scopes = []string{oidc.ScopeOpenID}
+	}
+	if len(emailDomains) == 0 || slices.Contains(scopes, "email") {
+		return scopes
+	}
+
+	logrus.Warnf("Adding the 'email' scope: emailDomains is configured, which needs the email claim")
+	return append(slices.Clone(scopes), "email")
+}
+
+// emailVerified reports whether the provider marked the address as verified,
+// and whether it said anything about it at all. Providers send either a bool
+// or a string.
+func emailVerified(claims map[string]interface{}) (verified bool, stated bool) {
+	switch value := claims["email_verified"].(type) {
+	case bool:
+		return value, true
+	case string:
+		return strings.EqualFold(value, "true"), true
+	}
+	return false, false
+}
+
 func verifyEmailDomain(allowedDomains []string, email string) (string, bool) {
 	if len(allowedDomains) == 0 {
 		return "", true
@@ -228,9 +270,11 @@ func verifyEmailDomain(allowedDomains []string, email string) (string, bool) {
 		return "Missing or invalid email address", false
 	}
 
-	// match the domain against the list of allowed domains
+	// match the domain against the list of allowed domains. Domain names are
+	// not case sensitive, and providers do hand out addresses as the user
+	// typed them.
 	for _, domain := range allowedDomains {
-		if domain == parsed[1] {
+		if strings.EqualFold(domain, parsed[1]) {
 			return "", true
 		}
 	}

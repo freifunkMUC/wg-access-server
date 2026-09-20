@@ -31,6 +31,8 @@ type fakeIDP struct {
 	clientID string
 	// tokenNonce is the nonce claim embedded in the next issued ID token
 	tokenNonce string
+	// extraClaims are merged into the next issued ID token
+	extraClaims map[string]interface{}
 }
 
 func newFakeIDP(t *testing.T) *fakeIDP {
@@ -72,7 +74,7 @@ func newFakeIDP(t *testing.T) *fakeIDP {
 	})
 
 	handler.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
-		idToken := idp.signIDToken(t, map[string]interface{}{
+		claims := map[string]interface{}{
 			"iss":   idp.server.URL,
 			"aud":   idp.clientID,
 			"sub":   "test-subject",
@@ -80,7 +82,11 @@ func newFakeIDP(t *testing.T) *fakeIDP {
 			"iat":   time.Now().Unix(),
 			"exp":   time.Now().Add(time.Hour).Unix(),
 			"nonce": idp.tokenNonce,
-		})
+		}
+		for name, value := range idp.extraClaims {
+			claims[name] = value
+		}
+		idToken := idp.signIDToken(t, claims)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"access_token": "test-access-token",
@@ -111,6 +117,13 @@ func (idp *fakeIDP) signIDToken(t *testing.T, claims map[string]interface{}) str
 
 func newOIDCFlow(t *testing.T) (*fakeIDP, *authruntime.Provider, *authruntime.ProviderRuntime, *mux.Router) {
 	t.Helper()
+	return newOIDCFlowWith(t, func(*OIDCConfig) {})
+}
+
+// newOIDCFlowWith builds the same flow, letting a test adjust the config
+// before the provider is created.
+func newOIDCFlowWith(t *testing.T, adjust func(*OIDCConfig)) (*fakeIDP, *authruntime.Provider, *authruntime.ProviderRuntime, *mux.Router) {
+	t.Helper()
 
 	idp := newFakeIDP(t)
 	config := &OIDCConfig{
@@ -121,6 +134,7 @@ func newOIDCFlow(t *testing.T) (*fakeIDP, *authruntime.Provider, *authruntime.Pr
 		RedirectURL:       "http://wg-access-server.test/callback",
 		ClaimsFromIDToken: true,
 	}
+	adjust(config)
 
 	provider := config.Provider()
 	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("test-session-key")))
