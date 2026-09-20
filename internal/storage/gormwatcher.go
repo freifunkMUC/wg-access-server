@@ -8,6 +8,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// silentSetting marks a statement whose changes the storage reports itself,
+// once they are durable.
+const silentSetting = "wg-access-server:silent"
+
 // GormWatcher turns the inserts and deletes gorm performs into storage
 // events. The SQL backends that have no notification channel of their own -
 // SQLite and MySQL - are served by exactly one process, so hooking into gorm
@@ -16,10 +20,12 @@ type GormWatcher struct {
 	db    *gorm.DB
 	table string
 
-	// update callbacks are not driven by gorm: a metadata write is an UPDATE
-	// like any other, and nothing should react to those. The storage says
-	// when a change is worth reporting (see SQLStorage.Rename).
+	// update and delete callbacks the storage invokes itself: a metadata
+	// write is an UPDATE like any other and must stay silent (see
+	// SQLStorage.Rename), and the deletes of a transaction may only be
+	// reported once it has committed (see SQLStorage.DeleteForOwner).
 	update []Callback
+	delete []Callback
 
 	// mu guards registered, which only makes the callback names unique
 	mu         sync.Mutex
@@ -51,6 +57,10 @@ func (w *GormWatcher) OnAdd(cb Callback) {
 }
 
 func (w *GormWatcher) OnDelete(cb Callback) {
+	w.mu.Lock()
+	w.delete = append(w.delete, cb)
+	w.mu.Unlock()
+
 	name := w.name("delete")
 	logrus.Debugf("registering gorm delete callback %s", name)
 	if err := w.db.Callback().Delete().After("gorm:delete").Register(name, func(tx *gorm.DB) {
@@ -71,6 +81,10 @@ func (w *GormWatcher) OnReconnect(cb func()) {
 }
 
 func (w *GormWatcher) emit(cb Callback, tx *gorm.DB) {
+	if _, silent := tx.Get(silentSetting); silent {
+		// part of a transaction that reports its changes once it committed
+		return
+	}
 	if tx.Error != nil {
 		// the operation failed (e.g. constraint violation or rollback),
 		// so we must not emit an event for a change that never happened
@@ -102,16 +116,22 @@ func (w *GormWatcher) EmitAdd(device *Device) {
 }
 
 func (w *GormWatcher) EmitUpdate(device *Device) {
-	w.mu.Lock()
-	callbacks := make([]Callback, len(w.update))
-	copy(callbacks, w.update)
-	w.mu.Unlock()
-
-	for _, cb := range callbacks {
+	for _, cb := range w.callbacks(&w.update) {
 		cb(device)
 	}
 }
 
 func (w *GormWatcher) EmitDelete(device *Device) {
-	// noop because we rely on gorm callback
+	for _, cb := range w.callbacks(&w.delete) {
+		cb(device)
+	}
+}
+
+// callbacks copies a callback list so it can be run without holding the lock.
+func (w *GormWatcher) callbacks(list *[]Callback) []Callback {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	callbacks := make([]Callback, len(*list))
+	copy(callbacks, *list)
+	return callbacks
 }

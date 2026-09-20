@@ -385,6 +385,43 @@ func (s *SQLStorage) Delete(device *Device) error {
 	return nil
 }
 
+// DeleteForOwner removes every device of one user in a single transaction.
+// The events follow the commit: reporting a device as gone and then rolling
+// the delete back would leave the WireGuard peers and the DNS zone describing
+// a state the database never reached.
+func (s *SQLStorage) DeleteForOwner(owner string) ([]*Device, error) {
+	var deleted []*Device
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("owner = ?", owner).Find(&deleted).Error; err != nil {
+			return errors.Wrap(err, "failed to list the devices of the user")
+		}
+
+		// One statement per device, not a bulk delete: the watcher reports
+		// devices, and a bulk delete carries no row to report. Silent,
+		// because these are reported below - after the commit.
+		//
+		// The chain starts at tx every time. Hoisting the Set out of the
+		// loop would reuse one statement, and gorm would keep adding each
+		// device's primary key to the same WHERE until it matches nothing.
+		for _, device := range deleted {
+			if err := tx.Set(silentSetting, true).Delete(device).Error; err != nil {
+				return errors.Wrapf(err, "failed to delete device '%s'", device.Name)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, device := range deleted {
+		s.EmitDelete(device)
+	}
+
+	return deleted, nil
+}
+
 func (s *SQLStorage) Ping() error {
 	db, err := s.sqlDB()
 	if err != nil {

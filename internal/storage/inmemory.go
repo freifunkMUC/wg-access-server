@@ -151,6 +151,30 @@ func (s *InMemoryStorage) rename(device *Device, newName string) (*Device, error
 	return &renamed, nil
 }
 
+// DeleteForOwner removes every device of one user. Nothing can fail halfway
+// through a map, so the all-or-nothing promise costs nothing here.
+func (s *InMemoryStorage) DeleteForOwner(owner string) ([]*Device, error) {
+	deleted := s.deleteForOwner(owner)
+	for _, device := range deleted {
+		s.EmitDelete(device)
+	}
+	return deleted, nil
+}
+
+func (s *InMemoryStorage) deleteForOwner(owner string) []*Device {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var deleted []*Device
+	for storedKey, device := range s.db {
+		if device.Owner == owner {
+			deleted = append(deleted, device)
+			delete(s.db, storedKey)
+		}
+	}
+	return deleted
+}
+
 func (s *InMemoryStorage) Ping() error {
 	return nil
 }

@@ -37,6 +37,12 @@ type Storage interface {
 	Get(owner string, name string) (*Device, error)
 	GetByPublicKey(publicKey string) (*Device, error)
 	Delete(device *Device) error
+	// DeleteForOwner removes every device of one user and returns what it
+	// removed. It is all or nothing: a failure halfway through leaves the
+	// user with all of their devices rather than some of them, which matters
+	// because this is how a user's access is revoked. The delete events
+	// follow once the change is durable.
+	DeleteForOwner(owner string) ([]*Device, error)
 	Close() error
 	Open() error
 }
