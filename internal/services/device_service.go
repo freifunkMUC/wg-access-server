@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/sirupsen/logrus"
@@ -12,6 +13,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
+	"github.com/freifunkMUC/wg-access-server/internal/traces"
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/proto/proto"
 )
@@ -29,8 +31,7 @@ func (d *DeviceService) AddDevice(ctx context.Context, req *proto.AddDeviceReq) 
 
 	device, err := d.DeviceManager.AddDevice(user, req.GetName(), req.GetPublicKey(), req.GetPresharedKey(), req.GetManualIpAssignment(), req.GetManualIpv4Address(), req.GetManualIpv6Address())
 	if err != nil {
-		ctxlogrus.Extract(ctx).Error(err)
-		return nil, status.Errorf(codes.Internal, "%v", err)
+		return nil, deviceError(ctx, err, "failed to add device")
 	}
 
 	audit.Log(ctx, audit.DeviceCreate, logrus.Fields{
@@ -75,8 +76,7 @@ func (d *DeviceService) DeleteDevice(ctx context.Context, req *proto.DeleteDevic
 	}
 
 	if err := d.DeviceManager.DeleteDevice(deviceOwner, req.GetName()); err != nil {
-		ctxlogrus.Extract(ctx).Error(err)
-		return nil, status.Errorf(codes.Internal, "failed to delete device: %v", err)
+		return nil, deviceError(ctx, err, "failed to delete device")
 	}
 
 	audit.Log(ctx, audit.DeviceDelete, logrus.Fields{
@@ -104,8 +104,7 @@ func (d *DeviceService) RenameDevice(ctx context.Context, req *proto.RenameDevic
 
 	device, err := d.DeviceManager.RenameDevice(deviceOwner, req.GetName(), req.GetNewName())
 	if err != nil {
-		ctxlogrus.Extract(ctx).Error(err)
-		return nil, status.Errorf(codes.Internal, "%v", err)
+		return nil, deviceError(ctx, err, "failed to rename device")
 	}
 
 	audit.Log(ctx, audit.DeviceRename, logrus.Fields{
@@ -136,6 +135,20 @@ func (d *DeviceService) ListAllDevices(ctx context.Context, req *proto.ListAllDe
 	return &proto.ListAllDevicesRes{
 		Items: mapDevices(devices),
 	}, nil
+}
+
+// deviceError logs err and turns it into the status the client gets. Only a
+// validation error carries its message to the client: anything else can hold
+// storage or schema details ("UNIQUE constraint failed: devices.public_key"),
+// which the client has no use for and should not learn.
+func deviceError(ctx context.Context, err error, fallback string) error {
+	ctxlogrus.Extract(ctx).Error(err)
+
+	var validation *devices.ValidationError
+	if errors.As(err, &validation) {
+		return status.Error(codes.InvalidArgument, validation.Error())
+	}
+	return status.Errorf(codes.Internal, "%s (trace = %s)", fallback, traces.TraceID(ctx))
 }
 
 func mapDevice(d *storage.Device) *proto.Device {

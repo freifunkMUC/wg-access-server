@@ -44,7 +44,7 @@ func TestAddDeviceRejectsUnusableManualAddresses(t *testing.T) {
 		{name: "address already in use", ipv4: "10.44.0.42", contains: "already in use"},
 		{name: "address outside of the subnet", ipv4: "192.0.2.10", contains: "not in the configured subnet"},
 		{name: "server address is reserved", ipv4: "10.44.0.1", contains: "reserved"},
-		{name: "not an address at all", ipv4: "10.44.0.42/32", contains: "invalid manual IPv4 address"},
+		{name: "not an address at all", ipv4: "10.44.0.42/32", contains: "not a valid address"},
 	}
 
 	for _, tt := range tests {
