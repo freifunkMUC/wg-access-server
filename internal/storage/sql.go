@@ -15,6 +15,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// migrationFailed explains the failure an operator is most likely to hit:
+// the unique index on public_key cannot be created while the table still
+// holds devices that share one.
+const migrationFailed = `failed to migrate the database schema.
+
+If this is about the unique index on public_key, the table holds devices
+sharing a public key. Two devices with the same key cannot both work - the
+WireGuard peer is identified by it - so find them:
+
+    SELECT public_key, COUNT(*) FROM devices GROUP BY public_key HAVING COUNT(*) > 1;
+
+and delete all but one device per key, then start the server again`
+
 // GormLogger is a custom logger for Gorm, making it use logrus.
 type GormLogger struct{}
 
@@ -130,8 +143,12 @@ func (s *SQLStorage) Open() error {
 	db.SetLogger(&GormLogger{})
 	db.LogMode(true)
 
-	// Migrate the schema
-	s.db.AutoMigrate(&Device{})
+	// Migrate the schema. The error matters: a failed migration used to be
+	// swallowed here, which is how MySQL ended up without the unique index
+	// on public_key for years.
+	if err := s.db.AutoMigrate(&Device{}).Error; err != nil {
+		return errors.Wrap(err, migrationFailed)
+	}
 
 	switch s.sqlType {
 	case "postgres":

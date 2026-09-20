@@ -82,15 +82,25 @@ type PeerConnection struct {
 }
 
 type Device struct {
-	Owner         string    `json:"owner" gorm:"type:varchar(100);unique_index:key;primary_key"`
-	OwnerName     string    `json:"owner_name"`
-	OwnerEmail    string    `json:"owner_email"`
-	OwnerProvider string    `json:"owner_provider"`
-	Name          string    `json:"name" gorm:"type:varchar(100);unique_index:key;primary_key"`
-	PublicKey     string    `json:"public_key" gorm:"unique_index"`
-	PresharedKey  string    `json:"preshared_key" gorm:"type:varchar(100)"`
-	Address       string    `json:"address"`
-	CreatedAt     time.Time `json:"created_at" gorm:"column:created_at"`
+	// Owner and Name are the primary key, which already makes the pair
+	// unique. The unique_index:key they used to carry on top of that was
+	// redundant - and it broke the schema on MySQL, where "key" is a
+	// reserved word: the CREATE INDEX failed with a syntax error and took
+	// the unique index on public_key with it (see SQLStorage.Open).
+	Owner         string `json:"owner" gorm:"type:varchar(100);primary_key"`
+	OwnerName     string `json:"owner_name"`
+	OwnerEmail    string `json:"owner_email"`
+	OwnerProvider string `json:"owner_provider"`
+	Name          string `json:"name" gorm:"type:varchar(100);primary_key"`
+	// The WireGuard peer is identified by its public key, so two devices
+	// must never share one: adding the second replaces the allowed
+	// addresses and the pre-shared key of the peer the first one uses, and
+	// deleting it removes that peer altogether. The unique index is what
+	// enforces that.
+	PublicKey    string    `json:"public_key" gorm:"unique_index"`
+	PresharedKey string    `json:"preshared_key" gorm:"type:varchar(100)"`
+	Address      string    `json:"address"`
+	CreatedAt    time.Time `json:"created_at" gorm:"column:created_at"`
 
 	/**
 	 * Metadata fields below.
