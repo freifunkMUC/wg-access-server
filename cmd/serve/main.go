@@ -278,6 +278,14 @@ func (cmd *servecmd) Run() {
 					dns.PushAuthZone(zone)
 				},
 			)
+			storageBackend.OnUpdate(
+				// a renamed device keeps its addresses but answers to a new
+				// name, so the zone has to be rebuilt for it too
+				func(_ *storage.Device) {
+					zone := generateZone(deviceManager, vpnips)
+					dns.PushAuthZone(zone)
+				},
+			)
 			storageBackend.OnDelete(
 				func(_ *storage.Device) {
 					zone := generateZone(deviceManager, vpnips)

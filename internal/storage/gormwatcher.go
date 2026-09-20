@@ -16,6 +16,11 @@ type GormWatcher struct {
 	db    *gorm.DB
 	table string
 
+	// update callbacks are not driven by gorm: a metadata write is an UPDATE
+	// like any other, and nothing should react to those. The storage says
+	// when a change is worth reporting (see SQLStorage.Rename).
+	update []Callback
+
 	// mu guards registered, which only makes the callback names unique
 	mu         sync.Mutex
 	registered int
@@ -55,6 +60,12 @@ func (w *GormWatcher) OnDelete(cb Callback) {
 	}
 }
 
+func (w *GormWatcher) OnUpdate(cb Callback) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.update = append(w.update, cb)
+}
+
 func (w *GormWatcher) OnReconnect(cb func()) {
 	// noop because the watcher can't reconnect
 }
@@ -88,6 +99,17 @@ func deviceOf(dest interface{}) (*Device, bool) {
 
 func (w *GormWatcher) EmitAdd(device *Device) {
 	// noop because we rely on gorm callback
+}
+
+func (w *GormWatcher) EmitUpdate(device *Device) {
+	w.mu.Lock()
+	callbacks := make([]Callback, len(w.update))
+	copy(callbacks, w.update)
+	w.mu.Unlock()
+
+	for _, cb := range callbacks {
+		cb(device)
+	}
 }
 
 func (w *GormWatcher) EmitDelete(device *Device) {

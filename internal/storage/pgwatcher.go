@@ -1,34 +1,69 @@
 package storage
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 
 	"github.com/freifunkMUC/pg-events/pkg/pgevents"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
+// renameTriggerSuffix names the trigger that reports renames. pg-events
+// installs its own trigger for inserts and deletes; this one sits next to it.
+const renameTriggerSuffix = "_rename_events"
+
 type PgWatcher struct {
 	*pgevents.Listener
 }
 
-func NewPgWatcher(connectionString string, table string) (*PgWatcher, error) {
+func NewPgWatcher(db *sql.DB, connectionString string, table string) (*PgWatcher, error) {
 	logrus.Debug("creating postgres watcher")
 	listener, err := pgevents.OpenListener(connectionString)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open pg listener")
 	}
 
-	// Only inserts and deletes are acted on (see OnAdd). Without UPDATE in the
-	// trigger, the metadata sync - one UPDATE per active device every 30s on
-	// every replica - no longer broadcasts each row to all replicas.
+	// Only inserts and deletes are acted on through pg-events (see OnAdd).
+	// Without UPDATE in its trigger, the metadata sync - one UPDATE per
+	// active device every 30s on every replica - no longer broadcasts each
+	// row to all replicas.
 	if err := listener.AttachActions(table, pgevents.Insert, pgevents.Delete); err != nil {
+		_ = listener.Close()
 		return nil, errors.Wrapf(err, "failed to attach listener to table: %s", table)
+	}
+
+	if err := attachRenameTrigger(db, table); err != nil {
+		_ = listener.Close()
+		return nil, err
 	}
 
 	return &PgWatcher{
 		Listener: listener,
 	}, nil
+}
+
+// attachRenameTrigger reports the one kind of update that matters: a device
+// that was renamed. "AFTER UPDATE OF name" fires only when a statement
+// assigns that column, so the metadata sync - which writes the traffic
+// counters and the handshake time - stays silent. The trigger reuses the
+// function and the channel pg-events set up, so the events arrive through the
+// same listener.
+func attachRenameTrigger(db *sql.DB, table string) error {
+	trigger := table + renameTriggerSuffix
+
+	if _, err := db.Exec(fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s", trigger, table)); err != nil {
+		return errors.Wrapf(err, "failed to drop the rename trigger on %s", table)
+	}
+	statement := fmt.Sprintf(
+		"CREATE TRIGGER %s AFTER UPDATE OF name ON %s FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event()",
+		trigger, table)
+	if _, err := db.Exec(statement); err != nil {
+		return errors.Wrapf(err, "failed to create the rename trigger on %s", table)
+	}
+
+	return nil
 }
 
 func (w *PgWatcher) OnAdd(cb Callback) {
@@ -39,6 +74,15 @@ func (w *PgWatcher) OnAdd(cb Callback) {
 		// if either of those properties become mutable - and adding UPDATE back to
 		// the trigger in NewPgWatcher.
 		if event.Action == "INSERT" && !event.Truncated {
+			w.emit(cb, event)
+		}
+	})
+}
+
+func (w *PgWatcher) OnUpdate(cb Callback) {
+	w.OnEvent(func(event *pgevents.TableEvent) {
+		// only the rename trigger reports updates, see attachRenameTrigger
+		if event.Action == "UPDATE" && !event.Truncated {
 			w.emit(cb, event)
 		}
 	})
@@ -80,6 +124,10 @@ func (w *PgWatcher) emit(cb Callback, event *pgevents.TableEvent) {
 
 func (w *PgWatcher) EmitAdd(device *Device) {
 	// noop because we rely on postgres channels
+}
+
+func (w *PgWatcher) EmitUpdate(device *Device) {
+	// noop because the database trigger tells every replica, including this one
 }
 
 func (w *PgWatcher) EmitDelete(device *Device) {

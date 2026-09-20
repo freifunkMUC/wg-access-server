@@ -125,6 +125,17 @@ func (s *InMemoryStorage) Delete(device *Device) error {
 }
 
 func (s *InMemoryStorage) Rename(device *Device, newName string) (*Device, error) {
+	renamed, err := s.rename(device, newName)
+	if err != nil {
+		return nil, err
+	}
+
+	// outside the lock, like every other event this storage emits
+	s.EmitUpdate(renamed)
+	return renamed, nil
+}
+
+func (s *InMemoryStorage) rename(device *Device, newName string) (*Device, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
