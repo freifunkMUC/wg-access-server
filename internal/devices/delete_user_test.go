@@ -9,18 +9,14 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
 )
 
-// failingStorage refuses to delete one named device and behaves like the
+// failingStorage refuses to delete a user's devices and behaves like the
 // in-memory storage otherwise.
 type failingStorage struct {
 	*storage.InMemoryStorage
-	failFor string
 }
 
-func (f *failingStorage) Delete(device *storage.Device) error {
-	if device.Name == f.failFor {
-		return errors.New("storage is on fire")
-	}
-	return f.InMemoryStorage.Delete(device)
+func (f *failingStorage) DeleteForOwner(owner string) ([]*storage.Device, error) {
+	return nil, errors.New("storage is on fire")
 }
 
 func deviceNames(t *testing.T, s storage.Storage, owner string) []string {
@@ -36,11 +32,11 @@ func deviceNames(t *testing.T, s storage.Storage, owner string) []string {
 	return names
 }
 
-// Deleting a user used to stop at the first device that failed, leaving the
-// rest of a revoked user's devices connected.
-func TestDeleteDevicesForUserKeepsGoingAfterAFailure(t *testing.T) {
+// Revoking a user's access is all or nothing: if the deletion fails, the user
+// must not be left with some of their devices still working.
+func TestDeleteDevicesForUserReportsAFailure(t *testing.T) {
 	inner := storage.NewMemoryStorage()
-	s := &failingStorage{InMemoryStorage: inner, failFor: "phone"}
+	s := &failingStorage{InMemoryStorage: inner}
 	for _, name := range []string{"laptop", "phone", "tablet"} {
 		if err := inner.Save(&storage.Device{
 			Owner: "alice", Name: name, PublicKey: name, Address: "10.44.0.2/32", CreatedAt: time.Now(),
@@ -52,15 +48,14 @@ func TestDeleteDevicesForUserKeepsGoingAfterAFailure(t *testing.T) {
 
 	err := manager.DeleteDevicesForUser("alice")
 	if err == nil {
-		t.Fatal("expected an error naming the device that is left behind")
+		t.Fatal("expected an error")
 	}
-	if !strings.Contains(err.Error(), "phone") {
-		t.Errorf("error %q does not name the device that could not be deleted", err)
+	if !strings.Contains(err.Error(), "alice") {
+		t.Errorf("error %q does not name the user", err)
 	}
 
-	left := deviceNames(t, inner, "alice")
-	if len(left) != 1 || left[0] != "phone" {
-		t.Errorf("devices left in storage: %q, want only [phone]", left)
+	if left := deviceNames(t, inner, "alice"); len(left) != 3 {
+		t.Errorf("devices left in storage: %q, want all three", left)
 	}
 }
 
