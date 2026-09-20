@@ -143,7 +143,7 @@ See the [Releases section](https://github.com/freifunkMUC/wg-access-server/relea
 The per-device metrics carry user controlled label values: the device name as users typed it and the owner's identity from your auth provider. Two things follow from that.
 
 - **They expose who uses the VPN and when.** Enable them only where that is acceptable, and protect `/metrics` with basic auth (or a network policy) — the endpoint is unauthenticated otherwise.
-- **Every device adds four time series.** Nothing limits how many devices a user may create, so `metrics.maxDeviceSeries` caps how many devices get their own labels; it defaults to `1000`. Beyond the cap devices are dropped in a stable order and counted in `wg_access_server_device_metrics_series_dropped`, while the aggregate metrics stay complete. Set it to `0` to export only the aggregates, or to a negative value to remove the cap. Names longer than 128 bytes are truncated, and devices whose labels collide after truncation are dropped rather than failing the scrape.
+- **Every device adds four time series.** Unless `maxDevicesPerUser` is set, nothing limits how many devices a user may create, so `metrics.maxDeviceSeries` caps how many devices get their own labels; it defaults to `1000`. Beyond the cap devices are dropped in a stable order and counted in `wg_access_server_device_metrics_series_dropped`, while the aggregate metrics stay complete. Set it to `0` to export only the aggregates, or to a negative value to remove the cap. Names longer than 128 bytes are truncated, and devices whose labels collide after truncation are dropped rather than failing the scrape.
 
 The software consists of a Golang server and a React app.
 
@@ -157,6 +157,29 @@ Here are some notes on development configuration:
 - sudo is required because the server uses iptables/ip to configure the VPN network
 - access to the website is on `:3000` and API requests are redirected to `:8000` thanks to webpack
 - in-memory storage and generated WireGuard keys are used
+
+### Running the tests:
+
+```sh
+go test ./...
+cd website && npm test
+```
+
+The storage tests for Postgres and MySQL need a real server and skip themselves without one. To run
+them locally, start the databases and point the tests at them - this is what the `test-databases` CI
+job does:
+
+```sh
+docker run -d --name wgas-pg -e POSTGRES_USER=wgtest -e POSTGRES_PASSWORD=wgtest -e POSTGRES_DB=wgtest -p 5432:5432 postgres:17-alpine
+docker run -d --name wgas-mysql -e MYSQL_ROOT_PASSWORD=wgtest -e MYSQL_DATABASE=wgtest -e MYSQL_USER=wgtest -e MYSQL_PASSWORD=wgtest -p 3306:3306 mysql:9
+
+export WG_TEST_POSTGRES_URI="postgresql://wgtest:wgtest@localhost:5432/wgtest?sslmode=disable"
+export WG_TEST_MYSQL_URI="mysql://wgtest:wgtest@localhost:3306/wgtest"
+go test -race ./...
+```
+
+They cover what only a real server shows: the allocation lock that keeps two replicas from handing
+out the same VPN address, and the LISTEN/NOTIFY watcher that tells the replicas about new devices.
 
 ### gRPC code generation:
 

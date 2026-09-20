@@ -57,3 +57,55 @@ jobs:
       - name: Run tests
         run: npm test
         working-directory: website
+
+  test-databases:
+    runs-on: ubuntu-latest
+    name: Go tests against Postgres and MySQL
+    # The HA paths - the shared allocation lock and the LISTEN/NOTIFY watcher -
+    # only run when a real server is configured. Without this job they are
+    # skipped everywhere and only ever tested by hand.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: wgtest
+          POSTGRES_PASSWORD: wgtest
+          POSTGRES_DB: wgtest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wgtest -d wgtest"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      mysql:
+        image: mysql:9
+        env:
+          MYSQL_ROOT_PASSWORD: wgtest
+          MYSQL_DATABASE: wgtest
+          MYSQL_USER: wgtest
+          MYSQL_PASSWORD: wgtest
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pwgtest"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26"
+          cache: true
+
+      # -race because what these tests are about is concurrency: several
+      # goroutines and, for the replica test, several processes at once
+      - name: Run tests
+        run: go test -race ./...
+        env:
+          WG_TEST_POSTGRES_URI: postgresql://wgtest:wgtest@localhost:5432/wgtest?sslmode=disable
+          WG_TEST_MYSQL_URI: mysql://wgtest:wgtest@localhost:3306/wgtest
