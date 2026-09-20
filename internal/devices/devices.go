@@ -24,6 +24,20 @@ type DeviceManager struct {
 	storage storage.Storage
 	cidr    string
 	cidrv6  string
+	// maxDevicesPerUser caps how many devices one user may have. Zero or
+	// less means no limit.
+	maxDevicesPerUser int
+}
+
+// Option configures a DeviceManager.
+type Option func(*DeviceManager)
+
+// WithMaxDevicesPerUser limits how many devices a single user may create.
+// Zero or less leaves the number unlimited.
+func WithMaxDevicesPerUser(max int) Option {
+	return func(d *DeviceManager) {
+		d.maxDevicesPerUser = max
+	}
 }
 
 type User struct {
@@ -61,8 +75,12 @@ func validateDeviceName(name string) error {
 	return nil
 }
 
-func New(wg wgembed.WireGuardInterface, s storage.Storage, cidr, cidrv6 string) *DeviceManager {
-	return &DeviceManager{wg, s, cidr, cidrv6}
+func New(wg wgembed.WireGuardInterface, s storage.Storage, cidr, cidrv6 string, opts ...Option) *DeviceManager {
+	d := &DeviceManager{wg: wg, storage: s, cidr: cidr, cidrv6: cidrv6}
+	for _, opt := range opts {
+		opt(d)
+	}
+	return d
 }
 
 // StartSync keeps the WireGuard peers in sync with storage and starts the
@@ -193,6 +211,12 @@ func (d *DeviceManager) addDeviceLocked(identity *authsession.Identity, name str
 
 	if nameTaken {
 		return nil, errors.New("Device name already taken.")
+	}
+
+	// Checked under the allocation lock together with the name, so two
+	// requests at the same time cannot both slip past the limit.
+	if d.maxDevicesPerUser > 0 && len(devices) >= d.maxDevicesPerUser {
+		return nil, errors.Errorf("You already have %d devices, which is the maximum allowed. Delete one to add another.", d.maxDevicesPerUser)
 	}
 
 	clientAddr := ""
