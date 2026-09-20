@@ -87,6 +87,36 @@ func (d *DeviceService) DeleteDevice(ctx context.Context, req *proto.DeleteDevic
 	return &emptypb.Empty{}, nil
 }
 
+func (d *DeviceService) RenameDevice(ctx context.Context, req *proto.RenameDeviceReq) (*proto.Device, error) {
+	user, err := authsession.CurrentUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.PermissionDenied, "Not authenticated")
+	}
+
+	deviceOwner := user.Subject
+
+	if req.Owner != nil {
+		if !user.Claims.IsAdmin() {
+			return nil, status.Errorf(codes.PermissionDenied, "must be an admin")
+		}
+		deviceOwner = req.Owner.Value
+	}
+
+	device, err := d.DeviceManager.RenameDevice(deviceOwner, req.GetName(), req.GetNewName())
+	if err != nil {
+		ctxlogrus.Extract(ctx).Error(err)
+		return nil, status.Errorf(codes.Internal, "%v", err)
+	}
+
+	audit.Log(ctx, audit.DeviceRename, logrus.Fields{
+		"device":   req.GetNewName(),
+		"previous": req.GetName(),
+		"owner":    deviceOwner,
+	})
+
+	return mapDevice(device), nil
+}
+
 func (d *DeviceService) ListAllDevices(ctx context.Context, req *proto.ListAllDevicesReq) (*proto.ListAllDevicesRes, error) {
 	user, err := authsession.CurrentUser(ctx)
 	if err != nil {

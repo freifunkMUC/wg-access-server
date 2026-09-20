@@ -28,6 +28,16 @@ type Storage interface {
 	// database and holds across every server replica sharing it; the other
 	// backends are single-instance and lock within the process.
 	WithAllocationLock(fn func() error) error
+	// Rename changes the name of a device and returns it with the new name.
+	// Neither the public key nor the address changes, so the WireGuard peer
+	// is untouched and the tunnel keeps running.
+	//
+	// The SQL backends do not emit an event for a rename: their watchers are
+	// driven by inserts and deletes (see PgWatcher and GormWatcher). Nothing
+	// in the server keeps device names in memory except the optional
+	// authoritative DNS zone, which picks the new name up the next time a
+	// device is added or removed.
+	Rename(device *Device, newName string) (*Device, error)
 	List(owner string) ([]*Device, error)
 	Get(owner string, name string) (*Device, error)
 	GetByPublicKey(publicKey string) (*Device, error)

@@ -112,6 +112,22 @@ func (s *InMemoryStorage) Delete(device *Device) error {
 	return nil
 }
 
+func (s *InMemoryStorage) Rename(device *Device, newName string) (*Device, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	stored, ok := s.db[key(device)]
+	if !ok {
+		return nil, errors.New("device doesn't exist")
+	}
+
+	renamed := *stored
+	renamed.Name = newName
+	delete(s.db, key(stored))
+	s.db[key(&renamed)] = &renamed
+	return &renamed, nil
+}
+
 func (s *InMemoryStorage) Ping() error {
 	return nil
 }

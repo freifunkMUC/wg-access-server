@@ -6,6 +6,7 @@ import Avatar from '@mui/material/Avatar';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import numeral from 'numeral';
 import { lastSeen } from '../Util';
 import { AppState } from '../AppState';
@@ -13,12 +14,15 @@ import { PopoverDisplay } from './PopoverDisplay';
 import { Device } from '../sdk/devices_pb';
 import { grpc } from '../Api';
 import { observer } from 'mobx-react';
-import { confirm } from './Present';
+import { confirm, prompt } from './Present';
+import { toast } from './Toast';
+import { errorMessage } from '../Util';
 import { IconButton, Typography } from '@mui/material';
 
 interface Props {
   device: Device.AsObject;
-  onRemove: () => void;
+  // called whenever the device changed, so the list can reload
+  onChange: () => void;
 }
 
 export const DeviceListItem = observer(
@@ -29,10 +33,28 @@ export const DeviceListItem = observer(
           await grpc.devices.deleteDevice({
             name: this.props.device.name,
           });
-          this.props.onRemove();
+          this.props.onChange();
         } catch {
           window.alert('api request failed');
         }
+      }
+    };
+
+    renameDevice = async () => {
+      const device = this.props.device;
+      const newName = await prompt('Rename "' + device.name + '" to:', device.name);
+      if (newName === null || newName === device.name) {
+        return;
+      }
+
+      try {
+        // The key and the address stay as they are, so the client
+        // configuration the user already has keeps working.
+        await grpc.devices.renameDevice({ name: device.name, newName });
+        toast({ text: 'Device renamed to "' + newName + '"', intent: 'success' });
+        this.props.onChange();
+      } catch (error) {
+        toast({ text: 'Failed to rename device: ' + errorMessage(error), intent: 'error' });
       }
     };
 
@@ -50,9 +72,14 @@ export const DeviceListItem = observer(
               </Avatar>
             }
             action={
-              <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={this.removeDevice} title="Delete Device">
-                <DeleteIcon />
-              </IconButton>
+              <>
+                <IconButton onClick={this.renameDevice} title="Rename Device">
+                  <EditIcon />
+                </IconButton>
+                <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={this.removeDevice} title="Delete Device">
+                  <DeleteIcon />
+                </IconButton>
+              </>
             }
           />
           <CardContent>

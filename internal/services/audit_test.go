@@ -152,3 +152,69 @@ func TestDeleteForeignDeviceIsRefusedAndNotAudited(t *testing.T) {
 		t.Error("the device was deleted although the request was refused")
 	}
 }
+
+// Renaming somebody else's device is an admin action and must be recorded
+// with both names.
+func TestRenameDeviceByAdminIsAudited(t *testing.T) {
+	hook := logrustest.NewGlobal()
+	defer hook.Reset()
+
+	service, s := deviceServiceWith(t, &storage.Device{
+		Owner: "alice", Name: "laptop", PublicKey: "key", Address: "10.44.0.2/32", CreatedAt: time.Now(),
+	})
+
+	device, err := service.RenameDevice(userContext("admin", true), &proto.RenameDeviceReq{
+		Name:    "laptop",
+		NewName: "alice laptop",
+		Owner:   wrapperspb.String("alice"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if device.Name != "alice laptop" {
+		t.Errorf("name = %q, want %q", device.Name, "alice laptop")
+	}
+	if _, err := s.Get("alice", "alice laptop"); err != nil {
+		t.Errorf("the device was not stored under its new name: %v", err)
+	}
+
+	entries := auditEntries(hook, audit.DeviceRename)
+	if len(entries) != 1 {
+		t.Fatalf("got %d audit records, want 1", len(entries))
+	}
+	for field, want := range map[string]interface{}{
+		"actor":    "admin",
+		"owner":    "alice",
+		"device":   "alice laptop",
+		"previous": "laptop",
+	} {
+		if entries[0].Data[field] != want {
+			t.Errorf("audit field %q = %v, want %v", field, entries[0].Data[field], want)
+		}
+	}
+}
+
+// A user may rename their own devices, but not somebody else's.
+func TestRenameForeignDeviceIsRefused(t *testing.T) {
+	hook := logrustest.NewGlobal()
+	defer hook.Reset()
+
+	service, s := deviceServiceWith(t, &storage.Device{
+		Owner: "alice", Name: "laptop", PublicKey: "key", Address: "10.44.0.2/32", CreatedAt: time.Now(),
+	})
+
+	_, err := service.RenameDevice(userContext("mallory", false), &proto.RenameDeviceReq{
+		Name:    "laptop",
+		NewName: "mine now",
+		Owner:   wrapperspb.String("alice"),
+	})
+	if err == nil {
+		t.Fatal("a non-admin renamed somebody else's device")
+	}
+	if entries := auditEntries(hook, audit.DeviceRename); len(entries) != 0 {
+		t.Errorf("got %d audit records for a refused rename, want none", len(entries))
+	}
+	if _, err := s.Get("alice", "laptop"); err != nil {
+		t.Error("the device was renamed although the request was refused")
+	}
+}
