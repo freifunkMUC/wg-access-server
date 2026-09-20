@@ -28,6 +28,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/dnsproxy"
+	"github.com/freifunkMUC/wg-access-server/internal/hooks"
 	"github.com/freifunkMUC/wg-access-server/internal/network"
 	"github.com/freifunkMUC/wg-access-server/internal/resolvconf"
 	"github.com/freifunkMUC/wg-access-server/internal/services"
@@ -143,6 +144,23 @@ func (cmd *servecmd) Run() {
 		vpnips = append(vpnips, vpnipv6.Addr())
 	}
 
+	// Commands an operator configured around the interface lifecycle. They
+	// run as this process does - root in most deployments - so the config
+	// file they come from has to be trustworthy.
+	lifecycleCommands := [][]string{
+		conf.WireGuard.PreUp, conf.WireGuard.PostUp,
+		conf.WireGuard.PreDown, conf.WireGuard.PostDown,
+	}
+	hasLifecycleCommands := false
+	for _, commands := range lifecycleCommands {
+		hasLifecycleCommands = hasLifecycleCommands || len(commands) > 0
+	}
+	if hasLifecycleCommands {
+		if err := hooks.VerifyConfigFile(cmd.ConfigFilePath); err != nil {
+			logrus.Fatal(errors.Wrap(err, "refusing to run the configured lifecycle commands"))
+		}
+	}
+
 	// WireGuard Server
 	wg := wgembed.NewNoOpInterface()
 	if conf.WireGuard.Enabled {
@@ -150,11 +168,27 @@ func (cmd *servecmd) Run() {
 			InterfaceName:     conf.WireGuard.Interface,
 			AllowKernelModule: true,
 		}
+		if err := hooks.Run(hooks.PreUp, conf.WireGuard.Interface, conf.WireGuard.PreUp); err != nil {
+			logrus.Fatal(err)
+		}
+
 		wgimpl, err := wgembed.NewWithOpts(wgOpts)
 		if err != nil {
 			logrus.Fatal(errors.Wrap(err, "failed to create WireGuard interface"))
 		}
+		// Deferred in this order so they unwind the other way round: PreDown
+		// runs while the interface is still there, PostDown once it is gone.
+		defer func() {
+			if err := hooks.Run(hooks.PostDown, conf.WireGuard.Interface, conf.WireGuard.PostDown); err != nil {
+				logrus.Error(err)
+			}
+		}()
 		defer wgimpl.Close()
+		defer func() {
+			if err := hooks.Run(hooks.PreDown, conf.WireGuard.Interface, conf.WireGuard.PreDown); err != nil {
+				logrus.Error(err)
+			}
+		}()
 		wg = wgimpl
 
 		logrus.Infof("Starting WireGuard on :%d", conf.WireGuard.Port)
@@ -189,6 +223,10 @@ func (cmd *servecmd) Run() {
 		if err := network.ConfigureForwarding(options); err != nil {
 			logrus.Error(err)
 			return
+		}
+
+		if err := hooks.Run(hooks.PostUp, conf.WireGuard.Interface, conf.WireGuard.PostUp); err != nil {
+			logrus.Fatal(err)
 		}
 	}
 

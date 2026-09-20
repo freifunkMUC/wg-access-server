@@ -55,6 +55,10 @@ Here's what you can configure:
 | `WG_WIREGUARD_PRIVATE_KEY_FILE`      | `--wireguard-private-key-file`      |                                |          |                                              | Read the wireguard private key from a file, e.g. a Docker secret. Trailing line breaks are removed. Exclusive with `WG_WIREGUARD_PRIVATE_KEY` / `wireguard.privateKey`. An empty file is an error rather than a reason to generate a new key.                                 |
 | `WG_WIREGUARD_PORT`                  | `--wireguard-port`                  | `wireguard.port`               |          | `51820`                                      | The wireguard server port (udp)                                                                                                                                                                                                                                               |
 | `WG_WIREGUARD_MTU`                   | `--wireguard-mtu`                   | `wireguard.mtu`                |          | `1420`                                       | The maximum transmission unit (MTU) to be used on the server-side interface.                                                                                                                                                                                                  |
+|                                      |                                     | `wireguard.preUp`              |          |                                              | Shell commands run before the WireGuard interface is created. See [Lifecycle commands](#lifecycle-commands). Config file only.                                                                                                                                                |
+|                                      |                                     | `wireguard.postUp`             |          |                                              | Shell commands run after the interface is up and the firewall rules are in place. Config file only.                                                                                                                                                                          |
+|                                      |                                     | `wireguard.preDown`            |          |                                              | Shell commands run on shutdown while the interface still exists. Config file only.                                                                                                                                                                                           |
+|                                      |                                     | `wireguard.postDown`           |          |                                              | Shell commands run on shutdown after the interface is gone. Config file only.                                                                                                                                                                                                |
 | `WG_VPN_CIDR`                        | `--vpn-cidr`                        | `vpn.cidr`                     |          | `10.44.0.0/24`                               | The VPN IPv4 network range. VPN clients will be assigned IP addresses in this range. Set to `0` to disable IPv4.                                                                                                                                                              |
 | `WG_IPV4_NAT_ENABLED`                | `--vpn-nat44-enabled`               | `vpn.nat44`                    |          | `true`                                       | Disables NAT for IPv4                                                                                                                                                                                                                                                         |
 | `WG_IPV6_NAT_ENABLED`                | `--vpn-nat66-enabled`               | `vpn.nat66`                    |          | `true`                                       | Disables NAT for IPv6                                                                                                                                                                                                                                                         |
@@ -76,6 +80,33 @@ Here's what you can configure:
 | `WG_HTTPS_KEY_FILE`                  | `--https-key-file`                  | `https.keyFile`                |          | `/data/wg-access-server.key`                 | Path to the TLS private key file. If the file does not exist, it is generated together with the self-signed certificate.                                                                                                                                                                               |
 | `WG_HTTPS_PORT`                      | `--https-port`                      | `https.port`                   |          | 8443                                         | Port for HTTPS server.                                                                                                                                                                                                                                                        |
 | `WG_HTTPS_HOST`                      | `--https-host`                      | `https.host`                   |          | ``  (listen all hosts)                       | Hostname or IP address to bind the HTTPS server to. If left empty, the HTTPS server will listen on all IP addresses on all available network interfaces.                                                                                                                      |
+
+## Lifecycle commands
+
+`wireguard.preUp`, `postUp`, `preDown` and `postDown` run shell commands around the lifecycle of the
+WireGuard interface, like the options of the same name in a `wg-quick` configuration. The typical use
+is a route that wg-access-server does not set up itself:
+
+```yaml
+wireguard:
+  postUp:
+    - "ip route add 192.168.178.0/24 dev %i"
+  preDown:
+    - "ip route del 192.168.178.0/24 dev %i"
+```
+
+- `%i` is replaced with the interface name, which is also passed to the command as `$WG_INTERFACE`.
+- The commands of a phase run in order, through `sh -c`. A failing `preUp` or `postUp` command stops
+  the server: a network that is only half set up is not what you asked for. A failing `preDown` or
+  `postDown` command is logged, the shutdown continues.
+- `preUp` runs before the interface is created, `postUp` after the firewall rules are in place,
+  `preDown` while the interface still exists and `postDown` once it is gone.
+- Nothing runs when the embedded WireGuard server is disabled - there is no interface then.
+
+These commands run as the user the server runs as, which is root in most deployments. They can
+therefore **only be set in the config file**, never through a flag or an environment variable, and
+wg-access-server refuses to run them - and refuses to start - unless the config file is writable by
+its owner alone and owned either by root or by the user running the server.
 
 ## The Config File (config.yaml)
 
