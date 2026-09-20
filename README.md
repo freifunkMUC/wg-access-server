@@ -181,6 +181,17 @@ go test -race ./...
 They cover what only a real server shows: the allocation lock that keeps two replicas from handing
 out the same VPN address, and the LISTEN/NOTIFY watcher that tells the replicas about new devices.
 
+### The API:
+
+The web UI talks to the server over [gRPC-Web](https://github.com/grpc/grpc-web). Two
+implementations of the same three services currently run side by side:
+
+- `/api` is served by `improbable-eng/grpc-web`, which wraps a gRPC server. That project is
+  archived.
+- `/connect` is served by [connectrpc](https://connectrpc.com), which speaks the gRPC-Web
+  protocol itself and needs no wrapper. It is meant to replace the above; the client in the
+  web UI works against either without changes.
+
 ### gRPC code generation:
 
 The client communicates with the server via gRPC web. You can edit the API specification in `./proto/*.proto`.
