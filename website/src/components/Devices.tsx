@@ -95,7 +95,7 @@ export const Devices = observer(
             <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' } }}>
               {devices.current.map((device: Device.AsObject, i: React.Key) => (
                 <Box key={i}>
-                  <DeviceListItem device={device} onRemove={() => devices.refresh()} />
+                  <DeviceListItem device={device} onChange={() => devices.refresh()} />
                 </Box>
               ))}
             </Box>

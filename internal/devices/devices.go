@@ -352,6 +352,47 @@ func (d *DeviceManager) ListDevices(user string) ([]*storage.Device, error) {
 	return d.storage.List(user)
 }
 
+// RenameDevice gives a device a new name. The public key and the address stay
+// as they are, so the client keeps working and its configuration file stays
+// valid - only the label in the web UI changes.
+func (d *DeviceManager) RenameDevice(user string, name string, newName string) (*storage.Device, error) {
+	if err := validateDeviceName(newName); err != nil {
+		return nil, err
+	}
+
+	if name == newName {
+		return d.storage.Get(user, name)
+	}
+
+	// The same lock as device creation, so a rename cannot take a name that a
+	// concurrent request is about to use, and vice versa.
+	var renamed *storage.Device
+	err := d.storage.WithAllocationLock(func() error {
+		device, err := d.storage.Get(user, name)
+		if err != nil {
+			return errors.Wrap(err, "failed to retrieve device")
+		}
+
+		devices, err := d.ListDevices(user)
+		if err != nil {
+			return errors.Wrap(err, "failed to list devices")
+		}
+		for _, existing := range devices {
+			if existing.Name == newName {
+				return errors.New("Device name already taken.")
+			}
+		}
+
+		renamed, err = d.storage.Rename(device, newName)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return renamed, nil
+}
+
 func (d *DeviceManager) DeleteDevice(user string, name string) error {
 	device, err := d.storage.Get(user, name)
 	if err != nil {

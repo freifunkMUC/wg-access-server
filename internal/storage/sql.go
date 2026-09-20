@@ -218,6 +218,26 @@ func (s *SQLStorage) RecordMetadata(updates []MetadataUpdate) error {
 	return nil
 }
 
+func (s *SQLStorage) Rename(device *Device, newName string) (*Device, error) {
+	logrus.Debugf("renaming device %s to %s", key(device), newName)
+
+	// Owner and name together are the primary key, so both identify the row.
+	// An UpdateColumn (no hooks) keeps this out of the gorm watcher, which
+	// expects the value of a create or delete and cannot map a bulk update
+	// back to a device.
+	q := s.db.Model(&Device{}).Where("owner = ? AND name = ?", device.Owner, device.Name).UpdateColumn("name", newName)
+	if q.Error != nil {
+		return nil, errors.Wrap(q.Error, "failed to rename device")
+	}
+	if q.RowsAffected == 0 {
+		return nil, errors.Errorf("device '%s' of user '%s' no longer exists", device.Name, device.Owner)
+	}
+
+	renamed := *device
+	renamed.Name = newName
+	return &renamed, nil
+}
+
 func (s *SQLStorage) List(username string) ([]*Device, error) {
 	var err error
 	devices := []*Device{}

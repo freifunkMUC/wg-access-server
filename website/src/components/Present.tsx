@@ -4,6 +4,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import TextField from '@mui/material/TextField';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { AppState } from '../AppState';
 import React from 'react';
@@ -48,4 +49,54 @@ export function confirm(msg: string): Promise<boolean> {
       </Dialog>
     </ThemeProvider>
   ));
+}
+
+/**
+ * Asks the user for a single line of text. Resolves with null when the dialog
+ * is cancelled or nothing was entered.
+ */
+export function prompt(msg: string, initialValue = ''): Promise<string | null> {
+  const darkLightTheme = createTheme({
+    palette: {
+      mode: AppState.darkMode ? 'dark' : 'light',
+    },
+  });
+
+  return present<string | null>((close) => {
+    let value = initialValue;
+    const submit = () => close(value.trim() === '' ? null : value.trim());
+
+    return (
+      <ThemeProvider theme={darkLightTheme}>
+        <Dialog open={true} onClose={() => close(null)} fullWidth maxWidth="xs">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              submit();
+            }}
+          >
+            <DialogTitle>{msg}</DialogTitle>
+            <DialogContent>
+              <TextField
+                autoFocus
+                fullWidth
+                variant="standard"
+                defaultValue={initialValue}
+                onChange={(event) => (value = event.currentTarget.value)}
+                slotProps={{ htmlInput: { 'aria-label': msg } }}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => close(null)} variant="contained" color="primary">
+                Cancel
+              </Button>
+              <Button type="submit" variant="outlined" color="secondary">
+                Ok
+              </Button>
+            </DialogActions>
+          </form>
+        </Dialog>
+      </ThemeProvider>
+    );
+  });
 }

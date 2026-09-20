@@ -23,6 +23,7 @@ const remoteAddrKey contextKey = "audit.remote-addr"
 const (
 	DeviceCreate = "device.create"
 	DeviceDelete = "device.delete"
+	DeviceRename = "device.rename"
 	UserDelete   = "user.delete"
 )
 

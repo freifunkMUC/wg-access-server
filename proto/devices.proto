@@ -12,6 +12,7 @@ service Devices {
   rpc AddDevice(AddDeviceReq) returns (Device) {}
   rpc ListDevices(ListDevicesReq) returns (ListDevicesRes) {}
   rpc DeleteDevice(DeleteDeviceReq) returns (google.protobuf.Empty) {}
+  rpc RenameDevice(RenameDeviceReq) returns (Device) {}
 
   // admin only
   rpc ListAllDevices(ListAllDevicesReq) returns (ListAllDevicesRes) {}
@@ -41,6 +42,13 @@ message AddDeviceReq {
   bool manual_ip_assignment = 4;
   string manual_ipv4_address = 5;
   string manual_ipv6_address = 6;
+}
+
+message RenameDeviceReq {
+  string name = 1;
+  string new_name = 2;
+  // admin only: rename a device of another user
+  google.protobuf.StringValue owner = 3;
 }
 
 message ListDevicesReq {
