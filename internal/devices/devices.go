@@ -49,7 +49,9 @@ func validateDeviceName(name string) error {
 	}
 	// The column counts characters, not bytes, so an umlaut must not count twice.
 	if utf8.RuneCountInString(name) > maxDeviceNameLength {
-		return fmt.Errorf("Device name must be at most %d characters long.", maxDeviceNameLength)
+		// errors.Errorf, not fmt.Errorf, to match the sentence style of the
+		// other validation messages: they are shown to the user in the web UI.
+		return errors.Errorf("Device name must be at most %d characters long.", maxDeviceNameLength)
 	}
 	for _, r := range name {
 		if unicode.IsControl(r) {
