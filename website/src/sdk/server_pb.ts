@@ -19,7 +19,7 @@ import * as buildinfo from './buildinfo_pb';
 export class Server {
 
 	private client_ = new grpcWeb.GrpcWebClientBase({
-		format: 'text',
+		format: 'binary',
 	});
 
 	private methodInfoInfo = new grpcWeb.MethodDescriptor<InfoReq, InfoRes>(

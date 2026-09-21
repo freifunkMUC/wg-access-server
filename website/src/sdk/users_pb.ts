@@ -17,7 +17,7 @@ import * as googleProtobufEmpty from 'google-protobuf/google/protobuf/empty_pb';
 export class Users {
 
 	private client_ = new grpcWeb.GrpcWebClientBase({
-		format: 'text',
+		format: 'binary',
 	});
 
 	private methodInfoListUsers = new grpcWeb.MethodDescriptor<ListUsersReq, ListUsersRes>(

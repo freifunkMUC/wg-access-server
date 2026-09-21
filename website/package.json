@@ -2,7 +2,7 @@
   "name": "wg-access-server-website",
   "type": "module",
   "scripts": {
-    "codegen": "npx grpc-ts-web -o src/sdk ../proto/*.proto",
+    "codegen": "npx grpc-ts-web --format binary -o src/sdk ../proto/*.proto",
     "dev": "vite dev --port 3000",
     "start": "npm run dev",
     "build": "npx tsc && vite build",
@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@freifunkmuc/grpc-ts-web": "^0.3.1",
+    "@freifunkmuc/grpc-ts-web": "^0.4.0",
     "@testing-library/react": "^16.3.3",
     "@types/common-tags": "^1.8.4",
     "@types/google-protobuf": "^3.15.12",
