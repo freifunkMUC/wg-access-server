@@ -199,6 +199,7 @@ The client communicates with the server via gRPC web. You can edit the API speci
 After changing a service or message definition, you must regenerate the server and client code:
 
 ```sh
+go install tool   # the code generators, pinned in go.mod
 ./codegen.sh
 cd website && npm run codegen
 ```

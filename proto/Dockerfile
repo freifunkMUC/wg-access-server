@@ -11,9 +11,9 @@ CMD ["npm", "run", "codegen"]
 FROM golang:1.27.1-alpine AS proto-go
 RUN apk add --no-cache protobuf protobuf-dev
 WORKDIR /code
-RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6
-RUN go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.21.0
+
+COPY ./go.mod ./go.sum ./
+RUN go install tool
 # Mount ./proto to /code/proto
 COPY ./codegen.sh ./
 CMD ["./codegen.sh"]
