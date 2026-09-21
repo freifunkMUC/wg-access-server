@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"connectrpc.com/connect"
+	"github.com/sirupsen/logrus"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
@@ -21,45 +22,59 @@ func TestValidationErrorsReachTheClient(t *testing.T) {
 		Address: "10.44.0.2/32", CreatedAt: time.Now(),
 	})
 
-	_, err := service.AddDevice(userContext("alice", false), &proto.AddDeviceReq{
+	_, err := service.AddDevice(userContext("alice", false), connect.NewRequest(&proto.AddDeviceReq{
 		Name:      "laptop",
 		PublicKey: "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBA=",
-	})
+	}))
 	if err == nil {
 		t.Fatal("adding a device with a name that is taken succeeded")
 	}
 
-	st, _ := status.FromError(err)
-	if st.Code() != codes.InvalidArgument {
-		t.Errorf("code = %s, want %s", st.Code(), codes.InvalidArgument)
+	if code := connect.CodeOf(err); code != connect.CodeInvalidArgument {
+		t.Errorf("code = %s, want %s", code, connect.CodeInvalidArgument)
 	}
-	if !strings.Contains(st.Message(), "already taken") {
-		t.Errorf("message %q does not say what is wrong", st.Message())
+	if !strings.Contains(err.Error(), "already taken") {
+		t.Errorf("message %q does not say what is wrong", err.Error())
 	}
 }
 
 // A storage failure must not hand the client its details - the client gets a
 // trace id to quote, the detail stays in the log.
 func TestStorageErrorsStayInternal(t *testing.T) {
+	hook := logrustest.NewGlobal()
+	defer hook.Reset()
+
 	manager := devices.New(noopWireGuardInterface{}, failingStorage{Storage: storage.NewMemoryStorage()}, "10.44.0.0/24", "")
 	service := &DeviceService{DeviceManager: manager}
 
-	_, err := service.AddDevice(userContext("alice", false), &proto.AddDeviceReq{
+	_, err := service.AddDevice(userContext("alice", false), connect.NewRequest(&proto.AddDeviceReq{
 		Name:      "laptop",
 		PublicKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-	})
+	}))
 	if err == nil {
 		t.Fatal("adding a device succeeded although the storage failed")
 	}
 
-	st, _ := status.FromError(err)
-	if st.Code() != codes.Internal {
-		t.Errorf("code = %s, want %s", st.Code(), codes.Internal)
+	if code := connect.CodeOf(err); code != connect.CodeInternal {
+		t.Errorf("code = %s, want %s", code, connect.CodeInternal)
 	}
-	if strings.Contains(st.Message(), "storage unavailable") {
-		t.Errorf("message %q leaks the storage error", st.Message())
+	if strings.Contains(err.Error(), "storage unavailable") {
+		t.Errorf("message %q leaks the storage error", err.Error())
 	}
-	if !strings.Contains(st.Message(), "trace = ") {
-		t.Errorf("message %q carries no trace id", st.Message())
+	if !strings.Contains(err.Error(), "trace = ") {
+		t.Errorf("message %q carries no trace id", err.Error())
+	}
+
+	logged := false
+	for _, entry := range hook.AllEntries() {
+		if cause, ok := entry.Data[logrus.ErrorKey].(error); ok && strings.Contains(cause.Error(), "storage unavailable") {
+			logged = true
+		}
+		if strings.Contains(entry.Message, "storage unavailable") {
+			logged = true
+		}
+	}
+	if !logged {
+		t.Error("the storage error the client does not get is not in the log either")
 	}
 }

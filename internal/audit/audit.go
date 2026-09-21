@@ -31,7 +31,7 @@ const (
 // asked for - the automatic deletion of inactive devices, for instance.
 const SystemActor = "system"
 
-// WithRemoteAddr remembers the address a request came from. The gRPC handlers
+// WithRemoteAddr remembers the address a request came from. The API handlers
 // are served through the HTTP router, so they see the context of the HTTP
 // request and can record the address along with the action.
 func WithRemoteAddr(ctx context.Context, remoteAddr string) context.Context {

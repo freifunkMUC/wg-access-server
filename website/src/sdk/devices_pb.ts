@@ -19,7 +19,7 @@ import * as googleProtobufEmpty from 'google-protobuf/google/protobuf/empty_pb';
 export class Devices {
 
 	private client_ = new grpcWeb.GrpcWebClientBase({
-		format: 'text',
+		format: 'binary',
 	});
 
 	private methodInfoAddDevice = new grpcWeb.MethodDescriptor<AddDeviceReq, Device>(

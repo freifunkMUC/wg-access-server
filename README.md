@@ -183,14 +183,15 @@ out the same VPN address, and the LISTEN/NOTIFY watcher that tells the replicas 
 
 ### The API:
 
-The web UI talks to the server over [gRPC-Web](https://github.com/grpc/grpc-web). Two
-implementations of the same three services currently run side by side:
+The web UI talks to the server over [gRPC-Web](https://github.com/grpc/grpc-web). The API is
+served under `/api` by [connectrpc](https://connectrpc.com), which speaks gRPC-Web itself, as well
+as its own [Connect protocol](https://connectrpc.com/docs/protocol). The latter is plain HTTP and
+JSON, so with a session - here from the admin password - a request can be sent with curl:
 
-- `/api` is served by `improbable-eng/grpc-web`, which wraps a gRPC server. That project is
-  archived.
-- `/connect` is served by [connectrpc](https://connectrpc.com), which speaks the gRPC-Web
-  protocol itself and needs no wrapper. It is meant to replace the above; the client in the
-  web UI works against either without changes.
+```sh
+curl -c cookies -d username=admin -d password=<password> https://localhost:8443/signin/simpleauth
+curl -b cookies -H 'Content-Type: application/json' -d '{}' https://localhost:8443/api/proto.Server/Info
+```
 
 ### gRPC code generation:
 
