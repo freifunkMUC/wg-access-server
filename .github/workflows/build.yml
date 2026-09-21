@@ -14,6 +14,27 @@ env:
 permissions:
   contents: read
 jobs:
+  cross-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Cross-compile for every published platform
+        run: |
+          for target in amd64: arm64: arm:7 ppc64le: s390x:; do
+            arch=${target%%:*}
+            arm=${target##*:}
+            echo "linux/$arch${arm:+/v$arm}"
+            GOOS=linux GOARCH=$arch GOARM=$arm CGO_ENABLED=0 go build -o /dev/null .
+          done
+
   build:
     runs-on: ubuntu-latest
     steps:

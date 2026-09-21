@@ -3,6 +3,7 @@ module github.com/freifunkMUC/wg-access-server
 go 1.26.0
 
 require (
+	connectrpc.com/connect v1.21.0
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-oidc/v3 v3.21.0
@@ -35,7 +36,6 @@ require (
 )
 
 require (
-	connectrpc.com/connect v1.19.0 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/GehirnInc/crypt v0.0.0-20230320061759-8cc1b52080c5 // indirect
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b // indirect

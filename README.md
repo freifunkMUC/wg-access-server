@@ -208,6 +208,6 @@ Or use the Dockerfile at `proto/Dockerfile`:
 ```sh
 docker build -f proto/Dockerfile --target proto-js -t wg-access-server-proto:js .
 docker build -f proto/Dockerfile --target proto-go -t wg-access-server-proto:go .
-docker run --rm -v `pwd`/proto:/proto -v `pwd`/website/src/sdk:/code/src/sdk wg-access-server-proto:js
-docker run --rm -v `pwd`/proto:/code/proto wg-access-server-proto:go
+docker run --rm --user "$(id -u):$(id -g)" -v `pwd`/proto:/proto -v `pwd`/website/src/sdk:/code/src/sdk wg-access-server-proto:js
+docker run --rm --user "$(id -u):$(id -g)" -v `pwd`/proto:/code/proto wg-access-server-proto:go
 ```
