@@ -4,10 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"connectrpc.com/connect"
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/freifunkMUC/wg-access-server/buildinfo"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
@@ -17,15 +15,14 @@ import (
 )
 
 type ServerService struct {
-	proto.UnimplementedServerServer
 	Config *config.AppConfig
 	Wg     wgembed.WireGuardInterface
 }
 
-func (s *ServerService) Info(ctx context.Context, req *proto.InfoReq) (*proto.InfoRes, error) {
+func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoReq]) (*connect.Response[proto.InfoRes], error) {
 	user, err := authsession.CurrentUser(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.PermissionDenied, "not authenticated")
+		return nil, errNotAuthenticated()
 	}
 
 	host := s.Config.ExternalHost
@@ -40,13 +37,12 @@ func (s *ServerService) Info(ctx context.Context, req *proto.InfoReq) (*proto.In
 
 	publicKey, err := s.Wg.PublicKey()
 	if err != nil {
-		ctxlogrus.Extract(ctx).Error(err)
-		return nil, status.Errorf(codes.Internal, "failed to get public key")
+		return nil, internalError(ctx, err, "failed to get public key")
 	}
 
 	vpnip, vpnipv6, err := network.ServerVPNIPs(s.Config.VPN.CIDR, s.Config.VPN.CIDRv6)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get server IPs")
+		return nil, internalError(ctx, err, "failed to get server IPs")
 	}
 	dnsAddress := network.StringJoinIPs(vpnip, vpnipv6)
 
@@ -57,7 +53,7 @@ func (s *ServerService) Info(ctx context.Context, req *proto.InfoReq) (*proto.In
 		hostVPNIP = ""
 	}
 
-	return &proto.InfoRes{
+	return connect.NewResponse(&proto.InfoRes{
 		Host:      stringValue(&host),
 		PublicKey: publicKey,
 		Port:      int32(s.Config.WireGuard.Port),
@@ -77,7 +73,7 @@ func (s *ServerService) Info(ctx context.Context, req *proto.InfoReq) (*proto.In
 		ClientConfigPersistentKeepalive: int32(s.Config.ClientConfig.PersistentKeepalive),
 		BuildInfo:                       &proto.BuildInfo{Version: buildinfo.Version(), Commit: buildinfo.ShortCommitHash()},
 		Mtu:                             int32(s.Config.WireGuard.MTU),
-	}, nil
+	}), nil
 }
 
 func allowedIPs(config *config.AppConfig) string {

@@ -62,7 +62,7 @@ func TestConnectAgainstARunningServer(t *testing.T) {
 		t.Fatal("no session cookie after the login")
 	}
 
-	devices := protoconnect.NewDevicesClient(client, base+"/connect", connect.WithGRPCWeb())
+	devices := protoconnect.NewDevicesClient(client, base+"/api", connect.WithGRPCWeb())
 
 	added, err := devices.AddDevice(context.Background(), connect.NewRequest(&proto.AddDeviceReq{
 		Name:      "laptop",
@@ -83,7 +83,7 @@ func TestConnectAgainstARunningServer(t *testing.T) {
 	t.Logf("listed %d device(s): %s", len(listed.Msg.Items), listed.Msg.Items[0].Name)
 
 	// and the old API still answers on /api
-	server := protoconnect.NewServerClient(client, base+"/connect", connect.WithGRPCWeb())
+	server := protoconnect.NewServerClient(client, base+"/api", connect.WithGRPCWeb())
 	info, err := server.Info(context.Background(), connect.NewRequest(&proto.InfoReq{}))
 	if err != nil {
 		t.Fatal(err)

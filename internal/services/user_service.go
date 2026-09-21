@@ -3,10 +3,8 @@ package services
 import (
 	"context"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
+	"connectrpc.com/connect"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
@@ -16,49 +14,47 @@ import (
 )
 
 type UserService struct {
-	proto.UnimplementedUsersServer
 	DeviceManager *devices.DeviceManager
 }
 
-func (d *UserService) ListUsers(ctx context.Context, req *proto.ListUsersReq) (*proto.ListUsersRes, error) {
+func (d *UserService) ListUsers(ctx context.Context, _ *connect.Request[proto.ListUsersReq]) (*connect.Response[proto.ListUsersRes], error) {
 	user, err := authsession.CurrentUser(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.PermissionDenied, "not authenticated")
+		return nil, errNotAuthenticated()
 	}
 
 	if !user.Claims.Has("admin", "true") {
-		return nil, status.Errorf(codes.PermissionDenied, "must be an admin")
+		return nil, errNotAdmin()
 	}
 
 	users, err := d.DeviceManager.ListUsers()
 	if err != nil {
-		ctxlogrus.Extract(ctx).Error(err)
-		return nil, status.Errorf(codes.Internal, "failed to retrieve users")
+		return nil, internalError(ctx, err, "failed to retrieve users")
 	}
 
-	return &proto.ListUsersRes{
+	return connect.NewResponse(&proto.ListUsersRes{
 		Items: mapUsers(users),
-	}, nil
+	}), nil
 }
 
-func (d *UserService) DeleteUser(ctx context.Context, req *proto.DeleteUserReq) (*emptypb.Empty, error) {
+func (d *UserService) DeleteUser(ctx context.Context, request *connect.Request[proto.DeleteUserReq]) (*connect.Response[emptypb.Empty], error) {
+	req := request.Msg
 	user, err := authsession.CurrentUser(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.PermissionDenied, "not authenticated")
+		return nil, errNotAuthenticated()
 	}
 
 	if !user.Claims.Has("admin", "true") {
-		return nil, status.Errorf(codes.PermissionDenied, "must be an admin")
+		return nil, errNotAdmin()
 	}
 
 	if err := d.DeviceManager.DeleteDevicesForUser(req.Name); err != nil {
-		ctxlogrus.Extract(ctx).Error(err)
-		return nil, status.Errorf(codes.Internal, "failed to delete user")
+		return nil, internalError(ctx, err, "failed to delete user")
 	}
 
 	audit.Log(ctx, audit.UserDelete, logrus.Fields{"target_user": req.Name})
 
-	return &emptypb.Empty{}, nil
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 func mapUser(u *devices.User) *proto.User {

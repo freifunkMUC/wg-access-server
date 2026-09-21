@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/sirupsen/logrus"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -59,10 +60,10 @@ func TestDeleteDeviceByAdminIsAudited(t *testing.T) {
 		Owner: "alice", Name: "laptop", PublicKey: "key", Address: "10.44.0.2/32", CreatedAt: time.Now(),
 	})
 
-	_, err := service.DeleteDevice(userContext("admin", true), &proto.DeleteDeviceReq{
+	_, err := service.DeleteDevice(userContext("admin", true), connect.NewRequest(&proto.DeleteDeviceReq{
 		Name:  "laptop",
 		Owner: wrapperspb.String("alice"),
-	})
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,10 +92,10 @@ func TestAddDeviceIsAudited(t *testing.T) {
 
 	service, _ := deviceServiceWith(t)
 
-	_, err := service.AddDevice(userContext("alice", false), &proto.AddDeviceReq{
+	_, err := service.AddDevice(userContext("alice", false), connect.NewRequest(&proto.AddDeviceReq{
 		Name:      "laptop",
 		PublicKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-	})
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +119,7 @@ func TestFailedDeleteIsNotAudited(t *testing.T) {
 
 	service, _ := deviceServiceWith(t)
 
-	_, err := service.DeleteDevice(userContext("alice", false), &proto.DeleteDeviceReq{Name: "does-not-exist"})
+	_, err := service.DeleteDevice(userContext("alice", false), connect.NewRequest(&proto.DeleteDeviceReq{Name: "does-not-exist"}))
 	if err == nil {
 		t.Fatal("deleting a device that does not exist succeeded")
 	}
@@ -138,10 +139,10 @@ func TestDeleteForeignDeviceIsRefusedAndNotAudited(t *testing.T) {
 		Owner: "alice", Name: "laptop", PublicKey: "key", Address: "10.44.0.2/32", CreatedAt: time.Now(),
 	})
 
-	_, err := service.DeleteDevice(userContext("mallory", false), &proto.DeleteDeviceReq{
+	_, err := service.DeleteDevice(userContext("mallory", false), connect.NewRequest(&proto.DeleteDeviceReq{
 		Name:  "laptop",
 		Owner: wrapperspb.String("alice"),
-	})
+	}))
 	if err == nil {
 		t.Fatal("a non-admin deleted somebody else's device")
 	}
@@ -163,16 +164,16 @@ func TestRenameDeviceByAdminIsAudited(t *testing.T) {
 		Owner: "alice", Name: "laptop", PublicKey: "key", Address: "10.44.0.2/32", CreatedAt: time.Now(),
 	})
 
-	device, err := service.RenameDevice(userContext("admin", true), &proto.RenameDeviceReq{
+	res, err := service.RenameDevice(userContext("admin", true), connect.NewRequest(&proto.RenameDeviceReq{
 		Name:    "laptop",
 		NewName: "alice laptop",
 		Owner:   wrapperspb.String("alice"),
-	})
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if device.Name != "alice laptop" {
-		t.Errorf("name = %q, want %q", device.Name, "alice laptop")
+	if res.Msg.Name != "alice laptop" {
+		t.Errorf("name = %q, want %q", res.Msg.Name, "alice laptop")
 	}
 	if _, err := s.Get("alice", "alice laptop"); err != nil {
 		t.Errorf("the device was not stored under its new name: %v", err)
@@ -203,11 +204,11 @@ func TestRenameForeignDeviceIsRefused(t *testing.T) {
 		Owner: "alice", Name: "laptop", PublicKey: "key", Address: "10.44.0.2/32", CreatedAt: time.Now(),
 	})
 
-	_, err := service.RenameDevice(userContext("mallory", false), &proto.RenameDeviceReq{
+	_, err := service.RenameDevice(userContext("mallory", false), connect.NewRequest(&proto.RenameDeviceReq{
 		Name:    "laptop",
 		NewName: "mine now",
 		Owner:   wrapperspb.String("alice"),
-	})
+	}))
 	if err == nil {
 		t.Fatal("a non-admin renamed somebody else's device")
 	}

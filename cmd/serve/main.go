@@ -339,15 +339,8 @@ func (cmd *servecmd) Run() {
 		Wg:            wg,
 	}
 
-	// Grpc api
-	site.PathPrefix("/api").Handler(services.ApiRouter(apiServices))
-
-	// The same API through connectrpc, which serves the gRPC-Web protocol
-	// itself. It runs next to the one above while the replacement of the
-	// archived grpc-web wrapper is being tried out.
-	site.PathPrefix("/connect").Handler(
-		http.StripPrefix("/connect", services.ConnectRouter(apiServices)),
-	)
+	// API
+	site.PathPrefix("/api").Handler(http.StripPrefix("/api", services.ApiRouter(apiServices)))
 
 	// Static website
 	site.PathPrefix("/").Handler(services.WebsiteRouter())

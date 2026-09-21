@@ -2,25 +2,23 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"math"
 	"net/http"
 
+	"connectrpc.com/connect"
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
-	grpcMiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpcLogrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	grpcRecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	"github.com/improbable-eng/grpc-web/go/grpcweb"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/gorilla/mux"
 
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/traces"
-	"github.com/freifunkMUC/wg-access-server/proto/proto"
-	"github.com/sirupsen/logrus"
+	"github.com/freifunkMUC/wg-access-server/proto/proto/protoconnect"
 )
+
+// maxRequestBytes bounds the size of a request message. The largest thing a
+// client sends is a device name and a public key.
+const maxRequestBytes = 1 << 20
 
 type ApiServices struct {
 	Config        *config.AppConfig
@@ -28,57 +26,66 @@ type ApiServices struct {
 	Wg            wgembed.WireGuardInterface
 }
 
+// ApiRouter serves the API through connectrpc. Besides its own protocol,
+// Connect speaks gRPC-Web - which is what the web UI's client uses.
 func ApiRouter(deps *ApiServices) http.Handler {
-	// Native GRPC server
-	server := grpc.NewServer([]grpc.ServerOption{
-		grpc.MaxRecvMsgSize(int(1 * math.Pow(2, 20))), // 1MB
-		grpc.UnaryInterceptor(grpcMiddleware.ChainUnaryServer(
-			func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-				// wrapped in anonymous func to get ctx
-				return grpcLogrus.UnaryServerInterceptor(grpcLoggerWith(ctx))(ctx, req, info, handler)
-			},
-			grpcRecovery.UnaryServerInterceptor(
-				grpcRecovery.WithRecoveryHandlerContext(func(ctx context.Context, p interface{}) (err error) {
-					// add trace id to error message so it's visible for the client
-					return status.Errorf(codes.Internal, "%v; trace = %s", p, traces.TraceID(ctx))
-				}),
-			),
-		)),
-	}...)
-
-	// Register GRPC services
-	proto.RegisterServerServer(server, &ServerService{
-		Config: deps.Config,
-		Wg:     deps.Wg,
-	})
-	proto.RegisterUsersServer(server, &UserService{
-		DeviceManager: deps.DeviceManager,
-	})
-	proto.RegisterDevicesServer(server, &DeviceService{
-		DeviceManager: deps.DeviceManager,
-	})
-
-	// Grpc Web in process proxy (wrapper)
-	grpcServer := grpcweb.WrapServer(server,
-		grpcweb.WithAllowNonRootResource(true),
+	options := connect.WithHandlerOptions(
+		connect.WithInterceptors(connect.UnaryInterceptorFunc(logInterceptor)),
+		connect.WithRecover(recoverHandler),
+		connect.WithReadMaxBytes(maxRequestBytes),
 	)
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if grpcServer.IsGrpcWebRequest(r) {
-			grpcServer.ServeHTTP(w, r)
-			return
-		}
+	router := mux.NewRouter()
+	for _, register := range []func() (string, http.Handler){
+		func() (string, http.Handler) {
+			return protoconnect.NewDevicesHandler(&DeviceService{DeviceManager: deps.DeviceManager}, options)
+		},
+		func() (string, http.Handler) {
+			return protoconnect.NewUsersHandler(&UserService{DeviceManager: deps.DeviceManager}, options)
+		},
+		func() (string, http.Handler) {
+			return protoconnect.NewServerHandler(&ServerService{Config: deps.Config, Wg: deps.Wg}, options)
+		},
+	} {
+		path, handler := register()
+		router.PathPrefix(path).Handler(handler)
+	}
 
-		w.WriteHeader(400)
-		_, _ = fmt.Fprintln(w, "expected grpc request")
-	})
+	return router
 }
 
-// GRPC events have the nature of DEBUG logs but are logged with INFO level. To clean up the log stream starting from INFO log level we only log WARN events.
-func grpcLoggerWith(ctx context.Context) *logrus.Entry {
-	if logrus.GetLevel() == logrus.InfoLevel {
-		return traces.WarnLogger(ctx)
-	} else {
-		return traces.Logger(ctx)
+// logInterceptor reports failures with the trace id of the request.
+func logInterceptor(next connect.UnaryFunc) connect.UnaryFunc {
+	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		res, err := next(ctx, req)
+		if err != nil {
+			traces.Logger(ctx).WithField("procedure", req.Spec().Procedure).Warn(err)
+		}
+		return res, err
 	}
+}
+
+// recoverHandler keeps a panic in one request from taking the connection
+// down with it, and gives the client a trace id to quote.
+func recoverHandler(ctx context.Context, spec connect.Spec, _ http.Header, p any) error {
+	traces.Logger(ctx).WithField("procedure", spec.Procedure).Errorf("panic: %v", p)
+	return connect.NewError(connect.CodeInternal, fmt.Errorf("internal error (trace = %s)", traces.TraceID(ctx)))
+}
+
+// Each request gets its own error: connect adds headers to an error's
+// metadata, so one shared between requests would be written concurrently.
+
+func errNotAuthenticated() error {
+	return connect.NewError(connect.CodePermissionDenied, errors.New("not authenticated"))
+}
+
+func errNotAdmin() error {
+	return connect.NewError(connect.CodePermissionDenied, errors.New("must be an admin"))
+}
+
+// internalError logs err, which can hold storage or schema details, and
+// hands the client only what failed and the trace id to find it in the log.
+func internalError(ctx context.Context, err error, what string) error {
+	traces.Logger(ctx).Error(err)
+	return connect.NewError(connect.CodeInternal, fmt.Errorf("%s (trace = %s)", what, traces.TraceID(ctx)))
 }

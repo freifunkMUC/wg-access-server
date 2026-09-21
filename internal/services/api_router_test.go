@@ -31,7 +31,7 @@ func connectServerFor(t *testing.T, subject string, authenticated bool, seed ...
 	}
 	manager := devices.New(noopWireGuardInterface{}, s, "10.44.0.0/24", "")
 
-	api := ConnectRouter(&ApiServices{
+	api := ApiRouter(&ApiServices{
 		Config:        &config.AppConfig{},
 		DeviceManager: manager,
 		Wg:            noopWireGuardInterface{},
@@ -59,9 +59,7 @@ func testDevice(owner, name string) *storage.Device {
 	}
 }
 
-// The web UI talks gRPC-Web. Connect serves that protocol itself, which is
-// what makes it a drop-in for the archived wrapper: the client in the
-// frontend does not have to change.
+// The web UI talks gRPC-Web, which Connect serves itself.
 func TestConnectServesTheGrpcWebProtocol(t *testing.T) {
 	url := connectServerFor(t, "alice", true, testDevice("alice", "laptop"))
 
@@ -90,8 +88,8 @@ func TestConnectServesItsOwnProtocol(t *testing.T) {
 	}
 }
 
-// The gRPC status codes the services report have to survive the translation,
-// otherwise the UI cannot tell "not allowed" from "broken".
+// The status codes the services report have to reach the client, otherwise
+// the UI cannot tell "not allowed" from "broken".
 func TestConnectKeepsTheStatusCode(t *testing.T) {
 	t.Run("without a session", func(t *testing.T) {
 		url := connectServerFor(t, "", false)
