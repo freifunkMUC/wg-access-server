@@ -102,7 +102,8 @@ func TestReadConfigReadsValidConfigFile(t *testing.T) {
 		"port: 12345\n" +
 		"adminUsername: tester\n" +
 		"adminPassword: secret\n" +
-		"storage: memory://\n"
+		"storage: memory://\n" +
+		"httpEnabled: true\n" // without a listener ReadConfig refuses to start
 
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	if err := os.WriteFile(path, []byte(yamlContent), 0o600); err != nil {
@@ -144,6 +145,7 @@ func TestReadConfigEmptyPathUsesDefaults(t *testing.T) {
 	cmd := &servecmd{}
 	cmd.AppConfig.AdminPassword = "secret"
 	cmd.AppConfig.Storage = "memory://"
+	cmd.AppConfig.HttpEnabled = true
 
 	conf, fataled, logOutput := runReadConfig(t, cmd)
 
