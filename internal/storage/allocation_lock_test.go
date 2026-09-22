@@ -18,7 +18,6 @@ func TestMain(m *testing.M) {
 	// share the test database - running in parallel under `go test ./...` -
 	// take the real lock, so this package's lock tests use their own.
 	allocationLockName = "wg-access-server/ip-allocation/storage-tests"
-	allocationLockKey = lockKey(allocationLockName)
 	os.Exit(m.Run())
 }
 
@@ -59,7 +58,7 @@ func heldDatabaseLocks(t *testing.T, s *SQLStorage) int {
 		for rows.Next() {
 			var high, low uint64
 			require.NoError(t, rows.Scan(&high, &low))
-			if high<<32|low == uint64(allocationLockKey) {
+			if high<<32|low == uint64(lockKey(allocationLockName)) {
 				n++
 			}
 		}

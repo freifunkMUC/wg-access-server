@@ -61,6 +61,10 @@ type SQLStorage struct {
 }
 
 func NewSqlStorage(u *url.URL) *SQLStorage {
+	// a copy: the scheme is normalized below, and the caller's URL is theirs
+	copied := *u
+	u = &copied
+
 	var connectionString string
 
 	switch u.Scheme {
@@ -169,16 +173,6 @@ func (s *SQLStorage) Open() error {
 	}
 	s.db = db
 
-	// Migrate the schema. The error matters: a failed migration used to be
-	// swallowed here, which is how MySQL ended up without the unique index
-	// on public_key for years.
-	if err := s.db.AutoMigrate(&Device{}); err != nil {
-		return errors.Wrap(err, migrationFailed)
-	}
-	if err := s.db.AutoMigrate(&APIToken{}); err != nil {
-		return errors.Wrap(err, "failed to migrate the api tokens table")
-	}
-
 	table, err := deviceTable(db)
 	if err != nil {
 		return err
@@ -189,6 +183,23 @@ func (s *SQLStorage) Open() error {
 		return err
 	}
 
+	// Migrating and attaching the Postgres triggers both change the schema,
+	// so replicas starting at the same time take turns. Replacing a trigger
+	// is a DROP and a CREATE: two replicas doing that at once can fail with
+	// "trigger already exists" or deadlock each other.
+	return s.withSchemaLock(func() error {
+		// See migrations.go. The error matters: a failed migration used to
+		// be swallowed here, which is how MySQL ended up without the unique
+		// index on public_key for years.
+		if err := runMigrations(db, migrations); err != nil {
+			return err
+		}
+		return s.attachWatcher(db, sqlDB, table)
+	})
+}
+
+// attachWatcher sets up how this replica learns about device changes.
+func (s *SQLStorage) attachWatcher(db *gorm.DB, sqlDB *sql.DB, table string) error {
 	switch s.sqlType {
 	case "postgres":
 		watcher, err := NewPgWatcher(sqlDB, s.connectionString, table)

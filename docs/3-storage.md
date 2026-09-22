@@ -96,6 +96,24 @@ version 0.3.0 and then follow the migration guide below to migrate to a differen
 _Note that the migration tool itself doesn't support the `file://` backend on versions
 released after 0.3.0_.
 
+## Schema Upgrades
+
+The SQL backends keep track of their schema: every change to it is a migration that runs once per
+database, and the ones already applied are listed in the `schema_migrations` table. On start,
+wg-access-server applies whatever is missing and logs each one (`Applying database migration ...`).
+
+- **Upgrading from a version without migrations** needs nothing: the existing tables are taken over
+  as they are, and the first start records them.
+- **Several replicas** sharing a PostgreSQL or MySQL database take turns: one migrates while the
+  others wait for it, up to 10 minutes.
+- **Downgrading** is refused once a newer version has migrated the database - the start fails,
+  naming the migrations this version does not know. The newer schema may not fit what the older
+  version writes. Run the newer version again, or restore a backup taken before the upgrade.
+- **MySQL** cannot roll back changes to the schema. If a migration fails there, fix the cause and
+  start again: a migration that was interrupted completes on the next start.
+
+Take a backup before upgrading, as with any database.
+
 ## Migration Between Backends
 
 You can migrate your registered devices between backends using the `wg-access-server migrate <src> <dest>`

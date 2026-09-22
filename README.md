@@ -174,12 +174,14 @@ docker run -d --name wgas-pg -e POSTGRES_USER=wgtest -e POSTGRES_PASSWORD=wgtest
 docker run -d --name wgas-mysql -e MYSQL_ROOT_PASSWORD=wgtest -e MYSQL_DATABASE=wgtest -e MYSQL_USER=wgtest -e MYSQL_PASSWORD=wgtest -p 3306:3306 mysql:9
 
 export WG_TEST_POSTGRES_URI="postgresql://wgtest:wgtest@localhost:5432/wgtest?sslmode=disable"
-export WG_TEST_MYSQL_URI="mysql://wgtest:wgtest@localhost:3306/wgtest"
+export WG_TEST_MYSQL_URI="mysql://root:wgtest@localhost:3306/wgtest"
 go test -race ./...
 ```
 
 They cover what only a real server shows: the allocation lock that keeps two replicas from handing
-out the same VPN address, and the LISTEN/NOTIFY watcher that tells the replicas about new devices.
+out the same VPN address, the LISTEN/NOTIFY watcher that tells the replicas about new devices, and
+the schema migrations. The migration tests create a database of their own for every run, which is why
+the MySQL tests connect as root.
 
 ### The API:
 
