@@ -197,7 +197,7 @@ func TestGithubOrganizationMemberSignsIn(t *testing.T) {
 
 	rec, identity := signIn(t, config)
 
-	require.Equal(t, http.StatusTemporaryRedirect, rec.Code, rec.Body.String())
+	require.Equal(t, http.StatusSeeOther, rec.Code, rec.Body.String())
 	require.NotNil(t, identity)
 	host := strings.TrimPrefix(gh.server.URL, "http://")
 	assert.Equal(t, "github@"+host+":42", identity.Subject)
@@ -248,7 +248,7 @@ func TestGithubAdminTeamOnALaterPage(t *testing.T) {
 
 	rec, identity := signIn(t, config)
 
-	require.Equal(t, http.StatusTemporaryRedirect, rec.Code, rec.Body.String())
+	require.Equal(t, http.StatusSeeOther, rec.Code, rec.Body.String())
 	require.NotNil(t, identity)
 	assert.True(t, identity.Claims.IsAdmin())
 }
@@ -262,7 +262,7 @@ func TestGithubUsersAreMatchedCaseInsensitively(t *testing.T) {
 
 	rec, identity := signIn(t, config)
 
-	require.Equal(t, http.StatusTemporaryRedirect, rec.Code, rec.Body.String())
+	require.Equal(t, http.StatusSeeOther, rec.Code, rec.Body.String())
 	require.NotNil(t, identity)
 	assert.True(t, identity.Claims.IsAdmin())
 	assert.Equal(t, "octocat", identity.Name, "the login stands in for a missing name")

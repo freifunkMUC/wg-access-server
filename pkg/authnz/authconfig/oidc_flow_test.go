@@ -192,7 +192,7 @@ func TestOIDCCallbackAcceptsMatchingNonce(t *testing.T) {
 
 	rec := doCallback(t, router, state, cookies)
 
-	require.Equal(t, http.StatusTemporaryRedirect, rec.Code, "body: %s", rec.Body.String())
+	require.Equal(t, http.StatusSeeOther, rec.Code, "body: %s", rec.Body.String())
 	assert.Equal(t, "/", rec.Header().Get("Location"))
 
 	// the session should now hold the authenticated identity

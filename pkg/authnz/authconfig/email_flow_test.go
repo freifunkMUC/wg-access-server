@@ -43,7 +43,7 @@ func TestOIDCCallbackAcceptsAVerifiedEmail(t *testing.T) {
 
 	rec := doCallback(t, router, state, cookies)
 
-	require.Equal(t, http.StatusTemporaryRedirect, rec.Code, "body: %s", rec.Body.String())
+	require.Equal(t, http.StatusSeeOther, rec.Code, "body: %s", rec.Body.String())
 }
 
 // A provider that says nothing about verification must not lock everybody out.
@@ -55,7 +55,7 @@ func TestOIDCCallbackAcceptsASilentProvider(t *testing.T) {
 
 	rec := doCallback(t, router, state, cookies)
 
-	require.Equal(t, http.StatusTemporaryRedirect, rec.Code, "body: %s", rec.Body.String())
+	require.Equal(t, http.StatusSeeOther, rec.Code, "body: %s", rec.Body.String())
 }
 
 func TestOIDCLoginRequestsTheEmailScope(t *testing.T) {
