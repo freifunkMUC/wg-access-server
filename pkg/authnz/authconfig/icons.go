@@ -13,6 +13,9 @@ import (
 //go:embed icons/gitlab.svg
 var gitlabIcon []byte
 
+//go:embed icons/github.svg
+var githubIcon []byte
+
 func svgDataURL(svg []byte) string {
 	return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(svg)
 }
