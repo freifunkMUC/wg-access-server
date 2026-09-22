@@ -79,5 +79,17 @@ jobs:
             VERSION=${{ github.head_ref || github.ref_name }}
             COMMIT=${{ github.sha }}
 
+      # Before anything is published: the Alpine packages and the Go binary in
+      # the image. Only what already has a fix fails the build - that can be
+      # dealt with here, usually by updating the base image.
+      - name: Scan the image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
       - name: Inspect Docker image
         run: docker image inspect ${{ steps.meta.outputs.tags }}
