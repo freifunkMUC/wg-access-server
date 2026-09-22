@@ -16,6 +16,7 @@ import React from 'react';
 import { grpc } from '../../Api';
 import { AppState } from '../../AppState';
 import { confirm } from '../../components/Present';
+import { toast } from '../../components/Toast';
 import { Device } from '../../sdk/devices_pb';
 import { User } from '../../sdk/users_pb';
 import { errorMessage, lastSeen, lazy } from '../../Util';
@@ -42,10 +43,11 @@ export const AllDevices = observer(
     users = lazy(async () => {
       try {
         const result = await grpc.users.listUsers({});
+        AppState.clearLoadingError();
         return result.items;
       } catch (error) {
         console.error('An error occurred:', error);
-        AppState.loadingError = errorMessage(error);
+        AppState.setLoadingError(errorMessage(error));
         return null;
       }
     });
@@ -53,10 +55,11 @@ export const AllDevices = observer(
     devices = lazy(async () => {
       try {
         const res = await grpc.devices.listAllDevices({});
+        AppState.clearLoadingError();
         return res.items;
       } catch (error) {
         console.error('An error occurred:', error);
-        AppState.loadingError = errorMessage(error);
+        AppState.setLoadingError(errorMessage(error));
         return null;
       }
     });
@@ -123,30 +126,40 @@ export const AllDevices = observer(
 
     deleteUser = async (user: User.AsObject) => {
       if (await confirm('Are you sure you want to delete all devices from ' + user.name + '?')) {
-        await grpc.users.deleteUser({
-          name: user.name,
-        });
-        await this.users.refresh();
-        await this.devices.refresh();
+        try {
+          await grpc.users.deleteUser({
+            name: user.name,
+          });
+          await this.users.refresh();
+          await this.devices.refresh();
+        } catch (error) {
+          console.error('Failed to delete user:', error);
+          toast({ text: 'Failed to delete the user: ' + errorMessage(error), intent: 'error' });
+        }
       }
     };
 
     deleteDevice = async (device: Device.AsObject) => {
       if (await confirm('Are you sure you want to delete ' + device.name + ' from ' + device.ownerName + '?')) {
-        await grpc.devices.deleteDevice({
-          name: device.name,
-          owner: { value: device.owner },
-        });
-        await this.devices.refresh();
+        try {
+          await grpc.devices.deleteDevice({
+            name: device.name,
+            owner: { value: device.owner },
+          });
+          await this.devices.refresh();
+        } catch (error) {
+          console.error('Failed to delete device:', error);
+          toast({ text: 'Failed to delete the device: ' + errorMessage(error), intent: 'error' });
+        }
       }
     };
 
     render() {
-      if (!this.devices.current || !this.users.current) {
-        return <Loading />;
-      }
       if (AppState.loadingError) {
         return <Error message={AppState.loadingError} />;
+      }
+      if (!this.devices.current || !this.users.current) {
+        return <Loading />;
       }
       const users = this.users.current;
       const devices = this.sortedDevices;

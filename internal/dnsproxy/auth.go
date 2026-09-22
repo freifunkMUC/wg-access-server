@@ -24,10 +24,16 @@ type DNSAuth struct {
 	zoneLock *sync.RWMutex
 }
 
+// PushZone replaces the zone. Names are stored in lower case: DNS does not
+// tell "iPhone" from "iphone", and neither may the lookup.
 func (d *DNSAuth) PushZone(zone Zone) {
 	logrus.Debugln("pushing new auth zone")
+	folded := make(Zone, len(zone))
+	for key, addresses := range zone {
+		folded[ZoneKey{Owner: strings.ToLower(key.Owner), Name: strings.ToLower(key.Name)}] = addresses
+	}
 	d.zoneLock.Lock()
-	d.zone = zone
+	d.zone = folded
 	d.zoneLock.Unlock()
 }
 
@@ -68,7 +74,13 @@ func (d *DNSAuth) Lookup(m *dns.Msg) (*dns.Msg, error) {
 		return nil, errors.New("only class INET allowed")
 	}
 
-	deviceAndOwner := strings.TrimSuffix(qname, d.Domain)
+	// DNS names are case-insensitive and clients may randomize the case of
+	// queries (0x20 encoding), so the domain suffix must be stripped
+	// case-insensitively while preserving the original casing of the qname.
+	deviceAndOwner := qname
+	if len(qname) >= len(d.Domain) && strings.EqualFold(qname[len(qname)-len(d.Domain):], d.Domain) {
+		deviceAndOwner = qname[:len(qname)-len(d.Domain)]
+	}
 	parts := dns.SplitDomainName(deviceAndOwner)
 
 	response := new(dns.Msg)
@@ -130,7 +142,7 @@ func (d *DNSAuth) Lookup(m *dns.Msg) (*dns.Msg, error) {
 func (d *DNSAuth) getDevice(owner, device string) []netip.Addr {
 	d.zoneLock.RLock()
 	defer d.zoneLock.RUnlock()
-	return d.zone[ZoneKey{owner, device}]
+	return d.zone[ZoneKey{strings.ToLower(owner), strings.ToLower(device)}]
 }
 
 // newRR creates a new resource record from the arguments

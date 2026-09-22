@@ -459,10 +459,12 @@ func (cmd *servecmd) Run() {
 // ReadConfig reads the config file from disk if specified and overrides any env vars or cmdline options
 func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	if cmd.ConfigFilePath != "" {
-		if b, err := os.ReadFile(cmd.ConfigFilePath); err == nil {
-			if err := yaml.Unmarshal(b, &cmd.AppConfig); err != nil {
-				logrus.Fatal(errors.Wrap(err, "failed to bind configuration file"))
-			}
+		b, err := os.ReadFile(cmd.ConfigFilePath)
+		if err != nil {
+			logrus.Fatal(errors.Wrap(err, "failed to read configuration file"))
+		}
+		if err := yaml.Unmarshal(b, &cmd.AppConfig); err != nil {
+			logrus.Fatal(errors.Wrap(err, "failed to bind configuration file"))
 		}
 	}
 
