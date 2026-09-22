@@ -70,7 +70,7 @@ export class GetConnected extends Component<PropsWithChildren<Props>, State> {
             <List>
               <ListItem>
                 <ListItemText style={{ width: 300 }} primary="1. Install the WireGuard app" />
-                <ButtonGroup size="large" color="primary" aria-label="large outlined primary button group">
+                <ButtonGroup size="large" color="primary" aria-label="Download the WireGuard app">
                   <Button onClick={() => this.go('https://www.WireGuard.com/install/')}>
                     <LinuxIcon />
                   </Button>
