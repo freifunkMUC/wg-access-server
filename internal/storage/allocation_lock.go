@@ -20,32 +20,31 @@ var allocationLockTimeout = 30 * time.Second
 // A var so tests can use their own lock (see TestMain).
 var allocationLockName = "wg-access-server/ip-allocation"
 
-// allocationLockKey is the Postgres advisory lock key. Advisory locks are
-// shared by the whole database, so derive the key from a name specific to
-// this application rather than picking a small number that might collide.
-var allocationLockKey = lockKey(allocationLockName)
-
+// lockKey derives the Postgres advisory lock key from a lock name. Advisory
+// locks are shared by the whole database, so the key comes from a name
+// specific to this application rather than a small number that might collide.
 func lockKey(name string) int64 {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(name))
 	return int64(h.Sum64())
 }
 
-// databaseLock acquires and releases a session-level lock on one connection.
+// databaseLock acquires and releases a named session-level lock on one
+// connection.
 type databaseLock struct {
-	acquire func(ctx context.Context, conn *sql.Conn) error
-	release func(ctx context.Context, conn *sql.Conn) error
+	acquire func(ctx context.Context, conn *sql.Conn, name string) error
+	release func(ctx context.Context, conn *sql.Conn, name string) error
 }
 
 var databaseLocks = map[string]databaseLock{
 	"postgres": {
-		acquire: func(ctx context.Context, conn *sql.Conn) error {
-			_, err := conn.ExecContext(ctx, "SELECT pg_advisory_lock($1)", allocationLockKey)
+		acquire: func(ctx context.Context, conn *sql.Conn, name string) error {
+			_, err := conn.ExecContext(ctx, "SELECT pg_advisory_lock($1)", lockKey(name))
 			return err
 		},
-		release: func(ctx context.Context, conn *sql.Conn) error {
+		release: func(ctx context.Context, conn *sql.Conn, name string) error {
 			var released bool
-			if err := conn.QueryRowContext(ctx, "SELECT pg_advisory_unlock($1)", allocationLockKey).Scan(&released); err != nil {
+			if err := conn.QueryRowContext(ctx, "SELECT pg_advisory_unlock($1)", lockKey(name)).Scan(&released); err != nil {
 				return err
 			}
 			if !released {
@@ -55,7 +54,7 @@ var databaseLocks = map[string]databaseLock{
 		},
 	},
 	"mysql": {
-		acquire: func(ctx context.Context, conn *sql.Conn) error {
+		acquire: func(ctx context.Context, conn *sql.Conn, name string) error {
 			// GET_LOCK waits by itself, so hand it the time left on the context.
 			// It takes whole seconds; round up so a short remainder does not
 			// become 0, which makes GET_LOCK give up immediately.
@@ -65,7 +64,7 @@ var databaseLocks = map[string]databaseLock{
 			}
 			seconds := int(math.Ceil(remaining.Seconds()))
 			var acquired sql.NullInt64
-			if err := conn.QueryRowContext(ctx, "SELECT GET_LOCK(?, ?)", allocationLockName, seconds).Scan(&acquired); err != nil {
+			if err := conn.QueryRowContext(ctx, "SELECT GET_LOCK(?, ?)", name, seconds).Scan(&acquired); err != nil {
 				return err
 			}
 			if !acquired.Valid || acquired.Int64 != 1 {
@@ -73,9 +72,9 @@ var databaseLocks = map[string]databaseLock{
 			}
 			return nil
 		},
-		release: func(ctx context.Context, conn *sql.Conn) error {
+		release: func(ctx context.Context, conn *sql.Conn, name string) error {
 			var released sql.NullInt64
-			if err := conn.QueryRowContext(ctx, "SELECT RELEASE_LOCK(?)", allocationLockName).Scan(&released); err != nil {
+			if err := conn.QueryRowContext(ctx, "SELECT RELEASE_LOCK(?)", name).Scan(&released); err != nil {
 				return err
 			}
 			if !released.Valid || released.Int64 != 1 {
@@ -97,12 +96,20 @@ func (s *SQLStorage) WithAllocationLock(fn func() error) error {
 	s.allocationMu.Lock()
 	defer s.allocationMu.Unlock()
 
+	return s.withDatabaseLock(allocationLockName, "IP allocation lock", allocationLockTimeout, fn)
+}
+
+// withDatabaseLock runs fn while holding the named lock in the database, so
+// that it holds across every replica sharing the database. SQLite is a
+// single-instance backend and has no such lock; fn just runs. what names the
+// lock in error messages.
+func (s *SQLStorage) withDatabaseLock(name string, what string, timeout time.Duration, fn func() error) error {
 	lock, distributed := databaseLocks[s.sqlType]
 	if !distributed {
 		return fn()
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), allocationLockTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	// Session-level locks belong to one database connection. database/sql
@@ -110,26 +117,26 @@ func (s *SQLStorage) WithAllocationLock(fn func() error) error {
 	// for the lock's whole lifetime; otherwise the unlock could run elsewhere.
 	db, err := s.sqlDB()
 	if err != nil {
-		return errors.Wrap(err, "failed to reserve a database connection for the IP allocation lock")
+		return errors.Wrapf(err, "failed to reserve a database connection for the %s", what)
 	}
 
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to reserve a database connection for the IP allocation lock")
+		return errors.Wrapf(err, "failed to reserve a database connection for the %s", what)
 	}
 
-	if err := lock.acquire(ctx, conn); err != nil {
+	if err := lock.acquire(ctx, conn, name); err != nil {
 		// Whether the lock was taken is unknown after an error (e.g. a timeout
 		// racing the grant), so never return this session to the pool.
 		discardConn(conn)
-		return errors.Wrap(err, "failed to acquire the IP allocation lock")
+		return errors.Wrapf(err, "failed to acquire the %s", what)
 	}
 
 	defer func() {
 		releaseCtx, cancelRelease := context.WithTimeout(context.Background(), allocationLockTimeout)
 		defer cancelRelease()
-		if err := lock.release(releaseCtx, conn); err != nil {
-			logrus.Warn(errors.Wrap(err, "failed to release the IP allocation lock - closing its connection instead"))
+		if err := lock.release(releaseCtx, conn, name); err != nil {
+			logrus.Warn(errors.Wrapf(err, "failed to release the %s - closing its connection instead", what))
 			discardConn(conn)
 			return
 		}
