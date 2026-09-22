@@ -65,8 +65,10 @@ func TestSessionCookieAttributes(t *testing.T) {
 	rr := httptest.NewRecorder()
 	m.Middleware(http.NotFoundHandler()).ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusTemporaryRedirect {
-		t.Fatalf("expected successful login to redirect (307), got %d", rr.Code)
+	// 303: the browser follows with a GET, rather than posting the
+	// credentials to "/" once more
+	if rr.Code != http.StatusSeeOther {
+		t.Fatalf("expected successful login to redirect (303), got %d", rr.Code)
 	}
 
 	cookie := findSessionCookie(t, rr)

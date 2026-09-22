@@ -65,8 +65,11 @@ func (p *ProviderRuntime) Restart(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/signin?signout=1", http.StatusSeeOther)
 }
 
+// Done sends a signed in browser on to the web UI. 303, not 307: after the
+// POST of a sign-in form, 307 would make the browser POST the form to "/"
+// once more.
 func (p *ProviderRuntime) Done(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (p *ProviderRuntime) ShowBanner(w http.ResponseWriter, r *http.Request, banner authsession.Banner) {
