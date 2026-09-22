@@ -20,6 +20,7 @@ The following authentication backends are currently supported:
 | Basic Auth     | Like Simple Auth, but using HTTP Basic Auth for login                                         | Logout does not work because browsers caches Basic Auth credentials |
 | OpenID Connect | For delegating authentication to an existing identity solution                                |                                                                     |
 | Gitlab         | For delegating authentication to gitlab. Supports self-hosted Gitlab.                         |                                                                     |
+| GitHub         | Signing in with a GitHub account, restricted to organizations, teams or users. Supports GitHub Enterprise Server. | Needs an OAuth app, see [GitHub](#github) |
 
 If `adminPassword` is set, an administrator account will be added with the username of `adminUsername` (default `admin`)
 to the Simple Auth or Basic Auth backend; whichever is enabled, automatically enabling Simple if both are unset,
@@ -121,6 +122,28 @@ auth:
     redirectURL: "https:///wg-access-server.example.com/callback"
     emailDomains:
       - example.com
+  github:
+    # Shown on the sign-in button. Defaults to "GitHub".
+    name: "GitHub"
+    clientID: "<client-id>"
+    clientSecret: "<client-secret>"
+    # Must match the callback URL of the OAuth app. Use a path of its own
+    # if another provider already uses /callback.
+    redirectURL: "https://wg-access-server.example.com/callback/github"
+    # Only for GitHub Enterprise Server; leave out for github.com.
+    # baseURL: "https://github.example.com"
+    # Who may sign in - at least one of these is required, because anybody
+    # can create a GitHub account. A user who matches any of them gets in.
+    organizations:
+      - my-org
+    teams:
+      - my-org/vpn-users
+    users:
+      - octocat
+    # Who is an admin.
+    adminTeams:
+      - my-org/vpn-admins
+    adminUsers: []
 ```
 
 ## API tokens
@@ -157,6 +180,34 @@ admin's token has admin rights. It works for the API under `/api` only, not for 
 Requests with a token that does not work get a `401` (a disabled feature too), an owner who has lost
 access a `403`. Creating and revoking tokens is recorded in the [audit log](./5-audit.md), and so is
 which token made a change.
+
+## GitHub
+
+GitHub does not offer OpenID Connect for signing in users, so it has a backend of its own rather than
+an `oidc` configuration.
+
+1. Create an OAuth app: for a personal account under *Settings → Developer settings → OAuth Apps*,
+   for an organization under *Organization settings → Developer settings → OAuth Apps*.
+2. Set the *Authorization callback URL* to your `redirectURL`, e.g.
+   `https://wg-access-server.example.com/callback/github`.
+3. Put the client ID and a client secret into the `github` section and restrict who may sign in with
+   `organizations`, `teams` or `users`. The server refuses to start without any of them: anybody can
+   create a GitHub account, and every one of them could otherwise add VPN devices.
+
+Some things worth knowing:
+
+- **Organizations and teams** are checked with the `read:org` scope, which is only requested when
+  they are configured. Only an *active* membership counts, a pending invitation does not. If the
+  organization restricts third-party access, an owner has to approve the OAuth app first - until then
+  GitHub does not show the memberships to it, and signing in fails.
+- **Users** are matched by their login, ignoring case. A GitHub user can rename their account, and
+  somebody else can then register the old login. Prefer organizations or teams where you can.
+- **Devices belong to the GitHub account id**, not the login, so they stay with the account across
+  a rename. Accounts of a GitHub Enterprise Server are kept apart from github.com ones.
+- The primary email address is shown in the web UI if GitHub verified it.
+- As with every provider, membership is checked when signing in. Removing somebody from the
+  organization takes effect when their web session ends (`sessionStore.maxAge`). Deleting the user in
+  the web UI removes their devices and API tokens at once, but not a session they still have.
 
 ## Login throttling
 
