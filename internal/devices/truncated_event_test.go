@@ -22,7 +22,14 @@ type recordingInterface struct {
 	peers map[string]bool
 }
 
+// AddPeer rejects a key that is not one, like the real interface does. The
+// database is shared with the other test packages, and a row with a broken
+// key they leave behind would otherwise become a peer that ListPeers then
+// fails on - failing the sync this test waits for.
 func (r *recordingInterface) AddPeer(publicKey, _ string, _ []string) error {
+	if _, err := wgtypes.ParseKey(publicKey); err != nil {
+		return err
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.peers[publicKey] = true
