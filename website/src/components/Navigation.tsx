@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import styled from '@emotion/styled';
-import { getCookie } from '../Cookies';
 import { AppState } from '../AppState';
 import { NavLink } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
@@ -24,13 +23,16 @@ const Title = styled(Typography)`
 `;
 
 export default function Navigation() {
-  const hasAuthCookie = !!getCookie('auth-session');
+  // The web UI is only served to signed in users, and the server info only
+  // loads with a session - the session cookie itself is HttpOnly and not
+  // visible from here.
+  const signedIn = !!AppState.info;
 
   return (
     <AppBar position="static">
       <Toolbar>
         <Title variant="h6">
-          <Link to="/" color="inherit" component={NavLink}>
+          <Link to="/" color="inherit" underline="none" component={NavLink}>
             <VpnKey /> wg-access-server
           </Link>
           {AppState.info?.isAdmin && (
@@ -65,7 +67,7 @@ export default function Navigation() {
           </Link>
         )}
 
-        {hasAuthCookie ? (
+        {signedIn ? (
           <Link href="/signout" color="inherit">
             <IconButton sx={{ ml: 1 }} color="inherit" title="Logout">
               <LogoutIcon />
