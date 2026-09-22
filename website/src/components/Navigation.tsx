@@ -53,7 +53,7 @@ export default function Navigation() {
 
         {AppState.info?.apiTokensEnabled && (
           <Link to="/tokens" color="inherit" component={NavLink}>
-            <IconButton sx={{ ml: 1 }} color="inherit" title="API Tokens">
+            <IconButton sx={{ ml: 1 }} color="inherit" title="API tokens">
               <KeyIcon />
             </IconButton>
           </Link>
@@ -61,7 +61,7 @@ export default function Navigation() {
 
         {AppState.info?.isAdmin && (
           <Link to="/admin/all-devices" color="inherit" component={NavLink}>
-            <IconButton sx={{ ml: 1 }} color="inherit" title="All Devices">
+            <IconButton sx={{ ml: 1 }} color="inherit" title="All devices">
               <DevicesIcon />
             </IconButton>
           </Link>
@@ -69,13 +69,13 @@ export default function Navigation() {
 
         {signedIn ? (
           <Link href="/signout" color="inherit">
-            <IconButton sx={{ ml: 1 }} color="inherit" title="Logout">
+            <IconButton sx={{ ml: 1 }} color="inherit" title="Sign out">
               <LogoutIcon />
             </IconButton>
           </Link>
         ) : (
           <Link href="/signin" color="inherit">
-            <IconButton sx={{ ml: 1 }} color="inherit" title="Login">
+            <IconButton sx={{ ml: 1 }} color="inherit" title="Sign in">
               <LoginIcon />
             </IconButton>
           </Link>
@@ -110,7 +110,7 @@ function DarkModeToggle() {
   }
 
   return (
-    <IconButton sx={{ ml: 1 }} onClick={toggleDarkMode} color="inherit" title={'Light / Dark'}>
+    <IconButton sx={{ ml: 1 }} onClick={toggleDarkMode} color="inherit" title="Switch between light and dark mode">
       {AppState.darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
     </IconButton>
   );

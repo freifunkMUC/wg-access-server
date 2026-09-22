@@ -69,7 +69,7 @@ export class GetConnected extends Component<PropsWithChildren<Props>, State> {
           <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
             <List>
               <ListItem>
-                <ListItemText style={{ width: 300 }} primary="1. Install the WireGuard App" />
+                <ListItemText style={{ width: 300 }} primary="1. Install the WireGuard app" />
                 <ButtonGroup size="large" color="primary" aria-label="large outlined primary button group">
                   <Button onClick={() => this.go('https://www.WireGuard.com/install/')}>
                     <LinuxIcon />
@@ -85,11 +85,11 @@ export class GetConnected extends Component<PropsWithChildren<Props>, State> {
               <ListItem>
                 <ListItemText style={{ width: 300 }} primary="2. Download your connection file" />
                 <Button variant="outlined" color="primary" onClick={this.download}>
-                  <GetApp /> Connection File
+                  <GetApp /> Connection file
                 </Button>
               </ListItem>
               <ListItem>
-                <ListItemText style={{ width: 300 }} primary="3. Import your connection file in the App" />
+                <ListItemText style={{ width: 300 }} primary="3. Import your connection file in the app" />
               </ListItem>
             </List>
           </Box>

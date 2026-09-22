@@ -19,8 +19,8 @@ describe('Navigation', () => {
   it('offers to sign out once the server info has loaded', () => {
     AppState.setInfo({ isAdmin: false } as InfoRes.AsObject);
     renderNavigation();
-    expect(screen.getByTitle('Logout').closest('a')?.getAttribute('href')).toBe('/signout');
-    expect(screen.queryByTitle('Login')).toBeNull();
+    expect(screen.getByTitle('Sign out').closest('a')?.getAttribute('href')).toBe('/signout');
+    expect(screen.queryByTitle('Sign in')).toBeNull();
   });
 
   it('does not underline the app name', () => {

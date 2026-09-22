@@ -73,10 +73,10 @@ export const DeviceListItem = observer(
             }
             action={
               <>
-                <IconButton onClick={this.renameDevice} title="Rename Device">
+                <IconButton onClick={this.renameDevice} title="Rename device">
                   <EditIcon />
                 </IconButton>
-                <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={this.removeDevice} title="Delete Device">
+                <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={this.removeDevice} title="Delete device">
                   <DeleteIcon />
                 </IconButton>
               </>

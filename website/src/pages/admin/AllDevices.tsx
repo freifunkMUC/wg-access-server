@@ -186,7 +186,7 @@ export const AllDevices = observer(
                         direction={this.sortBy === 'ownerProvider' ? this.sortOrder : 'asc'}
                         onClick={() => this.handleRequestSort('ownerProvider')}
                       >
-                        Auth Provider
+                        Auth provider
                       </TableSortLabel>
                     </TableCell>
                   )}
@@ -214,7 +214,7 @@ export const AllDevices = observer(
                       direction={this.sortBy === 'address' ? this.sortOrder : 'asc'}
                       onClick={() => this.handleRequestSort('address')}
                     >
-                      Local Address
+                      Local address
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
@@ -223,7 +223,7 @@ export const AllDevices = observer(
                       direction={this.sortBy === 'endpoint' ? this.sortOrder : 'asc'}
                       onClick={() => this.handleRequestSort('endpoint')}
                     >
-                      Last Endpoint
+                      Last endpoint
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
@@ -249,7 +249,7 @@ export const AllDevices = observer(
                       direction={this.sortBy === 'lastHandshakeTime' ? this.sortOrder : 'asc'}
                       onClick={() => this.handleRequestSort('lastHandshakeTime')}
                     >
-                      Last Seen
+                      Last seen
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>Actions</TableCell>
