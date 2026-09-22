@@ -46,3 +46,9 @@ markdown_extensions:
 
 plugins:
   - search
+
+# a version selector; see scripts/docs/deploy.sh
+extra:
+  version:
+    provider: mike
+    default: latest

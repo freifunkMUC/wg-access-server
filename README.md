@@ -34,7 +34,9 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 
 ## Documentation
 
-[See our documentation website](https://www.freie-netze.org/wg-access-server/)
+[See our documentation website](https://www.freie-netze.org/wg-access-server/). It shows the
+documentation of the latest release; the version selector at the top has the older releases and
+`dev`, the state of the master branch.
 
 Quick Links:
 

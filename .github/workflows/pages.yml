@@ -1,11 +1,31 @@
 name: Publish docs via GitHub Pages
+
+# One version of the docs per minor release, published with mike (see
+# scripts/docs/deploy.sh): master as "dev", a release tag as its minor
+# version, and the newest release as "latest", which visitors see first.
 on:
   push:
     branches:
       - master
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dev: publish master. migrate: once, publish every release and redirect the old unversioned pages"
+        type: choice
+        options:
+          - dev
+          - migrate
+        default: dev
 
 permissions:
   contents: write
+
+# every run pushes to gh-pages
+concurrency:
+  group: docs
+  cancel-in-progress: false
 
 jobs:
   mkdocs:
@@ -14,11 +34,36 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # the release tags, and gh-pages to add to
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install documentation dependencies
+        run: pip install -r requirements-docs.txt
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages:gh-pages
 
       - name: Deploy docs
-        uses: mhausenblas/mkdocs-deploy-gh-pages@d77dd03172e96abbcdb081d8c948224762033653 # v1.26
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CONFIG_FILE: mkdocs.yml
-          EXTRA_PACKAGES: build-base # required for Python dependencies
-          REQUIREMENTS: requirements-docs.txt
+          DOCS_PUSH: "1"
+          EVENT: ${{ github.event_name }}
+          MODE: ${{ inputs.mode }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            scripts/docs/deploy.sh "$MODE"
+          elif [ "$REF_TYPE" = "tag" ]; then
+            scripts/docs/deploy.sh release "$REF_NAME"
+          else
+            scripts/docs/deploy.sh dev
+          fi
