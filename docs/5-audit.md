@@ -15,7 +15,10 @@ level=info msg=device.delete audit=device.delete actor=admin actor_is_admin=true
 | --------------- | ------------------------------------------------- | ------------------------------ |
 | `device.create` | A device was added                                 | `device`, `owner`, `address`   |
 | `device.delete` | A device was deleted                               | `device`, `owner`, `reason`\*  |
-| `user.delete`   | An admin deleted a user and all of their devices   | `target_user`                  |
+| `device.rename` | A device was renamed                               | `device`, `previous`, `owner`  |
+| `user.delete`   | An admin deleted a user, their devices and tokens  | `target_user`                  |
+| `api_token.create` | An API token was created                        | `token`, `token_name`, `expires_at` |
+| `api_token.delete` | An API token was revoked                        | `token`, `token_name`, `owner` |
 
 \* `reason=inactive` marks a device the server deleted by itself because it exceeded the inactive
 device grace period.
@@ -27,6 +30,7 @@ device grace period.
 | `actor`          | The user that made the change, or `system` for changes wg-access-server made on its own |
 | `actor_provider` | The authentication backend that user logged in with                                    |
 | `actor_is_admin` | Whether the actor acted with admin rights                                              |
+| `actor_api_token`| The id of the API token the change was made with; absent for the web UI               |
 | `owner`          | The user the affected device belongs to - different from `actor` means an admin acted on somebody else's device |
 | `remote_addr`    | The address the request came from. Behind a reverse proxy this is the proxy           |
 | `trace.id`       | Ties the record to the other log lines of the same request                            |
