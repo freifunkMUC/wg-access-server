@@ -48,6 +48,17 @@ func TestDNSAuth_Lookup(t *testing.T) {
 		}
 	}
 
+	t.Run("device and owner names ignore case", func(t *testing.T) {
+		auth.PushZone(Zone{
+			{}:                               {serverAddr},
+			{Owner: "alice", Name: "laptop"}: {deviceAddr},
+			{Owner: "Bob", Name: "iPhone"}:   {deviceAddr},
+		})
+		for _, qname := range []string{"iphone.bob.vpn.example.com.", "IPHONE.BOB.vpn.example.com.", "iPhone.Bob.vpn.example.com."} {
+			expectA(t, lookupA(t, qname), deviceAddr)
+		}
+	})
+
 	t.Run("lowercase device query resolves", func(t *testing.T) {
 		expectA(t, lookupA(t, "laptop.alice.vpn.example.com."), deviceAddr)
 	})

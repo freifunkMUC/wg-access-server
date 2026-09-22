@@ -24,10 +24,16 @@ type DNSAuth struct {
 	zoneLock *sync.RWMutex
 }
 
+// PushZone replaces the zone. Names are stored in lower case: DNS does not
+// tell "iPhone" from "iphone", and neither may the lookup.
 func (d *DNSAuth) PushZone(zone Zone) {
 	logrus.Debugln("pushing new auth zone")
+	folded := make(Zone, len(zone))
+	for key, addresses := range zone {
+		folded[ZoneKey{Owner: strings.ToLower(key.Owner), Name: strings.ToLower(key.Name)}] = addresses
+	}
 	d.zoneLock.Lock()
-	d.zone = zone
+	d.zone = folded
 	d.zoneLock.Unlock()
 }
 
@@ -136,7 +142,7 @@ func (d *DNSAuth) Lookup(m *dns.Msg) (*dns.Msg, error) {
 func (d *DNSAuth) getDevice(owner, device string) []netip.Addr {
 	d.zoneLock.RLock()
 	defer d.zoneLock.RUnlock()
-	return d.zone[ZoneKey{owner, device}]
+	return d.zone[ZoneKey{strings.ToLower(owner), strings.ToLower(device)}]
 }
 
 // newRR creates a new resource record from the arguments
