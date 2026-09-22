@@ -114,4 +114,4 @@ jobs:
         run: go test -race ./...
         env:
           WG_TEST_POSTGRES_URI: postgresql://wgtest:wgtest@localhost:5432/wgtest?sslmode=disable
-          WG_TEST_MYSQL_URI: mysql://wgtest:wgtest@localhost:3306/wgtest
+          WG_TEST_MYSQL_URI: mysql://root:wgtest@localhost:3306/wgtest
