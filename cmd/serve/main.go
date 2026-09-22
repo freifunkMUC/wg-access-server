@@ -333,11 +333,13 @@ func (cmd *servecmd) Run() {
 	router.Use(middleware)
 
 	// API tokens, after the session: a request that names a token acts as it
-	var tokens *apitokens.Manager
+	// (and the middleware refuses every token while they are disabled)
+	tokens := apitokens.New(storageBackend, claims)
+	var acceptedTokens *apitokens.Manager
 	if conf.EnableAPITokens {
-		tokens = apitokens.New(storageBackend, claims)
+		acceptedTokens = tokens
 	}
-	router.Use(apitokens.Middleware(tokens))
+	router.Use(apitokens.Middleware(acceptedTokens))
 
 	// Subrouter for our site (web + api)
 	site := router.PathPrefix("/").Subrouter()
@@ -346,6 +348,7 @@ func (cmd *servecmd) Run() {
 	apiServices := &services.ApiServices{
 		Config:        conf,
 		DeviceManager: deviceManager,
+		Tokens:        tokens,
 		Wg:            wg,
 	}
 

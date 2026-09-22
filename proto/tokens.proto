@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/freifunkMUC/wg-access-server/proto/proto";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service Tokens {
+  // Only with a browser session: a token cannot create further tokens.
+  rpc CreateToken(CreateTokenReq) returns (CreateTokenRes) {}
+  rpc ListTokens(ListTokensReq) returns (ListTokensRes) {}
+  // Users can revoke their own tokens, admins any.
+  rpc DeleteToken(DeleteTokenReq) returns (google.protobuf.Empty) {}
+
+  // admin only
+  rpc ListAllTokens(ListAllTokensReq) returns (ListAllTokensRes) {}
+}
+
+message Token {
+  string id = 1;
+  string name = 2;
+  string owner = 3;
+  string owner_name = 4;
+  google.protobuf.Timestamp created_at = 5;
+  // unset: the token does not expire
+  google.protobuf.Timestamp expires_at = 6;
+  // unset: the token was never used
+  google.protobuf.Timestamp last_used_at = 7;
+}
+
+message CreateTokenReq {
+  string name = 1;
+  // unset: the token does not expire
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message CreateTokenRes {
+  Token token = 1;
+  // The token itself. It is not stored and cannot be shown again.
+  string secret = 2;
+}
+
+message ListTokensReq {
+
+}
+
+message ListTokensRes {
+  repeated Token items = 1;
+}
+
+message DeleteTokenReq {
+  string id = 1;
+}
+
+message ListAllTokensReq {
+
+}
+
+message ListAllTokensRes {
+  repeated Token items = 1;
+}
