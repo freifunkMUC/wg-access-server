@@ -1,12 +1,12 @@
-version: "3.0"
+# wg-access-server with Docker Compose. More setups - behind Traefik, IPv4- or
+# IPv6-only, with Docker secrets - are in docs/deployment/2-docker-compose.md.
 services:
   wg-access-server:
-    # to build the docker image from the source
-    # build:
-    #   dockerfile: Dockerfile
-    #   context: .
     image: ghcr.io/freifunkmuc/wg-access-server:latest
+    # to build the image from source instead:
+    # build: .
     container_name: wg-access-server
+    restart: unless-stopped
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -14,19 +14,16 @@ services:
       net.ipv6.conf.all.forwarding: 1
     volumes:
       - "wg-access-server-data:/data"
-    #   - "./config.yaml:/config.yaml" # if you have a custom config file
+      # - "./config.yaml:/config.yaml:ro" # an optional config file
     environment:
-      - "WG_ADMIN_PASSWORD=${WG_ADMIN_PASSWORD:?\n\nplease set the WG_ADMIN_PASSWORD environment variable:\n    export WG_ADMIN_PASSWORD=example\n}"
-      - "WG_WIREGUARD_PRIVATE_KEY=${WG_WIREGUARD_PRIVATE_KEY:?\n\nplease set the WG_WIREGUARD_PRIVATE_KEY environment variable:\n    export WG_WIREGUARD_PRIVATE_KEY=$(wg genkey)\n}"
-    #  - "WG_VPN_CIDRV6=0" # to disable IPv6
+      WG_ADMIN_PASSWORD: "${WG_ADMIN_PASSWORD:?set WG_ADMIN_PASSWORD, the password of the admin account}"
+      WG_WIREGUARD_PRIVATE_KEY: "${WG_WIREGUARD_PRIVATE_KEY:?set WG_WIREGUARD_PRIVATE_KEY, e.g. to the output of wg genkey}"
     ports:
-      - "8000:8000/tcp"
-      - "8443:8443/tcp"
-      - "51820:51820/udp"
+      - "8443:8443/tcp" # the web UI, over HTTPS with a self-signed certificate
+      - "127.0.0.1:8000:8000/tcp" # the web UI over plain HTTP - only for this machine
+      - "51820:51820/udp" # WireGuard
     devices:
       - "/dev/net/tun:/dev/net/tun"
 
-# shared volumes with the host
 volumes:
   wg-access-server-data:
-    driver: local
