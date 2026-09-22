@@ -93,8 +93,8 @@ export const Devices = observer(
         <Box sx={{ display: 'grid', gap: 3, justifyContent: 'center' }}>
           <Box sx={{ gridColumn: 'span 12' }}>
             <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' } }}>
-              {devices.current.map((device: Device.AsObject, i: React.Key) => (
-                <Box key={i}>
+              {sortByName(devices.current).map((device: Device.AsObject) => (
+                <Box key={device.name}>
                   <DeviceListItem device={device} onChange={() => devices.refresh()} />
                 </Box>
               ))}
@@ -108,3 +108,9 @@ export const Devices = observer(
     }
   },
 );
+
+// The storage hands devices out in whatever order it keeps them - SQL puts
+// "Tablet" before "iPhone". People expect them alphabetically.
+export function sortByName(devices: Device.AsObject[]): Device.AsObject[] {
+  return [...devices].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+}
