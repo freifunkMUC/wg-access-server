@@ -57,7 +57,7 @@ Example connection string:
 ### MySQL
 
 This backend requires an external Mysql database to be deployed. Mysql flavours should be compatible.
-wg-access-server uses [this golang driver](github.com/go-sql-driver/mysql) if you want to check the
+wg-access-server uses [this golang driver](https://github.com/go-sql-driver/mysql) if you want to check the
 compatibility of your favorite flavour.
 
 Example connection string:

@@ -193,7 +193,7 @@ curl -c cookies -d username=admin -d password=<password> https://localhost:8443/
 curl -b cookies -H 'Content-Type: application/json' -d '{}' https://localhost:8443/api/proto.Server/Info
 ```
 
-For scripts, [API tokens](docs/4-auth.md#api-tokens) replace the session.
+For scripts, [API tokens](https://www.freie-netze.org/wg-access-server/4-auth/#api-tokens) replace the session.
 
 ### gRPC code generation:
 
