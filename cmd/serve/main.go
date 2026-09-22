@@ -372,8 +372,11 @@ func (cmd *servecmd) Run() {
 
 		// Create a new HTTP server
 		httpSrv = &http.Server{
-			Addr:    address,
-			Handler: publicRouter,
+			Addr:              address,
+			Handler:           publicRouter,
+			ReadHeaderTimeout: readHeaderTimeout,
+			ReadTimeout:       readTimeout,
+			IdleTimeout:       idleTimeout,
 		}
 
 		// Start HTTP server
@@ -411,6 +414,10 @@ func (cmd *servecmd) Run() {
 			Addr:      httpsAddress,
 			Handler:   publicRouter,
 			TLSConfig: tlsConfig,
+			// see readHeaderTimeout
+			ReadHeaderTimeout: readHeaderTimeout,
+			ReadTimeout:       readTimeout,
+			IdleTimeout:       idleTimeout,
 		}
 
 		// Start HTTPS server
@@ -683,3 +690,14 @@ var missingPrivateKey = `Missing WireGuard private key:
         privateKey: "<private-key>"
 
 `
+
+// How long a client may take. Without these, a client that sends its request
+// a byte at a time holds on to a connection for as long as it likes, and
+// enough of them use up the server's connections for everybody else
+// (Slowloris). Nothing the web UI sends or receives takes long: the requests
+// are small, and no response is streamed.
+const (
+	readHeaderTimeout = 10 * time.Second
+	readTimeout       = 30 * time.Second
+	idleTimeout       = 2 * time.Minute
+)
