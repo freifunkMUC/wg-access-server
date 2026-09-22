@@ -82,6 +82,7 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 	}
 	runtime := authruntime.NewProviderRuntime(store)
 	providers := config.Providers()
+	runtime.SetProviderCount(len(providers))
 
 	for _, p := range providers {
 		if p.RegisterRoutes != nil {

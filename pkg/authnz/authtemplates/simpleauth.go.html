@@ -5,13 +5,16 @@
 
 	<form action="{{.PostURL}}" method="POST">
 		<label for="username">Username</label>
-		<input type="text" name="username" id="username" required />
+		<input type="text" name="username" id="username" autocomplete="username" autofocus required>
 		<label for="password">Password</label>
-		<input type="password" name="password" id="password" autocomplete="current-password" required />
-		<button id="submit" type="submit">Login</button>
+		<input type="password" name="password" id="password" autocomplete="current-password" required>
+		<button id="submit" type="submit">Sign in</button>
 	</form>
 	{{- with .ErrorMessage}}
-	<div class="error">{{.}}</div>
+	<div class="error" role="alert">{{.}}</div>
+	{{- end}}
+	{{- if .OtherProviders}}
+	<a class="back" href="/signin">Other ways to sign in</a>
 	{{- end}}
 
 </section>

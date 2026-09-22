@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sign In</title>
+    <title>Sign in · wg-access-server</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
     * {
@@ -53,7 +53,8 @@
         font-weight: 500;
     }
 
-    .form button {
+    .form button,
+    .form a.provider {
         width: 100%;
         padding: 0.75rem;
         border: none;
@@ -67,9 +68,46 @@
         margin: 0.5rem 0;
     }
 
-    .form button:hover {
+    .form button:hover,
+    .form a.provider:hover {
         background: #2d7aa3;
         transform: translateY(-1px);
+    }
+
+    /* a link that looks like the buttons: no underline, no link colours */
+    .form a.provider {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        text-decoration: none;
+    }
+
+    .form a.provider img {
+        position: absolute;
+        left: 0.75rem;
+        height: 1.125rem;
+        width: 1.125rem;
+    }
+
+    .form input:focus {
+        outline: none;
+        border-color: #3899c9;
+    }
+
+    /* keyboard users need to see where they are */
+    .form button:focus-visible,
+    .form a:focus-visible {
+        outline: 3px solid #165a7d;
+        outline-offset: 2px;
+    }
+
+    .form .back {
+        display: block;
+        margin-top: 1rem;
+        text-align: center;
+        color: #2d7aa3;
+        font-size: 0.9rem;
     }
 
     .form .error {
@@ -103,13 +141,19 @@
             color: #e0e0e0;
         }
 
-        .form button {
-            background: #3899c9;
+        .form button:focus-visible,
+        .form a:focus-visible {
+            outline-color: #8cc8e6;
         }
 
-        .form button:hover {
-            background: #2d7aa3;
+        .form .back {
+            color: #8cc8e6;
         }
+
+        .form .error {
+            color: #ff8a8a;
+        }
+
     }
     </style>
 </head>

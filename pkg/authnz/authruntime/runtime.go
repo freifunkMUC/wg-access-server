@@ -28,10 +28,23 @@ type ProviderBranding struct {
 
 type ProviderRuntime struct {
 	store sessions.Store
+	// otherProviders is whether a user can sign in some other way, too.
+	otherProviders bool
 }
 
 func NewProviderRuntime(store sessions.Store) *ProviderRuntime {
-	return &ProviderRuntime{store}
+	return &ProviderRuntime{store: store}
+}
+
+// SetProviderCount tells the providers how many there are, so a provider's
+// own login page knows whether to offer a way back to the others.
+func (p *ProviderRuntime) SetProviderCount(count int) {
+	p.otherProviders = count > 1
+}
+
+// HasOtherProviders reports whether a user can sign in some other way, too.
+func (p *ProviderRuntime) HasOtherProviders() bool {
+	return p.otherProviders
 }
 
 func (p *ProviderRuntime) SetSession(w http.ResponseWriter, r *http.Request, s *authsession.AuthSession) error {

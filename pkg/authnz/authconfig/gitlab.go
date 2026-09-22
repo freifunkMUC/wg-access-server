@@ -34,7 +34,7 @@ func (c *GitlabConfig) Provider() *authruntime.Provider {
 	p.Branding = authruntime.ProviderBranding{
 		Background: "#fc6d26",
 		Color:      "white",
-		Icon:       "https://about.gitlab.com/images/press/logo/svg/gitlab-icon-1-color-white-rgb.svg",
+		Icon:       svgDataURL(gitlabIcon),
 	}
 	return p
 }
