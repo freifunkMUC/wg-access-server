@@ -11,6 +11,13 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   reactHooks.configs.flat['recommended-latest'],
   {
+    // scripts run in Node, not in the browser
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { Buffer: 'readonly', console: 'readonly', fetch: 'readonly', process: 'readonly', setTimeout: 'readonly' },
+    },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {

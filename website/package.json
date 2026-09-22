@@ -9,6 +9,7 @@
     "preview": "vite preview --port 5000",
     "lint": "npx eslint . --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",
+    "screenshots": "node scripts/screenshots.mjs",
     "test:watch": "vitest",
     "prettier": "npx prettier \"./src/**/*.{ts,tsx}\" --write"
   },
@@ -45,6 +46,7 @@
     "fork-ts-checker-webpack-plugin": "^9.1.0",
     "grpc-web": "^2.1.1",
     "jsdom": "^30.1.0",
+    "playwright": "^1.63.0",
     "prettier": "^3.9.6",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.0",
