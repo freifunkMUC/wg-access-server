@@ -78,7 +78,8 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("vpn-nat44-enabled", "Enable or disable NAT of IPv6 traffic leaving through the gateway").Envar("WG_IPV4_NAT_ENABLED").Default("true").BoolVar(&cmd.AppConfig.VPN.NAT44)
 	cli.Flag("vpn-nat66-enabled", "Enable or disable NAT of IPv6 traffic leaving through the gateway").Envar("WG_IPV6_NAT_ENABLED").Default("true").BoolVar(&cmd.AppConfig.VPN.NAT66)
 	cli.Flag("vpn-client-isolation", "Block or allow traffic between client devices").Envar("WG_VPN_CLIENT_ISOLATION").Default("false").BoolVar(&cmd.AppConfig.VPN.ClientIsolation)
-	cli.Flag("vpn-disable-iptables", "Disable iptables configuration completely").Envar("WG_VPN_DISABLE_IPTABLES").Default("false").BoolVar(&cmd.AppConfig.VPN.DisableIPTables)
+	cli.Flag("vpn-firewall", "How to set up the forwarding rules: iptables, nftables or none").Envar("WG_VPN_FIREWALL").StringVar(&cmd.AppConfig.VPN.Firewall)
+	cli.Flag("vpn-disable-iptables", "Deprecated: use --vpn-firewall=none").Envar("WG_VPN_DISABLE_IPTABLES").Default("false").BoolVar(&cmd.AppConfig.VPN.DisableIPTables)
 	cli.Flag("dns-enabled", "Enable or disable the embedded dns proxy server (useful for development)").Envar("WG_DNS_ENABLED").Default("true").BoolVar(&cmd.AppConfig.DNS.Enabled)
 	cli.Flag("dns-upstream", "An upstream DNS server to proxy DNS traffic to. Defaults to resolvconf with Cloudflare DNS as fallback").Envar("WG_DNS_UPSTREAM").StringsVar(&cmd.AppConfig.DNS.Upstream)
 	cli.Flag("dns-cache-size", "How many DNS responses the embedded DNS proxy caches (0 disables caching)").Envar("WG_DNS_CACHE_SIZE").Default(strconv.Itoa(dnsproxy.DefaultCacheSize)).IntVar(&cmd.AppConfig.DNS.CacheSize)
@@ -219,7 +220,7 @@ func (cmd *servecmd) Run() {
 			NAT66:           conf.VPN.NAT66,
 			ClientIsolation: conf.VPN.ClientIsolation,
 			AllowedIPs:      conf.VPN.AllowedIPs,
-			DisableIPTables: conf.VPN.DisableIPTables,
+			Firewall:        conf.VPN.Firewall,
 		}
 
 		if err := network.ConfigureForwarding(options); err != nil {
@@ -496,6 +497,12 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	if err := cmd.AppConfig.Auth.Validate(); err != nil {
 		logrus.Fatal(err)
 	}
+
+	firewall, err := network.ResolveFirewall(cmd.AppConfig.VPN.Firewall, cmd.AppConfig.VPN.DisableIPTables)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	cmd.AppConfig.VPN.Firewall = firewall
 
 	if !cmd.AppConfig.Auth.IsEnabled() {
 		if cmd.AppConfig.AdminPassword == "" {
