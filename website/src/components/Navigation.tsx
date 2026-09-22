@@ -15,6 +15,7 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LoginIcon from '@mui/icons-material/Login';
 import DevicesIcon from '@mui/icons-material/Devices';
+import KeyIcon from '@mui/icons-material/Key';
 import { useMediaQuery } from '@mui/material';
 
 // Stile mit `styled` definieren
@@ -47,6 +48,14 @@ export default function Navigation() {
         </Title>
 
         <DarkModeToggle />
+
+        {AppState.info?.apiTokensEnabled && (
+          <Link to="/tokens" color="inherit" component={NavLink}>
+            <IconButton sx={{ ml: 1 }} color="inherit" title="API Tokens">
+              <KeyIcon />
+            </IconButton>
+          </Link>
+        )}
 
         {AppState.info?.isAdmin && (
           <Link to="/admin/all-devices" color="inherit" component={NavLink}>

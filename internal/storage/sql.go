@@ -175,6 +175,9 @@ func (s *SQLStorage) Open() error {
 	if err := s.db.AutoMigrate(&Device{}); err != nil {
 		return errors.Wrap(err, migrationFailed)
 	}
+	if err := s.db.AutoMigrate(&APIToken{}); err != nil {
+		return errors.Wrap(err, "failed to migrate the api tokens table")
+	}
 
 	table, err := deviceTable(db)
 	if err != nil {

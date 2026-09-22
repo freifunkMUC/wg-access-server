@@ -123,6 +123,41 @@ auth:
       - example.com
 ```
 
+## API tokens
+
+With `enableApiTokens: true`, users can create tokens on the *API tokens* page of the web UI (the key
+icon) and use the API from scripts without a browser session:
+
+```sh
+curl -H "Authorization: Bearer wgas_..." -H 'Content-Type: application/json' -d '{}' \
+  https://wg-access-server.example.com/api/proto.Devices/ListDevices
+```
+
+A token acts as the user who created it and may do exactly what they may do in the web UI - an
+admin's token has admin rights. It works for the API under `/api` only, not for the web UI.
+
+- **What is stored:** only a SHA-256 hash of the token. The token itself is shown once, when it is
+  created. Every token starts with `wgas_`, so a leaked one is easy to recognise, for secret scanners
+  too.
+- **Rights are checked on every request**, the way they are for a web session: a token carries the
+  identity its owner had when creating it, and the server checks that identity against the current
+  configuration. For Simple and Basic Auth, admin rights come from `adminUsername`, so a user who is
+  no longer the configured admin loses them on their tokens too. For OIDC, a token is refused once
+  the configuration requires an `accessClaim` its identity does not have.
+- **Changes at the identity provider do not reach a token.** The claims of an OIDC user are those
+  from the login the token was created in - just like a web session, only that a token can live
+  longer. To take access away from somebody at once, delete the user in the web UI, which revokes
+  their tokens, or revoke the tokens under *All tokens*.
+- **Lifetime:** a token expires after 30 days, 90 days, a year or never, as chosen when creating it.
+  Users can revoke their own tokens, admins every token (listed under *All tokens*). Deleting a user
+  revokes their tokens too. A revoked or expired token stops working immediately, on every replica.
+- **A token cannot create further tokens.** Otherwise a leaked token could outlive its expiry
+  through the tokens it created. Creating a token needs a web session.
+
+Requests with a token that does not work get a `401` (a disabled feature too), an owner who has lost
+access a `403`. Creating and revoking tokens is recorded in the [audit log](./5-audit.md), and so is
+which token made a change.
+
 ## Login throttling
 
 Failed logins to the Simple Auth and Basic Auth backends are slowed down: after a wrong password the

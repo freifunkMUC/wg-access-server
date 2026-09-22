@@ -10,6 +10,7 @@ import (
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"github.com/gorilla/mux"
 
+	"github.com/freifunkMUC/wg-access-server/internal/apitokens"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/traces"
@@ -23,6 +24,7 @@ const maxRequestBytes = 1 << 20
 type ApiServices struct {
 	Config        *config.AppConfig
 	DeviceManager *devices.DeviceManager
+	Tokens        *apitokens.Manager
 	Wg            wgembed.WireGuardInterface
 }
 
@@ -41,7 +43,10 @@ func ApiRouter(deps *ApiServices) http.Handler {
 			return protoconnect.NewDevicesHandler(&DeviceService{DeviceManager: deps.DeviceManager}, options)
 		},
 		func() (string, http.Handler) {
-			return protoconnect.NewUsersHandler(&UserService{DeviceManager: deps.DeviceManager}, options)
+			return protoconnect.NewUsersHandler(&UserService{DeviceManager: deps.DeviceManager, Tokens: deps.Tokens}, options)
+		},
+		func() (string, http.Handler) {
+			return protoconnect.NewTokensHandler(&TokenService{Tokens: deps.Tokens, Enabled: deps.Config.EnableAPITokens}, options)
 		},
 		func() (string, http.Handler) {
 			return protoconnect.NewServerHandler(&ServerService{Config: deps.Config, Wg: deps.Wg}, options)

@@ -1,6 +1,7 @@
 import { Timestamp } from 'google-protobuf/google/protobuf/timestamp_pb';
 import { Devices } from './sdk/devices_pb';
 import { Server } from './sdk/server_pb';
+import { Tokens } from './sdk/tokens_pb';
 import { Users } from './sdk/users_pb';
 
 const backend = window.location.origin + '/api';
@@ -9,6 +10,7 @@ export const grpc = {
   server: new Server(backend),
   users: new Users(backend),
   devices: new Devices(backend),
+  tokens: new Tokens(backend),
 };
 
 // https://github.com/SafetyCulture/grpc-web-devtools

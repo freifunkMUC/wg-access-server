@@ -25,6 +25,8 @@ const (
 	DeviceDelete = "device.delete"
 	DeviceRename = "device.rename"
 	UserDelete   = "user.delete"
+	TokenCreate  = "api_token.create"
+	TokenDelete  = "api_token.delete"
 )
 
 // SystemActor stands in for wg-access-server itself, for changes that no user
@@ -71,6 +73,9 @@ func Log(ctx context.Context, action string, fields logrus.Fields) {
 		entry["actor"] = user.Subject
 		entry["actor_provider"] = user.Provider
 		entry["actor_is_admin"] = user.Claims.IsAdmin()
+		if token := authsession.APIToken(ctx); token != "" {
+			entry["actor_api_token"] = token
+		}
 	}
 	if addr := remoteAddr(ctx); addr != "" {
 		entry["remote_addr"] = addr

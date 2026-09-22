@@ -13,6 +13,7 @@ type InMemoryStorage struct {
 	// calls List and Save, which take mu themselves.
 	allocationMu sync.Mutex
 	db           map[string]*Device
+	tokens       map[string]*APIToken
 }
 
 func NewMemoryStorage() *InMemoryStorage {
@@ -20,6 +21,7 @@ func NewMemoryStorage() *InMemoryStorage {
 	return &InMemoryStorage{
 		InProcessWatcher: NewInProcessWatcher(),
 		db:               db,
+		tokens:           make(map[string]*APIToken),
 	}
 }
 

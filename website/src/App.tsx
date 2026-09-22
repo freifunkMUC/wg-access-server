@@ -8,6 +8,7 @@ import { grpc } from './Api';
 import { AppState } from './AppState';
 import { YourDevices } from './pages/YourDevices';
 import { AllDevices } from './pages/admin/AllDevices';
+import { ApiTokens } from './pages/ApiTokens';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { Loading } from './components/Loading';
 import { Error } from './components/Error';
@@ -34,6 +35,7 @@ export const App = observer(
           <Routes>
             <Route path="/" element={<YourDevices />} />
             {AppState.info.isAdmin && <Route path="/admin/all-devices" element={<AllDevices />} />}
+            {AppState.info.apiTokensEnabled && <Route path="/tokens" element={<ApiTokens />} />}
           </Routes>
         );
       }

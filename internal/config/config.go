@@ -60,6 +60,11 @@ type AppConfig struct {
 	// subnet, not about trust.
 	// Defaults to 0 (no limit)
 	MaxDevicesPerUser int `yaml:"maxDevicesPerUser"`
+	// EnableAPITokens lets users create tokens for using the API from
+	// scripts. A token keeps working until it expires or is revoked, even
+	// after the web session it was created in has ended.
+	// Defaults to false
+	EnableAPITokens bool `yaml:"enableApiTokens"`
 	// The name of the WireGuard configuration file that can
 	// be downloaded through the web UI after adding a device.
 	// Do not include the '.conf' extension

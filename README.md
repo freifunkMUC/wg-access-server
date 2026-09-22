@@ -193,6 +193,8 @@ curl -c cookies -d username=admin -d password=<password> https://localhost:8443/
 curl -b cookies -H 'Content-Type: application/json' -d '{}' https://localhost:8443/api/proto.Server/Info
 ```
 
+For scripts, [API tokens](docs/4-auth.md#api-tokens) replace the session.
+
 ### gRPC code generation:
 
 The client communicates with the server via gRPC web. You can edit the API specification in `./proto/*.proto`.
