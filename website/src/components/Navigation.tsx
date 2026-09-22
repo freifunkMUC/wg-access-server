@@ -68,11 +68,13 @@ export default function Navigation() {
         )}
 
         {signedIn ? (
-          <Link href="/signout" color="inherit">
-            <IconButton sx={{ ml: 1 }} color="inherit" title="Sign out">
+          // a form, not a link: signing out takes a POST, which another site
+          // cannot make the browser send (see CrossOriginProtection)
+          <form method="post" action="/signout" style={{ display: 'contents' }}>
+            <IconButton type="submit" sx={{ ml: 1 }} color="inherit" title="Sign out">
               <LogoutIcon />
             </IconButton>
-          </Link>
+          </form>
         ) : (
           <Link href="/signin" color="inherit">
             <IconButton sx={{ ml: 1 }} color="inherit" title="Sign in">

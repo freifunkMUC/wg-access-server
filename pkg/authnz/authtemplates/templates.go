@@ -17,6 +17,8 @@ var (
 	loginPage string
 	//go:embed simpleauth.go.html
 	simpleAuthPage string
+	//go:embed signout.go.html
+	signoutPage string
 )
 
 // iconURL lets the provider logos through, which are data: URLs that
@@ -33,6 +35,7 @@ var (
 	baseTemplate       = template.Must(template.New("base").Funcs(template.FuncMap{"iconURL": iconURL}).Parse(base))
 	loginPageTemplate  = template.Must(template.Must(baseTemplate.Clone()).Parse(loginPage))
 	simpleAuthTemplate = template.Must(template.Must(baseTemplate.Clone()).Parse(simpleAuthPage))
+	signoutTemplate    = template.Must(template.Must(baseTemplate.Clone()).Parse(signoutPage))
 )
 
 type LoginPage struct {
@@ -54,4 +57,8 @@ type SimpleAuthPage struct {
 
 func RenderSimpleAuthPage(w io.Writer, data SimpleAuthPage) error {
 	return simpleAuthTemplate.Execute(w, data)
+}
+
+func RenderSignoutPage(w io.Writer) error {
+	return signoutTemplate.Execute(w, nil)
 }

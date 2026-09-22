@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authconfig"
@@ -95,16 +96,41 @@ func TestSessionCookieAttributes(t *testing.T) {
 func TestSignoutStillExpiresSessionCookie(t *testing.T) {
 	m := newBasicAuthMiddleware(t, "admin", "s3cret")
 
-	req := httptest.NewRequest("GET", "/signout", nil)
+	req := httptest.NewRequest("POST", "/signout", nil)
 	rr := httptest.NewRecorder()
 	m.Middleware(http.NotFoundHandler()).ServeHTTP(rr, req)
 
+	if rr.Code != http.StatusSeeOther || rr.Header().Get("Location") != "/signin?signout=1" {
+		t.Errorf("signout answered %d to %q, want 303 to the sign-in page", rr.Code, rr.Header().Get("Location"))
+	}
 	cookie := findSessionCookie(t, rr)
 	if cookie.MaxAge >= 0 {
 		t.Errorf("signout session cookie Max-Age = %d, want < 0 (deletion)", cookie.MaxAge)
 	}
 	if !cookie.HttpOnly {
 		t.Error("signout session cookie is missing the HttpOnly attribute")
+	}
+}
+
+// A GET must not sign anybody out: another site can make a browser send
+// one with a link or an image. It gets a page with the button instead.
+func TestSignoutByGetOnlyAsks(t *testing.T) {
+	m := newBasicAuthMiddleware(t, "admin", "s3cret")
+
+	req := httptest.NewRequest("GET", "/signout", nil)
+	rr := httptest.NewRecorder()
+	m.Middleware(http.NotFoundHandler()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("status %d, want 200 with the sign-out page", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), `<form action="/signout" method="POST">`) {
+		t.Error("the page has no sign-out button")
+	}
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie.MaxAge < 0 {
+			t.Errorf("a GET deleted the cookie %s", cookie.Name)
+		}
 	}
 }
 

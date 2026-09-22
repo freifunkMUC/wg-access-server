@@ -1,0 +1,11 @@
+{{- define "body" -}}
+<section class="form">
+	<h2>Sign out</h2>
+
+	<form action="/signout" method="POST">
+		<button id="submit" type="submit" autofocus>Sign out</button>
+	</form>
+
+	{{template "footer"}}
+</section>
+{{- end}}

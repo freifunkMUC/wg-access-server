@@ -314,6 +314,10 @@ func (cmd *servecmd) Run() {
 	router.Use(services.RecoveryMiddleware)
 	router.Use(services.SecurityHeadersMiddleware)
 	router.Use(audit.Middleware)
+	// Refuses a POST (or PUT, DELETE, ...) a browser sends on behalf of
+	// another site: signing in or out, and the API. Scripts send no such
+	// headers and are not affected.
+	router.Use(http.NewCrossOriginProtection().Handler)
 
 	// Health check endpoint
 	router.PathPrefix("/health").Handler(services.HealthEndpoint(deviceManager))

@@ -122,7 +122,16 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 		provider.Invoke(w, r, runtime)
 	})
 
+	// Signing out changes state, so it takes a POST: a link or an image on
+	// another site can make a browser GET anything. A GET - an old bookmark,
+	// or the address typed in - gets a page with the button instead.
 	router.HandleFunc("/signout", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			if err := authtemplates.RenderSignoutPage(w); err != nil {
+				logrus.Error(errors.Wrap(err, "failed to render the sign-out page"))
+			}
+			return
+		}
 		_ = runtime.ClearSession(w, r)
 		runtime.Restart(w, r)
 	})
