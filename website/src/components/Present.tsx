@@ -5,7 +5,8 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
+import { appTheme } from '../Theme';
 import { AppState } from '../AppState';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -25,11 +26,7 @@ export function present<T>(content: (close: (result: T) => void) => React.ReactN
 }
 
 export function confirm(msg: string): Promise<boolean> {
-  const darkLightTheme = createTheme({
-    palette: {
-      mode: AppState.darkMode ? 'dark' : 'light',
-    },
-  });
+  const darkLightTheme = appTheme(AppState.darkMode);
 
   return present<boolean>((close) => (
     <ThemeProvider theme={darkLightTheme}>
@@ -43,7 +40,7 @@ export function confirm(msg: string): Promise<boolean> {
             Cancel
           </Button>
           <Button onClick={() => close(true)} variant="outlined" color="secondary">
-            Ok
+            OK
           </Button>
         </DialogActions>
       </Dialog>
@@ -56,11 +53,7 @@ export function confirm(msg: string): Promise<boolean> {
  * is cancelled or nothing was entered.
  */
 export function prompt(msg: string, initialValue = ''): Promise<string | null> {
-  const darkLightTheme = createTheme({
-    palette: {
-      mode: AppState.darkMode ? 'dark' : 'light',
-    },
-  });
+  const darkLightTheme = appTheme(AppState.darkMode);
 
   return present<string | null>((close) => {
     let value = initialValue;
@@ -91,7 +84,7 @@ export function prompt(msg: string, initialValue = ''): Promise<string | null> {
                 Cancel
               </Button>
               <Button type="submit" variant="outlined" color="secondary">
-                Ok
+                OK
               </Button>
             </DialogActions>
           </form>

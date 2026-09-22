@@ -9,7 +9,8 @@ import { AppState } from './AppState';
 import { YourDevices } from './pages/YourDevices';
 import { AllDevices } from './pages/admin/AllDevices';
 import { ApiTokens } from './pages/ApiTokens';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
+import { appTheme } from './Theme';
 import { Loading } from './components/Loading';
 import { Error } from './components/Error';
 import { errorMessage } from './Util';
@@ -42,11 +43,7 @@ export const App = observer(
     }
 
     render() {
-      const darkLightTheme = createTheme({
-        palette: {
-          mode: AppState.darkMode ? 'dark' : 'light',
-        },
-      });
+      const darkLightTheme = appTheme(AppState.darkMode);
 
       return (
         <Router>
