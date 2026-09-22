@@ -145,8 +145,11 @@ type AppConfig struct {
 		// ClientIsolation configures whether traffic between client devices will be blocked or allowed
 		// defaults to false
 		ClientIsolation bool `yaml:"clientIsolation"`
-		// DisableIPTables configures whether to disable iptables configuration completely
-		// defaults to false
+		// Firewall is how the forwarding rules are set up: "iptables",
+		// "nftables" or "none" (set up nothing).
+		// defaults to iptables
+		Firewall string `yaml:"firewall"`
+		// DisableIPTables is the deprecated way of saying Firewall: none.
 		DisableIPTables bool `yaml:"disableIPTables"`
 	} `yaml:"vpn"`
 	// Configure the embedded DNS server

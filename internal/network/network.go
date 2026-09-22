@@ -7,6 +7,7 @@ import (
 
 	"github.com/coreos/go-iptables/iptables"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // ServerVPNIPs returns two netip.Prefix objects (for IPv4 + IPv6)
@@ -99,37 +100,57 @@ type ForwardingOptions struct {
 	AllowedIPs      []string
 	allowedIPv4s    []string
 	allowedIPv6s    []string
-	DisableIPTables bool
+	// Firewall is the backend that sets up the rules: FirewallIPTables,
+	// FirewallNftables or FirewallNone.
+	Firewall string
 }
 
+// The firewall backends.
+const (
+	FirewallIPTables = "iptables"
+	FirewallNftables = "nftables"
+	FirewallNone     = "none"
+)
+
+// ResolveFirewall picks the firewall backend from the configuration. An
+// empty choice keeps what older versions did: iptables, unless the
+// deprecated disableIPTables turned it off.
+func ResolveFirewall(firewall string, disableIPTables bool) (string, error) {
+	switch firewall {
+	case "":
+		if disableIPTables {
+			logrus.Warn("vpn.disableIPTables is deprecated - use vpn.firewall: none")
+			return FirewallNone, nil
+		}
+		return FirewallIPTables, nil
+	case FirewallIPTables, FirewallNftables, FirewallNone:
+		if disableIPTables && firewall != FirewallNone {
+			return "", errors.Errorf("vpn.disableIPTables and vpn.firewall: %s contradict each other - set only vpn.firewall", firewall)
+		}
+		return firewall, nil
+	}
+	return "", errors.Errorf("unknown firewall %q: use iptables, nftables or none", firewall)
+}
+
+// ConfigureForwarding sets up the rules that send the clients' traffic to
+// the allowed networks and nowhere else.
 func ConfigureForwarding(options ForwardingOptions) error {
-	// If iptables is disabled, return early
-	if options.DisableIPTables {
+	if options.Firewall == FirewallNone {
 		return nil
 	}
 
-	// Networking configuration (iptables) configuration
-	// to ensure that traffic from clients of the WireGuard interface
-	// is sent to the provided network interface
-	allowedIPv4s := make([]string, 0, len(options.AllowedIPs)/2)
-	allowedIPv6s := make([]string, 0, len(options.AllowedIPs)/2)
-
-	for _, allowedCIDR := range options.AllowedIPs {
-		parsedAddress, parsedNetwork, err := net.ParseCIDR(allowedCIDR)
-		if err != nil {
-			return errors.Wrap(err, "invalid cidr in AllowedIPs")
-		}
-		if as4 := parsedAddress.To4(); as4 != nil {
-			// Handle IPv4-mapped IPv6 addresses, if they go into ip6tables they don't get hit
-			// and go-iptables can't convert them (whereas commandline iptables can).
-			parsedNetwork.IP = as4
-			allowedIPv4s = append(allowedIPv4s, parsedNetwork.String())
-		} else {
-			allowedIPv6s = append(allowedIPv6s, parsedNetwork.String())
-		}
+	options, err := splitAllowedIPs(options)
+	if err != nil {
+		return err
 	}
-	options.allowedIPv4s = allowedIPv4s
-	options.allowedIPv6s = allowedIPv6s
+
+	// Rules of the other backend from an earlier start would keep applying
+	// next to the new ones - an old reject could block what is allowed now.
+	if options.Firewall == FirewallNftables {
+		removeIPTables()
+		return configureNftables(options)
+	}
+	removeNftables()
 
 	if options.CIDR != "" {
 		if err := configureForwardingv4(options); err != nil {
@@ -290,4 +311,55 @@ func clearOrCreateChain(ipt *iptables.IPTables, table, chain string) error {
 		}
 	}
 	return nil
+}
+
+// splitAllowedIPs sorts the allowed networks into IPv4 and IPv6 ones.
+func splitAllowedIPs(options ForwardingOptions) (ForwardingOptions, error) {
+	allowedIPv4s := make([]string, 0, len(options.AllowedIPs)/2)
+	allowedIPv6s := make([]string, 0, len(options.AllowedIPs)/2)
+
+	for _, allowedCIDR := range options.AllowedIPs {
+		parsedAddress, parsedNetwork, err := net.ParseCIDR(allowedCIDR)
+		if err != nil {
+			return options, errors.Wrap(err, "invalid cidr in AllowedIPs")
+		}
+		if as4 := parsedAddress.To4(); as4 != nil {
+			// Handle IPv4-mapped IPv6 addresses, if they go into ip6tables they don't get hit
+			// and go-iptables can't convert them (whereas commandline iptables can).
+			parsedNetwork.IP = as4
+			allowedIPv4s = append(allowedIPv4s, parsedNetwork.String())
+		} else {
+			allowedIPv6s = append(allowedIPv6s, parsedNetwork.String())
+		}
+	}
+	options.allowedIPv4s = allowedIPv4s
+	options.allowedIPv6s = allowedIPv6s
+	return options, nil
+}
+
+// removeIPTables takes out the chains a start with the iptables backend left
+// behind. Best effort: without iptables there is nothing to remove.
+func removeIPTables() {
+	for _, protocol := range []iptables.Protocol{iptables.ProtocolIPv4, iptables.ProtocolIPv6} {
+		ipt, err := iptables.NewWithProtocol(protocol)
+		if err != nil {
+			continue
+		}
+		for _, chain := range []struct{ table, parent, name string }{
+			{"filter", "FORWARD", "WG_ACCESS_SERVER_FORWARD"},
+			{"nat", "POSTROUTING", "WG_ACCESS_SERVER_POSTROUTING"},
+		} {
+			exists, err := ipt.ChainExists(chain.table, chain.name)
+			if err != nil || !exists {
+				continue
+			}
+			if err := ipt.DeleteIfExists(chain.table, chain.parent, "-j", chain.name); err != nil {
+				logrus.Warn(errors.Wrapf(err, "failed to remove the jump to %s", chain.name))
+				continue
+			}
+			if err := ipt.ClearAndDeleteChain(chain.table, chain.name); err != nil {
+				logrus.Warn(errors.Wrapf(err, "failed to remove %s", chain.name))
+			}
+		}
+	}
 }

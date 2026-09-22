@@ -28,6 +28,8 @@ docker run \
 
 ## Modules
 
+With `WG_VPN_FIREWALL=nftables`, load `nf_tables` instead of `ip_tables` and `ip6_tables`.
+
 If you are unable to load the `iptables` kernel modules, you can add the `SYS_MODULE` capability instead: `--cap-add SYS_MODULE`. You must also add the following mount: `-v /lib/modules:/lib/modules:ro`.
 
 This is not recommended as it essentially gives the container root privileges over the host system and an attacker could easily break out of the container.

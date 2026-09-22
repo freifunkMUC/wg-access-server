@@ -30,7 +30,7 @@ RUN go build -o wg-access-server
 
 ### Server
 FROM alpine:3.24.1
-RUN apk add --no-cache iptables ip6tables wireguard-tools curl openssl
+RUN apk add --no-cache iptables ip6tables nftables wireguard-tools curl openssl
 ENV WG_CONFIG="/config.yaml"
 ENV WG_STORAGE="sqlite3:///data/db.sqlite3"
 # Keep the generated self-signed certificate on the data volume, otherwise a
