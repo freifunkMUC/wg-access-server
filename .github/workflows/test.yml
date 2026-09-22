@@ -38,10 +38,19 @@ jobs:
       - name: Build the server
         run: go build -o /tmp/wg-access-server .
 
+      # The nftables test loads its ruleset into a network namespace of its
+      # own. Ubuntu keeps unprivileged user namespaces behind AppArmor.
+      - name: Prepare the nftables test
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nftables
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Run tests
         run: go test -v ./...
         env:
           WG_BINARY: /tmp/wg-access-server
+          WG_TEST_NFTABLES: "1"
 
   test-website:
     runs-on: ubuntu-latest
