@@ -102,7 +102,7 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 		w.WriteHeader(http.StatusOK)
 		banner, _ := runtime.GetBanner(w, r)
 		err := authtemplates.RenderLoginPage(w, authtemplates.LoginPage{
-			Title:     "Sign In",
+			Title:     "Sign in",
 			Providers: providers,
 			Banner:    banner,
 		})

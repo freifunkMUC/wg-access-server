@@ -36,7 +36,7 @@
 	}
 </style>
 <section class="form">
-	<h2>{{if .Title}}{{.Title}}{{else}}Sign In{{end}}</h2>
+	<h2>{{if .Title}}{{.Title}}{{else}}Sign in{{end}}</h2>
 
 	{{if .Banner}}
 		<div class="banner {{.Banner.Intent}}" role="alert">{{.Banner.Text}}</div>
@@ -79,5 +79,6 @@
 		{{end}}
 	{{end}}
 
+	{{template "footer"}}
 </section>
 {{- end}}
