@@ -74,6 +74,13 @@ jobs: # Docs: <https://git.io/JvxXE>
 
       # The same strict build the Pages deployment runs after a merge, where
       # a single warning - a broken link, say - stops the docs from updating.
+      # the file is included in the docs, and people copy it from there
+      - name: Check docker-compose.yml
+        run: docker compose -f docker-compose.yml config -q
+        env:
+          WG_ADMIN_PASSWORD: example
+          WG_WIREGUARD_PRIVATE_KEY: example
+
       - name: Build docs
         run: |
           python3 -m venv .venv
