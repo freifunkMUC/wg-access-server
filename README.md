@@ -199,6 +199,20 @@ out the same VPN address, the LISTEN/NOTIFY watcher that tells the replicas abou
 the schema migrations. The migration tests create a database of their own for every run, which is why
 the MySQL tests connect as root.
 
+### Screenshots:
+
+The screenshots in this README are taken with [Playwright](https://playwright.dev). To take them
+again after changing the web UI:
+
+```sh
+cd website
+npx playwright install chromium   # once
+npm run screenshots
+```
+
+It builds the web UI and the server, starts the server with a few example devices and writes the
+images to `screenshots/`. It needs Go and leaves nothing running.
+
 ### The API:
 
 The web UI talks to the server over [gRPC-Web](https://github.com/grpc/grpc-web). The API is
