@@ -61,6 +61,10 @@ type SQLStorage struct {
 }
 
 func NewSqlStorage(u *url.URL) *SQLStorage {
+	// a copy: the scheme is normalized below, and the caller's URL is theirs
+	copied := *u
+	u = &copied
+
 	var connectionString string
 
 	switch u.Scheme {
