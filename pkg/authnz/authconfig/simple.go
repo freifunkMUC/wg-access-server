@@ -36,7 +36,7 @@ func (c *SimpleAuthConfig) Provider() *authruntime.Provider {
 		// -> Invoke / simpleAuthLogin() renders login form -> POST to postURL / simpleAuthPostEndpoint()
 		// -> redirect to /
 		Invoke: func(w http.ResponseWriter, r *http.Request, runtime *authruntime.ProviderRuntime) {
-			simpleAuthLogin()(w, r)
+			simpleAuthLogin(runtime)(w, r)
 		},
 		RegisterRoutes: func(router *mux.Router, runtime *authruntime.ProviderRuntime) error {
 			router.HandleFunc(postURL, simpleAuthPostEndpoint(c, runtime, throttle))
@@ -45,11 +45,14 @@ func (c *SimpleAuthConfig) Provider() *authruntime.Provider {
 	}
 }
 
-func simpleAuthLogin() http.HandlerFunc {
+func simpleAuthLogin(runtime *authruntime.ProviderRuntime) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// A login page with a username and a password field
 		w.WriteHeader(http.StatusOK)
-		err := authtemplates.RenderSimpleAuthPage(w, authtemplates.SimpleAuthPage{PostURL: postURL})
+		err := authtemplates.RenderSimpleAuthPage(w, authtemplates.SimpleAuthPage{
+			PostURL:        postURL,
+			OtherProviders: runtime.HasOtherProviders(),
+		})
 		if err != nil {
 			logrus.Error(errors.Wrap(err, "failed to render simple auth login page"))
 			return
@@ -102,8 +105,9 @@ func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRu
 
 		w.WriteHeader(http.StatusForbidden)
 		err = authtemplates.RenderSimpleAuthPage(w, authtemplates.SimpleAuthPage{
-			PostURL:      postURL,
-			ErrorMessage: "Invalid username or password",
+			PostURL:        postURL,
+			ErrorMessage:   "Invalid username or password",
+			OtherProviders: runtime.HasOtherProviders(),
 		})
 		if err != nil {
 			logrus.Error(errors.Wrap(err, "failed to render simple auth login page"))

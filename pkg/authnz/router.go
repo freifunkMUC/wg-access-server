@@ -82,6 +82,7 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 	}
 	runtime := authruntime.NewProviderRuntime(store)
 	providers := config.Providers()
+	runtime.SetProviderCount(len(providers))
 
 	for _, p := range providers {
 		if p.RegisterRoutes != nil {
@@ -100,11 +101,14 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 		}
 		w.WriteHeader(http.StatusOK)
 		banner, _ := runtime.GetBanner(w, r)
-		_, _ = fmt.Fprint(w, authtemplates.RenderLoginPage(w, authtemplates.LoginPage{
+		err := authtemplates.RenderLoginPage(w, authtemplates.LoginPage{
 			Title:     "Sign In",
 			Providers: providers,
 			Banner:    banner,
-		}))
+		})
+		if err != nil {
+			logrus.Error(errors.Wrap(err, "failed to render the login page"))
+		}
 	})
 
 	router.HandleFunc("/signin/{index}", func(w http.ResponseWriter, r *http.Request) {

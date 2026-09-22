@@ -14,20 +14,6 @@
 		color: white;
 	}
 
-	.form button {
-		position: relative;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.form button img {
-		position: absolute;
-		left: 0.75rem;
-		height: 1.125rem;
-		width: 1.125rem;
-	}
-
 	.form hr {
 		position: relative;
 		width: 55%;
@@ -52,56 +38,44 @@
 <section class="form">
 	<h2>{{if .Title}}{{.Title}}{{else}}Sign In{{end}}</h2>
 
+	{{if .Banner}}
+		<div class="banner {{.Banner.Intent}}" role="alert">{{.Banner.Text}}</div>
+	{{end}}
+
+	{{/* the providers that sign in elsewhere first, then - set apart - the form */}}
+	{{$form := false}}
+	{{$links := false}}
 	{{range $i, $p := .Providers}}
 		{{if eq $p.Type "basic"}}
-			<form autocomplete="off" method="post" action="/signin/{{$i}}">
-				{{if $.Banner}}
-					<div class="banner {{$.Banner.Intent}}">
-						{{$.Banner.Text}}
-					</div>
-				{{end}}
+			{{$form = true}}
+		{{else}}
+			{{$links = true}}
+			{{/* a link, not a button inside a link: one element to click and to focus */}}
+			<a class="provider" href="/signin/{{$i}}"
+				style="{{with $p.Branding.Background}}background: {{.}};{{end}} color: {{with $p.Branding.Color}}{{.}}{{else}}white{{end}};">
+				{{with $p.Branding.Icon}}<img src="{{iconURL .}}" alt="">{{end}}
+				<span>{{if eq $p.Type "simple"}}Username and password{{else}}{{$p.Name}}{{end}}</span>
+			</a>
+		{{end}}
+	{{end}}
+
+	{{if and $form $links}}
+		<hr>
+	{{end}}
+
+	{{range $i, $p := .Providers}}
+		{{if eq $p.Type "basic"}}
+			<form method="post" action="/signin/{{$i}}">
 				<div>
 					<label for="username">Username</label>
-					<input id="username" name="username" placeholder="Username" type="text"></input>
+					<input id="username" name="username" type="text" autocomplete="username" autofocus required>
 				</div>
 				<div>
 					<label for="password">Password</label>
-					<input id="password" name="password" placeholder="Password" type="password"></input>
+					<input id="password" name="password" type="password" autocomplete="current-password" required>
 				</div>
-				<button id="submit">Sign in</button>
+				<button id="submit" type="submit">Sign in</button>
 			</form>
-
-			{{ $length := len $.Providers }}
-			{{ if gt $length 1 }}
-				<hr />
-			{{end}}
-
-		{{else}}
-
-			<a href="/signin/{{$i}}">
-				<button
-					style="
-						{{if .Branding.Background}}
-							background: {{.Branding.Background}};
-						{{end}}
-					"
-				>
-					{{if .Branding.Icon}}
-						<img src="{{.Branding.Icon}}" />
-					{{end}}
-					<span
-						style="
-							{{if .Branding.Color}}
-								color: {{.Branding.Color}};
-							{{else}}
-								color: white;
-							{{end}}
-						"
-					>
-						{{$p.Name}}
-					</span>
-				</button>
-			</a>
 		{{end}}
 	{{end}}
 
