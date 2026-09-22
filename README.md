@@ -79,14 +79,14 @@ If the project is running locally on the computer, you can easily connect to the
 
 Please also read the [Docker instructions](https://www.freie-netze.org/wg-access-server/deployment/1-docker/) for general information regarding Docker deployments.
 
-Download the the docker-compose.yml file from the repo and run the following command.
+Download the docker-compose.yml file from the repo and run the following commands.
 
 ```bash
 export WG_ADMIN_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w30 | head -n1)
 export WG_WIREGUARD_PRIVATE_KEY="$(wg genkey)"
 echo "Your automatically generated admin password for the wg-access-server's web interface: $WG_ADMIN_PASSWORD"
 
-docker-compose up
+docker compose up -d
 ```
 
 You can connect to the web server on the local machine browser at https://localhost:8443

@@ -10,18 +10,32 @@ Please also read the [Docker instructions](1-docker.md) for general information 
 {!../docker-compose.yml!}
 ```
 
-## With traefik as Reverse proxy (with LetsEncrypt)
+Set the two variables and start it:
+
+```sh
+export WG_ADMIN_PASSWORD="<a password for the admin account>"
+export WG_WIREGUARD_PRIVATE_KEY="$(wg genkey)"
+docker compose up -d
+```
+
+Keep the private key: the device configurations handed out so far only work with it. Put the
+variables into an `.env` file next to `docker-compose.yml` to have them at the next start - or use
+[Docker secrets](#with-docker-secrets).
+
+The web UI is at `https://<your-server>:8443`, with a self-signed certificate. Plain HTTP on port
+8000 is only reachable from the machine itself: it would carry passwords unencrypted.
+
+## Behind Traefik, with a Let's Encrypt certificate
+
+Traefik terminates TLS, so wg-access-server serves plain HTTP to it. Port 80 is needed for Let's
+Encrypt's challenge and redirects everything else to HTTPS.
 
 ```yaml
-version: "3.0"
 services:
   wg-access-server:
-    # to build the docker image from the source
-    # build:
-    #   dockerfile: Dockerfile
-    #   context: .
     image: ghcr.io/freifunkmuc/wg-access-server:latest
     container_name: wg-access-server
+    restart: unless-stopped
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -29,60 +43,57 @@ services:
       net.ipv6.conf.all.forwarding: 1
     volumes:
       - "wg-access-server-data:/data"
-    #   - "./config.yaml:/config.yaml" # if you have a custom config file
     environment:
-      - "WG_ADMIN_PASSWORD=${WG_ADMIN_PASSWORD:?\n\nplease set the WG_ADMIN_PASSWORD environment variable:\n    export WG_ADMIN_PASSWORD=example\n}"
-      - "WG_WIREGUARD_PRIVATE_KEY=${WG_WIREGUARD_PRIVATE_KEY:?\n\nplease set the WG_WIREGUARD_PRIVATE_KEY environment variable:\n    export WG_WIREGUARD_PRIVATE_KEY=$(wg genkey)\n}"
-      - "WG_HTTPS_ENABLED=false"
-    #  - "WG_VPN_CIDRV6=0" # to disable IPv6
-    expose:
-      - "8000/tcp"
+      WG_ADMIN_PASSWORD: "${WG_ADMIN_PASSWORD:?set WG_ADMIN_PASSWORD, the password of the admin account}"
+      WG_WIREGUARD_PRIVATE_KEY: "${WG_WIREGUARD_PRIVATE_KEY:?set WG_WIREGUARD_PRIVATE_KEY, e.g. to the output of wg genkey}"
+      WG_HTTPS_ENABLED: "false" # Traefik terminates TLS
     ports:
       - "51820:51820/udp"
     devices:
       - "/dev/net/tun:/dev/net/tun"
-    depends_on:
-      - reverse-proxy
     labels:
-      - traefik.http.routers.vpn.rule=Host(`vpn.example.com`)
-      - traefik.http.routers.vpn.tls=true
-      - traefik.http.routers.vpn.tls.certresolver=myresolver
+      - "traefik.enable=true"
+      - "traefik.http.routers.vpn.rule=Host(`vpn.example.com`)"
+      - "traefik.http.routers.vpn.entrypoints=websecure"
+      - "traefik.http.routers.vpn.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vpn.loadbalancer.server.port=8000"
 
-  reverse-proxy:
-    # The official v3 Traefik docker image
+  traefik:
     image: traefik:v3
-    command: >
-      --providers.docker
-      --entryPoints.websecure.address=:443
-      --certificatesresolvers.myresolver.acme.email=your-email@example.com
-      --certificatesresolvers.myresolver.acme.storage=letsencrypt/acme.json
-      --certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      # only containers labelled traefik.enable=true are published
+      - "--providers.docker.exposedByDefault=false"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.email=you@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
     ports:
-      # The HTTPS port
+      - "80:80"
       - "443:443"
     volumes:
-      # So that Traefik can listen to the Docker events
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./letsencrypt:/letsencrypt
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
 
-# shared volumes with the host
 volumes:
   wg-access-server-data:
-    driver: local
 ```
 
-## With traefik as Reverse proxy (with traefik self generated certificate)
+Replace `vpn.example.com` and the email address with yours; the name must point to the server.
+
+## Behind Traefik, with a self-signed certificate
+
+The same without Let's Encrypt, for a test or a network where the certificate is not needed:
 
 ```yaml
-version: "3.0"
 services:
   wg-access-server:
-    # to build the docker image from the source
-    # build:
-    #   dockerfile: Dockerfile
-    #   context: .
     image: ghcr.io/freifunkmuc/wg-access-server:latest
     container_name: wg-access-server
+    restart: unless-stopped
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -90,102 +101,59 @@ services:
       net.ipv6.conf.all.forwarding: 1
     volumes:
       - "wg-access-server-data:/data"
-    #   - "./config.yaml:/config.yaml" # if you have a custom config file
     environment:
-      - "WG_ADMIN_PASSWORD=${WG_ADMIN_PASSWORD:?\n\nplease set the WG_ADMIN_PASSWORD environment variable:\n    export WG_ADMIN_PASSWORD=example\n}"
-      - "WG_WIREGUARD_PRIVATE_KEY=${WG_WIREGUARD_PRIVATE_KEY:?\n\nplease set the WG_WIREGUARD_PRIVATE_KEY environment variable:\n    export WG_WIREGUARD_PRIVATE_KEY=$(wg genkey)\n}"
-      - "WG_HTTPS_ENABLED=false"
-    #  - "WG_VPN_CIDRV6=0" # to disable IPv6
-    expose:
-      - "8000/tcp"
+      WG_ADMIN_PASSWORD: "${WG_ADMIN_PASSWORD:?set WG_ADMIN_PASSWORD, the password of the admin account}"
+      WG_WIREGUARD_PRIVATE_KEY: "${WG_WIREGUARD_PRIVATE_KEY:?set WG_WIREGUARD_PRIVATE_KEY, e.g. to the output of wg genkey}"
+      WG_HTTPS_ENABLED: "false" # Traefik terminates TLS
     ports:
       - "51820:51820/udp"
     devices:
       - "/dev/net/tun:/dev/net/tun"
-    depends_on:
-      - reverse-proxy
     labels:
-      - traefik.http.routers.vpn.rule=Host(`vpn.example.com`)
-      - traefik.http.routers.vpn.tls=true
+      - "traefik.enable=true"
+      - "traefik.http.routers.vpn.rule=Host(`vpn.example.com`)"
+      - "traefik.http.routers.vpn.entrypoints=websecure"
+      - "traefik.http.routers.vpn.tls=true"
+      - "traefik.http.services.vpn.loadbalancer.server.port=8000"
 
-  reverse-proxy:
-    # The official v3 Traefik docker image
+  traefik:
     image: traefik:v3
-    command: >
-      --providers.docker
-      --entryPoints.websecure.address=:443
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - "--providers.docker.exposedByDefault=false"
+      - "--entryPoints.websecure.address=:443"
     ports:
-      # The HTTPS port
       - "443:443"
     volumes:
-      # So that Traefik can listen to the Docker events
-      - /var/run/docker.sock:/var/run/docker.sock
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
-# shared volumes with the host
 volumes:
   wg-access-server-data:
-    driver: local
 ```
 
-For more Traefik options, take a look here: https://doc.traefik.io/traefik/https/tls/
+For more Traefik options, see <https://doc.traefik.io/traefik/https/tls/>.
 
 ## IPv6-only (without IPv4)
 
-```yaml
-version: "3.0"
-services:
-  wg-access-server:
-    image: ghcr.io/freifunkmuc/wg-access-server:latest
-    container_name: wg-access-server
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      net.ipv6.conf.all.disable_ipv6: 0
-      net.ipv6.conf.all.forwarding: 1
-    volumes:
-      - "wg-access-server-data:/data"
-    environment:
-      - "WG_ADMIN_PASSWORD=${WG_ADMIN_PASSWORD:?\n\nplease set the WG_ADMIN_PASSWORD environment variable:\n    export WG_ADMIN_PASSWORD=example\n}"
-      - "WG_WIREGUARD_PRIVATE_KEY=${WG_WIREGUARD_PRIVATE_KEY:?\n\nplease set the WG_WIREGUARD_PRIVATE_KEY environment variable:\n    export WG_WIREGUARD_PRIVATE_KEY=$(wg genkey)\n}"
-      - "WG_VPN_CIDR=0" # to disable IPv4
-    ports:
-      - "8000:8000/tcp"
-      - "8443:8443/tcp"
-      - "51820:51820/udp"
-    devices:
-      - "/dev/net/tun:/dev/net/tun"
+In the first example, set `WG_VPN_CIDR` to `0`:
 
-volumes:
-  wg-access-server-data:
-    driver: local
+```yaml
+    environment:
+      WG_ADMIN_PASSWORD: "${WG_ADMIN_PASSWORD:?set WG_ADMIN_PASSWORD, the password of the admin account}"
+      WG_WIREGUARD_PRIVATE_KEY: "${WG_WIREGUARD_PRIVATE_KEY:?set WG_WIREGUARD_PRIVATE_KEY, e.g. to the output of wg genkey}"
+      WG_VPN_CIDR: "0" # no IPv4
 ```
 
 ## IPv4-only (without IPv6)
 
-```yaml
-version: "3.0"
-services:
-  wg-access-server:
-    image: ghcr.io/freifunkmuc/wg-access-server:latest
-    container_name: wg-access-server
-    cap_add:
-      - NET_ADMIN
-    volumes:
-      - "wg-access-server-data:/data"
-    environment:
-      - "WG_ADMIN_PASSWORD=${WG_ADMIN_PASSWORD:?\n\nplease set the WG_ADMIN_PASSWORD environment variable:\n    export WG_ADMIN_PASSWORD=example\n}"
-      - "WG_WIREGUARD_PRIVATE_KEY=${WG_WIREGUARD_PRIVATE_KEY:?\n\nplease set the WG_WIREGUARD_PRIVATE_KEY environment variable:\n    export WG_WIREGUARD_PRIVATE_KEY=$(wg genkey)\n}"
-      - "WG_VPN_CIDRV6=0" # to disable IPv6
-    ports:
-      - "8000:8000/tcp"
-      - "8443:8443/tcp"
-      - "51820:51820/udp"
-    devices:
-      - "/dev/net/tun:/dev/net/tun"
+In the first example, set `WG_VPN_CIDRV6` to `0`. The two `sysctls` for IPv6 are then not needed:
 
-volumes:
-  wg-access-server-data:
-    driver: local
+```yaml
+    environment:
+      WG_ADMIN_PASSWORD: "${WG_ADMIN_PASSWORD:?set WG_ADMIN_PASSWORD, the password of the admin account}"
+      WG_WIREGUARD_PRIVATE_KEY: "${WG_WIREGUARD_PRIVATE_KEY:?set WG_WIREGUARD_PRIVATE_KEY, e.g. to the output of wg genkey}"
+      WG_VPN_CIDRV6: "0" # no IPv6
 ```
 
 ## With Docker secrets
@@ -212,18 +180,23 @@ services:
   wg-access-server:
     image: ghcr.io/freifunkmuc/wg-access-server:latest
     container_name: wg-access-server
+    restart: unless-stopped
     cap_add:
       - NET_ADMIN
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: 0
+      net.ipv6.conf.all.forwarding: 1
     volumes:
       - "wg-access-server-data:/data"
     environment:
-      - "WG_ADMIN_PASSWORD_FILE=/run/secrets/wg_admin_password"
-      - "WG_WIREGUARD_PRIVATE_KEY_FILE=/run/secrets/wg_private_key"
+      WG_ADMIN_PASSWORD_FILE: "/run/secrets/wg_admin_password"
+      WG_WIREGUARD_PRIVATE_KEY_FILE: "/run/secrets/wg_private_key"
     secrets:
       - wg_admin_password
       - wg_private_key
     ports:
-      - "8000:8000/tcp"
+      - "8443:8443/tcp"
+      - "127.0.0.1:8000:8000/tcp"
       - "51820:51820/udp"
     devices:
       - "/dev/net/tun:/dev/net/tun"
@@ -236,7 +209,6 @@ secrets:
 
 volumes:
   wg-access-server-data:
-    driver: local
 ```
 
 A `_FILE` variable and its direct counterpart are exclusive: if both
