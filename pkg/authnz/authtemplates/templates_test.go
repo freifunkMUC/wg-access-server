@@ -10,7 +10,7 @@ import (
 func render(t *testing.T, providers ...*authruntime.Provider) string {
 	t.Helper()
 	var out strings.Builder
-	if err := RenderLoginPage(&out, LoginPage{Title: "Sign In", Providers: providers}); err != nil {
+	if err := RenderLoginPage(&out, LoginPage{Title: "Sign in", Providers: providers}); err != nil {
 		t.Fatal(err)
 	}
 	return out.String()
@@ -85,6 +85,26 @@ func TestSimpleAuthPageLinksBackOnlyWhenThereIsSomewhereToGo(t *testing.T) {
 		}
 		if got := strings.Contains(out.String(), `href="/signin"`); got != others {
 			t.Errorf("other providers %v: link back = %v", others, got)
+		}
+	}
+}
+
+// Both sign-in pages carry the footer and an icon of their own: the web UI's
+// favicon is behind the sign-in, so a signed out browser cannot load it.
+func TestPagesHaveFooterAndIcon(t *testing.T) {
+	var simple strings.Builder
+	if err := RenderSimpleAuthPage(&simple, SimpleAuthPage{PostURL: "/signin/simpleauth"}); err != nil {
+		t.Fatal(err)
+	}
+	for name, page := range map[string]string{
+		"login":  render(t, &authruntime.Provider{Type: "oidc", Name: "Keycloak"}),
+		"simple": simple.String(),
+	} {
+		if !strings.Contains(page, "https://github.com/freifunkMUC/wg-access-server") {
+			t.Errorf("%s page: no link to the source", name)
+		}
+		if !strings.Contains(page, `rel="icon" href="data:image/svg+xml;base64,`) {
+			t.Errorf("%s page: no icon", name)
 		}
 	}
 }
