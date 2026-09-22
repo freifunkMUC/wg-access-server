@@ -24,6 +24,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/freifunkMUC/wg-access-server/buildinfo"
+	"github.com/freifunkMUC/wg-access-server/internal/apitokens"
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
@@ -55,6 +56,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("enable-inactive-device-deletion", "Enable inactive device deletion").Envar("WG_ENABLE_INACTIVE_DEVICE_DELETION").Default("false").BoolVar(&cmd.AppConfig.EnableInactiveDeviceDeletion)
 	cli.Flag("inactive-device-grace-period", "Duration after inactive device are deleted").Envar("WG_INACTIVE_DEVICE_GRACE_PERIOD").Default((1 * config.Year).String()).DurationVar(&cmd.AppConfig.InactiveDeviceGracePeriod)
 	cli.Flag("max-devices-per-user", "Maximum number of devices a single user may create (0: no limit)").Envar("WG_MAX_DEVICES_PER_USER").Default("0").IntVar(&cmd.AppConfig.MaxDevicesPerUser)
+	cli.Flag("enable-api-tokens", "Let users create tokens for using the API from scripts").Envar("WG_ENABLE_API_TOKENS").Default("false").BoolVar(&cmd.AppConfig.EnableAPITokens)
 	cli.Flag("filename", "The configuration filename (e.g. WireGuard-Home)").Envar("WG_FILENAME").StringVar(&cmd.AppConfig.Filename)
 	cli.Flag("https-enabled", "Enable HTTPS for the web UI").Envar("WG_HTTPS_ENABLED").Default("true").BoolVar(&cmd.AppConfig.HTTPS.Enabled)
 	cli.Flag("https-cert-file", "Path to the TLS certificate file").Envar("WG_HTTPS_CERT_FILE").StringVar(&cmd.AppConfig.HTTPS.CertFile)
@@ -322,12 +324,20 @@ func (cmd *servecmd) Run() {
 	}))
 
 	// Authentication middleware
-	middleware, err := authnz.NewMiddleware(conf.Auth, authnz.ClaimsMiddleware(conf))
+	claims := authnz.ClaimsMiddleware(conf)
+	middleware, err := authnz.NewMiddleware(conf.Auth, claims)
 	if err != nil {
 		logrus.Error(errors.Wrap(err, "failed to set up authnz middleware"))
 		return
 	}
 	router.Use(middleware)
+
+	// API tokens, after the session: a request that names a token acts as it
+	var tokens *apitokens.Manager
+	if conf.EnableAPITokens {
+		tokens = apitokens.New(storageBackend, claims)
+	}
+	router.Use(apitokens.Middleware(tokens))
 
 	// Subrouter for our site (web + api)
 	site := router.PathPrefix("/").Subrouter()

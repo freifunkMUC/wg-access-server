@@ -1,6 +1,7 @@
 package authsession
 
-const adminClaim = "admin"
+// AdminClaim is the claim that makes a user an admin.
+const AdminClaim = "admin"
 
 type claim struct {
 	Name  string
@@ -37,12 +38,12 @@ func (c *Claims) Has(claim string, value string) bool {
 }
 
 func (c *Claims) IsAdmin() bool {
-	return c.Has(adminClaim, "true")
+	return c.Has(AdminClaim, "true")
 }
 
 func (c *Claims) MakeAdmin() {
 	if c == nil {
 		return
 	}
-	c.Add(adminClaim, "true")
+	c.Add(AdminClaim, "true")
 }

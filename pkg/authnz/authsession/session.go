@@ -16,6 +16,9 @@ type AuthSession struct {
 	// Nonce holds the OpenID Connect nonce used to bind an ID token to the login session
 	Nonce    *string
 	Identity *Identity
+	// APIToken is the id of the API token a request authenticated with,
+	// empty for a browser session. It is never part of the session cookie.
+	APIToken string `json:"-"`
 }
 
 type Banner struct {
@@ -107,6 +110,15 @@ func CurrentUser(ctx context.Context) (*Identity, error) {
 		}
 	}
 	return nil, errors.New("Unauthenticated")
+}
+
+// APIToken returns the id of the API token the request authenticated with, or
+// "" for a browser session.
+func APIToken(ctx context.Context) string {
+	if session, ok := ctx.Value(sessionKey).(*AuthSession); ok {
+		return session.APIToken
+	}
+	return ""
 }
 
 func Authenticated(ctx context.Context) bool {
