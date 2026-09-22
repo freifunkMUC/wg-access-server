@@ -22,7 +22,7 @@ import AddIcon from '@mui/icons-material/Add';
 export function AddDeviceSkeleton() {
   return (
     <Card>
-      <CardHeader title="Add A Device" />
+      <CardHeader title="Add a device" />
       <CardContent>
         <FormControl fullWidth>
           <InputLabel htmlFor="device-name">

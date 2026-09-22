@@ -57,8 +57,8 @@ describe('DeviceListItem', () => {
     const onChange = vi.fn();
     render(<DeviceListItem device={testDevice()} onChange={onChange} />);
 
-    fireEvent.click(screen.getByTitle('Delete Device'));
-    fireEvent.click(within(await screen.findByRole('dialog')).getByText('Ok'));
+    fireEvent.click(screen.getByTitle('Delete device'));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByText('OK'));
 
     await waitFor(() => expect(grpc.devices.deleteDevice).toHaveBeenCalledWith({ name: 'laptop' }));
     await waitFor(() => expect(onChange).toHaveBeenCalled());
@@ -69,7 +69,7 @@ describe('DeviceListItem', () => {
     const onChange = vi.fn();
     render(<DeviceListItem device={testDevice()} onChange={onChange} />);
 
-    fireEvent.click(screen.getByTitle('Delete Device'));
+    fireEvent.click(screen.getByTitle('Delete device'));
     fireEvent.click(within(await screen.findByRole('dialog')).getByText('Cancel'));
 
     await waitFor(() => expect(grpc.devices.deleteDevice).not.toHaveBeenCalled());
@@ -80,12 +80,12 @@ describe('DeviceListItem', () => {
     const onChange = vi.fn();
     render(<DeviceListItem device={testDevice()} onChange={onChange} />);
 
-    fireEvent.click(screen.getByTitle('Rename Device'));
+    fireEvent.click(screen.getByTitle('Rename device'));
 
     // the dialog title and the field carry the same text, so query by role
     const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'work laptop' } });
-    fireEvent.click(within(dialog).getByText('Ok'));
+    fireEvent.click(within(dialog).getByText('OK'));
 
     await waitFor(() =>
       expect(grpc.devices.renameDevice).toHaveBeenCalledWith({ name: 'laptop', newName: 'work laptop' }),
@@ -98,9 +98,9 @@ describe('DeviceListItem', () => {
     const onChange = vi.fn();
     render(<DeviceListItem device={testDevice()} onChange={onChange} />);
 
-    fireEvent.click(screen.getByTitle('Rename Device'));
+    fireEvent.click(screen.getByTitle('Rename device'));
     const dialog = await screen.findByRole('dialog');
-    fireEvent.click(within(dialog).getByText('Ok'));
+    fireEvent.click(within(dialog).getByText('OK'));
 
     await waitFor(() => expect(grpc.devices.renameDevice).not.toHaveBeenCalled());
     expect(onChange).not.toHaveBeenCalled();
@@ -109,7 +109,7 @@ describe('DeviceListItem', () => {
   it('does not rename when the dialog is cancelled', async () => {
     render(<DeviceListItem device={testDevice()} onChange={() => {}} />);
 
-    fireEvent.click(screen.getByTitle('Rename Device'));
+    fireEvent.click(screen.getByTitle('Rename device'));
     const dialog = await screen.findByRole('dialog');
     fireEvent.click(within(dialog).getByText('Cancel'));
 

@@ -73,10 +73,10 @@ export const DeviceListItem = observer(
             }
             action={
               <>
-                <IconButton onClick={this.renameDevice} title="Rename Device">
+                <IconButton onClick={this.renameDevice} title="Rename device">
                   <EditIcon />
                 </IconButton>
-                <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={this.removeDevice} title="Delete Device">
+                <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={this.removeDevice} title="Delete device">
                   <DeleteIcon />
                 </IconButton>
               </>
@@ -109,13 +109,13 @@ export const DeviceListItem = observer(
                 <tr>
                   <td>Public key</td>
                   <td>
-                    <PopoverDisplay label="show">{device.publicKey}</PopoverDisplay>
+                    <PopoverDisplay label="Show">{device.publicKey}</PopoverDisplay>
                   </td>
                 </tr>
                 <tr>
                   <td>Pre-shared key</td>
                   <td>
-                    {device.presharedKey ? <PopoverDisplay label="show">{device.presharedKey}</PopoverDisplay> : 'None'}
+                    {device.presharedKey ? <PopoverDisplay label="Show">{device.presharedKey}</PopoverDisplay> : 'None'}
                   </td>
                 </tr>
               </tbody>

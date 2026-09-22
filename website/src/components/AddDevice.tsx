@@ -254,13 +254,13 @@ export const AddDevice = observer(
       return (
         <>
           <Card>
-            <CardHeader title="Add A Device" 
+            <CardHeader title="Add a device" 
               action={<ImportExportDelete onRefresh={() => this.props.onRefresh()} />}
             />
             <CardContent>
               <form onSubmit={this.submit}>
                 <FormControl fullWidth>
-                  <InputLabel htmlFor="device-name">Device Name</InputLabel>
+                  <InputLabel htmlFor="device-name">Device name</InputLabel>
                   <Input
                     id="device-name"
                     value={this.deviceName}
@@ -279,7 +279,7 @@ export const AddDevice = observer(
                     </AccordionSummary>
                     <AccordionDetails>
                       <FormControl fullWidth>
-                        <InputLabel htmlFor="device-publickey">Device Public Key (Optional)</InputLabel>
+                        <InputLabel htmlFor="device-publickey">Device public key (optional)</InputLabel>
                         <Input
                           id="device-publickey"
                           value={this.devicePublickey}
@@ -301,7 +301,7 @@ export const AddDevice = observer(
                         label="Use pre-shared key"
                       />
                       <FormControl fullWidth >
-                        <InputLabel htmlFor="persistent-keepalive">Persistent Keepalive (Optional)</InputLabel>
+                        <InputLabel htmlFor="persistent-keepalive">Persistent keepalive (optional)</InputLabel>
                         <Input
                           id="persistent-keepalive"
                           type="number"
@@ -333,7 +333,7 @@ export const AddDevice = observer(
                       {this.manualIPAssignment && (
                         <>
                           <FormControl fullWidth>
-                            <InputLabel htmlFor="manual-ipv4-address">IPv4 Address</InputLabel>
+                            <InputLabel htmlFor="manual-ipv4-address">IPv4 address</InputLabel>
                             <Input
                               id="manual-ipv4-address"
                               value={this.manualIPv4Address}
@@ -346,7 +346,7 @@ export const AddDevice = observer(
                             </FormHelperText>
                           </FormControl>
                           <FormControl fullWidth>
-                            <InputLabel htmlFor="manual-ipv6-address">IPv6 Address</InputLabel>
+                            <InputLabel htmlFor="manual-ipv6-address">IPv6 address</InputLabel>
                             <Input
                               id="manual-ipv6-address"
                               value={this.manualIPv6Address}
@@ -382,7 +382,7 @@ export const AddDevice = observer(
           </Card>
           <Dialog maxWidth="xl" open={this.dialogOpen} onClose={handleClose}>
             <DialogTitle>
-              Get Connected
+              Get connected
               <Info>
                 <Typography component="p" style={{ paddingBottom: 8 }}>
                   Your VPN connection file is not stored by this portal.

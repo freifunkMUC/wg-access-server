@@ -124,7 +124,7 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
   };
 
   const handleDeleteAll = async () => {
-    if (await confirm('Are you sure you want to delete ALL your devices? This action cannot be undone!')) {
+    if (await confirm('Delete all of your devices? This cannot be undone.')) {
       try {
         const response = await grpc.devices.listDevices({});
         const devices = response.items;
@@ -153,13 +153,13 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
         <ListItemIcon>
           <FileDownloadIcon fontSize="small" />
         </ListItemIcon>
-        <ListItemText>Export Devices</ListItemText>
+        <ListItemText>Export devices</ListItemText>
       </MenuItem>
       <MenuItem component="label">
         <ListItemIcon>
           <FileUploadIcon fontSize="small" />
         </ListItemIcon>
-        <ListItemText>Import Devices</ListItemText>
+        <ListItemText>Import devices</ListItemText>
         <input
           type="file"
           hidden
@@ -171,7 +171,7 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
         <ListItemIcon>
           <DeleteIcon fontSize="small" />
         </ListItemIcon>
-        <ListItemText>Delete All Devices</ListItemText>
+        <ListItemText>Delete all devices</ListItemText>
       </MenuItem>
     </IconMenu>
   );
