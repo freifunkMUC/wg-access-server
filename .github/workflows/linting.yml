@@ -65,3 +65,17 @@ jobs: # Docs: <https://git.io/JvxXE>
       - name: Run linter
         run: npm run lint
         working-directory: website
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The same strict build the Pages deployment runs after a merge, where
+      # a single warning - a broken link, say - stops the docs from updating.
+      - name: Build docs
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet -r requirements-docs.txt
+          .venv/bin/mkdocs build --strict
