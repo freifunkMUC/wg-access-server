@@ -59,8 +59,10 @@ func (p *ProviderRuntime) ClearSession(w http.ResponseWriter, r *http.Request) e
 	return authsession.ClearSession(p.store, r, w)
 }
 
+// Restart sends the browser back to the sign-in page. 303, so that it gets
+// there with a GET whatever method brought it here.
 func (p *ProviderRuntime) Restart(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/signin?signout=1", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/signin?signout=1", http.StatusSeeOther)
 }
 
 func (p *ProviderRuntime) Done(w http.ResponseWriter, r *http.Request) {

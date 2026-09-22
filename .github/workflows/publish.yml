@@ -43,16 +43,16 @@ jobs:
       - name: Retrieve author data
         id: author
         run: |
-          AUTHOR=$(curl -sSL ${{ github.event.repository.owner.url }} | jq -r '.name')
-          echo "AUTHOR=$AUTHOR" >> $GITHUB_ENV
+          AUTHOR=$(curl -sSL "${{ github.event.repository.owner.url }}" | jq -r '.name')
+          echo "AUTHOR=$AUTHOR" >> "$GITHUB_ENV"
 
       - name: Set up environment
         run: |
-          echo "TAG_NAME=" >> $GITHUB_ENV
+          echo "TAG_NAME=" >> "$GITHUB_ENV"
           if [[ "${GITHUB_REF##*/}" == "main" ]]; then
-            echo "TAG_NAME=main" >> $GITHUB_ENV
+            echo "TAG_NAME=main" >> "$GITHUB_ENV"
           elif [[ "${GITHUB_REF##*/}" == "master" ]]; then
-            echo "TAG_NAME=master" >> $GITHUB_ENV
+            echo "TAG_NAME=master" >> "$GITHUB_ENV"
           fi
           
       - name: Extract metadata (tags, labels) for Docker
@@ -68,7 +68,6 @@ jobs:
           labels: |
             org.opencontainers.image.authors=${{ env.AUTHOR }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.created=${{ steps.meta.outputs.created }}
 
       - name: Build and push container image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0

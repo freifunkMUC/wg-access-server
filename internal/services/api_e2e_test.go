@@ -184,6 +184,49 @@ func TestAPITokensAreOffByDefault(t *testing.T) {
 	}
 }
 
+// A browser marks where a request comes from (Sec-Fetch-Site). Another site
+// must not be able to sign a user in or out, or call the API, in their name.
+func TestCrossSiteRequestsAreRefused(t *testing.T) {
+	base, session := startServer(t, "18095")
+
+	send := func(method, path, fetchSite, contentType, body string) int {
+		t.Helper()
+		req, err := http.NewRequest(method, base+path, strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Sec-Fetch-Site", fetchSite)
+		if contentType != "" {
+			req.Header.Set("Content-Type", contentType)
+		}
+		client := *session
+		client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = res.Body.Close()
+		return res.StatusCode
+	}
+	form := "application/x-www-form-urlencoded"
+
+	for _, tc := range []struct {
+		name, method, path, site, contentType, body string
+		want                                        int
+	}{
+		{"sign in from another site", "POST", "/signin/simpleauth", "cross-site", form, "username=admin&password=hunter2", http.StatusForbidden},
+		{"API call from another site", "POST", "/api/proto.Server/Info", "cross-site", "application/json", "{}", http.StatusForbidden},
+		{"sign out from another site", "POST", "/signout", "cross-site", form, "", http.StatusForbidden},
+		{"sign out by GET only asks", "GET", "/signout", "cross-site", "", "", http.StatusOK},
+		{"API call from the web UI", "POST", "/api/proto.Server/Info", "same-origin", "application/json", "{}", http.StatusOK},
+		{"sign out from the web UI", "POST", "/signout", "same-origin", form, "", http.StatusSeeOther},
+	} {
+		if got := send(tc.method, tc.path, tc.site, tc.contentType, tc.body); got != tc.want {
+			t.Errorf("%s: status %d, want %d", tc.name, got, tc.want)
+		}
+	}
+}
+
 func mustParse(t *testing.T, raw string) *url.URL {
 	t.Helper()
 	parsed, err := url.Parse(raw)
