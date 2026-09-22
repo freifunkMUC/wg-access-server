@@ -493,6 +493,10 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		logrus.Infof("The web UI is also served over plain HTTP on port %d. Unless something in front of it terminates TLS, client configurations and their private keys travel unencrypted - disable it with --no-http-enabled", cmd.AppConfig.Port)
 	}
 
+	if err := cmd.AppConfig.Auth.Validate(); err != nil {
+		logrus.Fatal(err)
+	}
+
 	if !cmd.AppConfig.Auth.IsEnabled() {
 		if cmd.AppConfig.AdminPassword == "" {
 			logrus.Fatal("Missing admin password: please set via environment variable, flag or config file")
