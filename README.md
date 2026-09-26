@@ -46,11 +46,13 @@ Quick Links:
 - [Deploy with Helm](https://www.freie-netze.org/wg-access-server/deployment/3-kubernetes/)
 - [Raspberry Pi with Pi-hole](https://www.freie-netze.org/wg-access-server/deployment/4-raspberry-pi-pi-hole/)
 
-## Running with Docker
+## Try it out
 
-Here is a quick command to start the wg-access-server for the first time and try it out.
+Load the kernel modules on the host, then start the container:
 
 ```bash
+modprobe ip_tables && modprobe ip6_tables && modprobe wireguard
+
 export WG_ADMIN_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w30 | head -n1)
 export WG_WIREGUARD_PRIVATE_KEY="$(wg genkey)"
 echo "Your automatically generated admin password for the wg-access-server's web interface: $WG_ADMIN_PASSWORD"
@@ -59,12 +61,10 @@ docker run \
   -it \
   --rm \
   --cap-add NET_ADMIN \
-  --cap-add SYS_MODULE \
   --device /dev/net/tun:/dev/net/tun \
   --sysctl net.ipv6.conf.all.disable_ipv6=0 \
   --sysctl net.ipv6.conf.all.forwarding=1 \
   -v wg-access-server-data:/data \
-  -v /lib/modules:/lib/modules:ro \
   -e "WG_ADMIN_PASSWORD=$WG_ADMIN_PASSWORD" \
   -e "WG_WIREGUARD_PRIVATE_KEY=$WG_WIREGUARD_PRIVATE_KEY" \
   -p 8443:8443/tcp \
@@ -72,30 +72,17 @@ docker run \
   ghcr.io/freifunkmuc/wg-access-server:latest
 ```
 
-**Note:** This command includes the `SYS_MODULE` capability which essentially gives the container root privileges over the host system and an attacker could easily break out of the container. See the [Docker instructions](https://www.freie-netze.org/wg-access-server/deployment/1-docker/) for the recommended way to run the container.
-
 The web UI is at https://localhost:8443 on the machine itself, and at `https://<its address>:8443`
 from others in your network - for example from your phone, to add it with the QR code. The
 certificate is self-signed, so the browser warns once.
 
-## Running with Docker Compose
-
-Please also read the [Docker instructions](https://www.freie-netze.org/wg-access-server/deployment/1-docker/) for general information regarding Docker deployments.
-
-Download the docker-compose.yml file from the repo and run the following commands.
-
-```bash
-export WG_ADMIN_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w30 | head -n1)
-export WG_WIREGUARD_PRIVATE_KEY="$(wg genkey)"
-echo "Your automatically generated admin password for the wg-access-server's web interface: $WG_ADMIN_PASSWORD"
-
-docker compose up -d
-```
-
-You can connect to the web server on the local machine browser at https://localhost:8443
-
-If you open your browser to your machine's LAN IP address you'll be able
-to connect your phone using the UI and QR code!
+For an installation that stays - Docker Compose, a reverse proxy with a real certificate, a
+database, single sign-on - follow the deployment documentation:
+[Docker](https://www.freie-netze.org/wg-access-server/deployment/1-docker/),
+[Docker Compose](https://www.freie-netze.org/wg-access-server/deployment/2-docker-compose/) or
+[Raspberry Pi with Pi-hole](https://www.freie-netze.org/wg-access-server/deployment/4-raspberry-pi-pi-hole/).
+It also covers what to do when the kernel modules cannot be loaded, and how to keep the private key
+so that the devices you added keep working.
 
 ## Running on Kubernetes via Helm
 
