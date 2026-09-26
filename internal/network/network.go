@@ -105,6 +105,12 @@ type ForwardingOptions struct {
 	Firewall string
 }
 
+// The chains wg-access-server owns in the iptables backend.
+const (
+	forwardChain     = "WG_ACCESS_SERVER_FORWARD"
+	postroutingChain = "WG_ACCESS_SERVER_POSTROUTING"
+)
+
 // The firewall backends.
 const (
 	FirewallIPTables = "iptables"
@@ -151,143 +157,97 @@ func ConfigureForwarding(options ForwardingOptions) error {
 		return configureNftables(options)
 	}
 	removeNftables()
+	return configureIPTables(options)
+}
 
-	if options.CIDR != "" {
-		if err := configureForwardingv4(options); err != nil {
-			return err
+// family is one address family with the settings that apply to it. Both
+// firewall backends work through these, so that IPv4 and IPv6 cannot drift
+// apart.
+type family struct {
+	protocol iptables.Protocol
+	// nftables keyword for this family
+	keyword string
+	cidr    string
+	allowed []string
+	nat     bool
+}
+
+// families returns the address families the server hands out addresses in.
+func (options ForwardingOptions) families() []family {
+	all := []family{
+		{iptables.ProtocolIPv4, "ip", options.CIDR, options.allowedIPv4s, options.NAT44},
+		{iptables.ProtocolIPv6, "ip6", options.CIDRv6, options.allowedIPv6s, options.NAT66},
+	}
+	configured := make([]family, 0, len(all))
+	for _, f := range all {
+		if f.cidr != "" {
+			configured = append(configured, f)
 		}
 	}
-	if options.CIDRv6 != "" {
-		if err := configureForwardingv6(options); err != nil {
+	return configured
+}
+
+func configureIPTables(options ForwardingOptions) error {
+	for _, f := range options.families() {
+		if err := configureIPTablesFamily(options, f); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func configureForwardingv4(options ForwardingOptions) error {
-	ipt, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
+func configureIPTablesFamily(options ForwardingOptions, f family) error {
+	ipt, err := iptables.NewWithProtocol(f.protocol)
 	if err != nil {
 		return errors.Wrap(err, "failed to init iptables")
 	}
 
 	// Cleanup our chains first so that we don't leak
 	// iptable rules when the network configuration changes.
-	err = clearOrCreateChain(ipt, "filter", "WG_ACCESS_SERVER_FORWARD")
-	if err != nil {
+	if err := clearOrCreateChain(ipt, "filter", forwardChain); err != nil {
+		return err
+	}
+	if err := clearOrCreateChain(ipt, "nat", postroutingChain); err != nil {
 		return err
 	}
 
-	err = clearOrCreateChain(ipt, "nat", "WG_ACCESS_SERVER_POSTROUTING")
-	if err != nil {
-		return err
-	}
-
-	err = ipt.AppendUnique("filter", "FORWARD", "-j", "WG_ACCESS_SERVER_FORWARD")
-	if err != nil {
+	if err := ipt.AppendUnique("filter", "FORWARD", "-j", forwardChain); err != nil {
 		return errors.Wrap(err, "failed to append FORWARD rule to filter chain")
 	}
-
-	err = ipt.AppendUnique("nat", "POSTROUTING", "-j", "WG_ACCESS_SERVER_POSTROUTING")
-	if err != nil {
+	if err := ipt.AppendUnique("nat", "POSTROUTING", "-j", postroutingChain); err != nil {
 		return errors.Wrap(err, "failed to append POSTROUTING rule to nat chain")
 	}
 
 	if options.ClientIsolation {
 		// Reject inter-device traffic
-		if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", options.CIDR, "-d", options.CIDR, "-j", "REJECT"); err != nil {
+		if err := ipt.AppendUnique("filter", forwardChain, "-s", f.cidr, "-d", f.cidr, "-j", "REJECT"); err != nil {
 			return errors.Wrap(err, "failed to set ip tables rule")
 		}
 	}
 	// Accept client traffic for given allowed ips
-	for _, allowedCIDR := range options.allowedIPv4s {
-		if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", options.CIDR, "-d", allowedCIDR, "-j", "ACCEPT"); err != nil {
+	for _, allowedCIDR := range f.allowed {
+		if err := ipt.AppendUnique("filter", forwardChain, "-s", f.cidr, "-d", allowedCIDR, "-j", "ACCEPT"); err != nil {
 			return errors.Wrap(err, "failed to set ip tables rule")
 		}
 	}
 
 	// Accept return traffic when NAT is disabled
-	if !options.NAT44 {
-		for _, allowedCIDR := range options.allowedIPv4s {
-			if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", allowedCIDR, "-d", options.CIDR, "-j", "ACCEPT"); err != nil {
+	if !f.nat {
+		for _, allowedCIDR := range f.allowed {
+			if err := ipt.AppendUnique("filter", forwardChain, "-s", allowedCIDR, "-d", f.cidr, "-j", "ACCEPT"); err != nil {
 				return errors.Wrap(err, "failed to set ip tables rule for return traffic")
 			}
 		}
 	}
 
 	// And reject everything else
-	if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", options.CIDR, "-j", "REJECT"); err != nil {
+	if err := ipt.AppendUnique("filter", forwardChain, "-s", f.cidr, "-j", "REJECT"); err != nil {
 		return errors.Wrap(err, "failed to set ip tables rule")
 	}
 
-	if options.GatewayIface != "" {
-		if options.NAT44 {
-			if err := ipt.AppendUnique("nat", "WG_ACCESS_SERVER_POSTROUTING", "-s", options.CIDR, "-o", options.GatewayIface, "-j", "MASQUERADE"); err != nil {
-				return errors.Wrap(err, "failed to set ip tables rule")
-			}
-		}
-	}
-	return nil
-}
-
-func configureForwardingv6(options ForwardingOptions) error {
-	ipt, err := iptables.NewWithProtocol(iptables.ProtocolIPv6)
-	if err != nil {
-		return errors.Wrap(err, "failed to init ip6tables")
-	}
-
-	err = clearOrCreateChain(ipt, "filter", "WG_ACCESS_SERVER_FORWARD")
-	if err != nil {
-		return err
-	}
-
-	err = clearOrCreateChain(ipt, "nat", "WG_ACCESS_SERVER_POSTROUTING")
-	if err != nil {
-		return err
-	}
-
-	err = ipt.AppendUnique("filter", "FORWARD", "-j", "WG_ACCESS_SERVER_FORWARD")
-	if err != nil {
-		return errors.Wrap(err, "failed to append FORWARD rule to filter chain")
-	}
-
-	err = ipt.AppendUnique("nat", "POSTROUTING", "-j", "WG_ACCESS_SERVER_POSTROUTING")
-	if err != nil {
-		return errors.Wrap(err, "failed to append POSTROUTING rule to nat chain")
-	}
-
-	if options.ClientIsolation {
-		// Reject inter-device traffic
-		if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", options.CIDRv6, "-d", options.CIDRv6, "-j", "REJECT"); err != nil {
+	if options.GatewayIface != "" && f.nat {
+		if err := ipt.AppendUnique("nat", postroutingChain, "-s", f.cidr, "-o", options.GatewayIface, "-j", "MASQUERADE"); err != nil {
 			return errors.Wrap(err, "failed to set ip tables rule")
-		}
-	}
-	// Accept client traffic for given allowed ips
-	for _, allowedCIDR := range options.allowedIPv6s {
-		if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", options.CIDRv6, "-d", allowedCIDR, "-j", "ACCEPT"); err != nil {
-			return errors.Wrap(err, "failed to set ip tables rule")
-		}
-	}
-
-	// Accept return traffic when NAT is disabled
-	if !options.NAT66 {
-		for _, allowedCIDR := range options.allowedIPv6s {
-			if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", allowedCIDR, "-d", options.CIDRv6, "-j", "ACCEPT"); err != nil {
-				return errors.Wrap(err, "failed to set ip tables rule for return traffic")
-			}
-		}
-	}
-
-	// And reject everything else
-	if err := ipt.AppendUnique("filter", "WG_ACCESS_SERVER_FORWARD", "-s", options.CIDRv6, "-j", "REJECT"); err != nil {
-		return errors.Wrap(err, "failed to set ip tables rule")
-	}
-
-	if options.GatewayIface != "" {
-		if options.NAT66 {
-			if err := ipt.AppendUnique("nat", "WG_ACCESS_SERVER_POSTROUTING", "-s", options.CIDRv6, "-o", options.GatewayIface, "-j", "MASQUERADE"); err != nil {
-				return errors.Wrap(err, "failed to set ip tables rule")
-			}
 		}
 	}
 	return nil
@@ -346,8 +306,8 @@ func removeIPTables() {
 			continue
 		}
 		for _, chain := range []struct{ table, parent, name string }{
-			{"filter", "FORWARD", "WG_ACCESS_SERVER_FORWARD"},
-			{"nat", "POSTROUTING", "WG_ACCESS_SERVER_POSTROUTING"},
+			{"filter", "FORWARD", forwardChain},
+			{"nat", "POSTROUTING", postroutingChain},
 		} {
 			exists, err := ipt.ChainExists(chain.table, chain.name)
 			if err != nil || !exists {
