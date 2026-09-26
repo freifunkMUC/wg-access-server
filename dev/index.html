@@ -352,21 +352,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#running-with-docker" class="md-nav__link">
+  <a href="#try-it-out" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Running with Docker
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#running-with-docker-compose" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Running with Docker Compose
+        Try it out
       
     </span>
   </a>
@@ -858,21 +847,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#running-with-docker" class="md-nav__link">
+  <a href="#try-it-out" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Running with Docker
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#running-with-docker-compose" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Running with Docker Compose
+        Try it out
       
     </span>
   </a>
@@ -1067,9 +1045,11 @@ documentation of the latest release; the version selector at the top has the old
 <li><a href="https://www.freie-netze.org/wg-access-server/deployment/3-kubernetes/">Deploy with Helm</a></li>
 <li><a href="https://www.freie-netze.org/wg-access-server/deployment/4-raspberry-pi-pi-hole/">Raspberry Pi with Pi-hole</a></li>
 </ul>
-<h2 id="running-with-docker">Running with Docker<a class="headerlink" href="#running-with-docker" title="Permanent link"> ¶</a></h2>
-<p>Here is a quick command to start the wg-access-server for the first time and try it out.</p>
-<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">WG_ADMIN_PASSWORD</span><span class="o">=</span><span class="k">$(</span>tr<span class="w"> </span>-cd<span class="w"> </span><span class="s1">'[:alnum:]'</span><span class="w"> </span>&lt;<span class="w"> </span>/dev/urandom<span class="w"> </span><span class="p">|</span><span class="w"> </span>fold<span class="w"> </span>-w30<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n1<span class="k">)</span>
+<h2 id="try-it-out">Try it out<a class="headerlink" href="#try-it-out" title="Permanent link"> ¶</a></h2>
+<p>Load the kernel modules on the host, then start the container:</p>
+<div class="highlight"><pre><span></span><code>modprobe<span class="w"> </span>ip_tables<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>modprobe<span class="w"> </span>ip6_tables<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>modprobe<span class="w"> </span>wireguard
+
+<span class="nb">export</span><span class="w"> </span><span class="nv">WG_ADMIN_PASSWORD</span><span class="o">=</span><span class="k">$(</span>tr<span class="w"> </span>-cd<span class="w"> </span><span class="s1">'[:alnum:]'</span><span class="w"> </span>&lt;<span class="w"> </span>/dev/urandom<span class="w"> </span><span class="p">|</span><span class="w"> </span>fold<span class="w"> </span>-w30<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n1<span class="k">)</span>
 <span class="nb">export</span><span class="w"> </span><span class="nv">WG_WIREGUARD_PRIVATE_KEY</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>wg<span class="w"> </span>genkey<span class="k">)</span><span class="s2">"</span>
 <span class="nb">echo</span><span class="w"> </span><span class="s2">"Your automatically generated admin password for the wg-access-server's web interface: </span><span class="nv">$WG_ADMIN_PASSWORD</span><span class="s2">"</span>
 
@@ -1077,34 +1057,26 @@ docker<span class="w"> </span>run<span class="w"> </span><span class="se">\</spa
 <span class="w">  </span>-it<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--rm<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--cap-add<span class="w"> </span>NET_ADMIN<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--cap-add<span class="w"> </span>SYS_MODULE<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--device<span class="w"> </span>/dev/net/tun:/dev/net/tun<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--sysctl<span class="w"> </span>net.ipv6.conf.all.disable_ipv6<span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--sysctl<span class="w"> </span>net.ipv6.conf.all.forwarding<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span>wg-access-server-data:/data<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-v<span class="w"> </span>/lib/modules:/lib/modules:ro<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_ADMIN_PASSWORD=</span><span class="nv">$WG_ADMIN_PASSWORD</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_WIREGUARD_PRIVATE_KEY=</span><span class="nv">$WG_WIREGUARD_PRIVATE_KEY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-p<span class="w"> </span><span class="m">8443</span>:8443/tcp<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-p<span class="w"> </span><span class="m">51820</span>:51820/udp<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>ghcr.io/freifunkmuc/wg-access-server:latest
 </code></pre></div>
-<p><strong>Note:</strong> This command includes the <code>SYS_MODULE</code> capability which essentially gives the container root privileges over the host system and an attacker could easily break out of the container. See the <a href="https://www.freie-netze.org/wg-access-server/deployment/1-docker/">Docker instructions</a> for the recommended way to run the container.</p>
 <p>The web UI is at https://localhost:8443 on the machine itself, and at <code>https://&lt;its address&gt;:8443</code>
 from others in your network - for example from your phone, to add it with the QR code. The
 certificate is self-signed, so the browser warns once.</p>
-<h2 id="running-with-docker-compose">Running with Docker Compose<a class="headerlink" href="#running-with-docker-compose" title="Permanent link"> ¶</a></h2>
-<p>Please also read the <a href="https://www.freie-netze.org/wg-access-server/deployment/1-docker/">Docker instructions</a> for general information regarding Docker deployments.</p>
-<p>Download the docker-compose.yml file from the repo and run the following commands.</p>
-<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">WG_ADMIN_PASSWORD</span><span class="o">=</span><span class="k">$(</span>tr<span class="w"> </span>-cd<span class="w"> </span><span class="s1">'[:alnum:]'</span><span class="w"> </span>&lt;<span class="w"> </span>/dev/urandom<span class="w"> </span><span class="p">|</span><span class="w"> </span>fold<span class="w"> </span>-w30<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n1<span class="k">)</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">WG_WIREGUARD_PRIVATE_KEY</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>wg<span class="w"> </span>genkey<span class="k">)</span><span class="s2">"</span>
-<span class="nb">echo</span><span class="w"> </span><span class="s2">"Your automatically generated admin password for the wg-access-server's web interface: </span><span class="nv">$WG_ADMIN_PASSWORD</span><span class="s2">"</span>
-
-docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
-</code></pre></div>
-<p>You can connect to the web server on the local machine browser at https://localhost:8443</p>
-<p>If you open your browser to your machine's LAN IP address you'll be able
-to connect your phone using the UI and QR code!</p>
+<p>For an installation that stays - Docker Compose, a reverse proxy with a real certificate, a
+database, single sign-on - follow the deployment documentation:
+<a href="https://www.freie-netze.org/wg-access-server/deployment/1-docker/">Docker</a>,
+<a href="https://www.freie-netze.org/wg-access-server/deployment/2-docker-compose/">Docker Compose</a> or
+<a href="https://www.freie-netze.org/wg-access-server/deployment/4-raspberry-pi-pi-hole/">Raspberry Pi with Pi-hole</a>.
+It also covers what to do when the kernel modules cannot be loaded, and how to keep the private key
+so that the devices you added keep working.</p>
 <h2 id="running-on-kubernetes-via-helm">Running on Kubernetes via Helm<a class="headerlink" href="#running-on-kubernetes-via-helm" title="Permanent link"> ¶</a></h2>
 <p>The Helm chart included in this repository has been removed due to lack of expertise on our side and nobody answering
 our call for aid.<br />

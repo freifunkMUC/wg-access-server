@@ -794,7 +794,7 @@ If it still fails to load, the server automatically falls back to the userspace 
 <span class="w">  </span>-v<span class="w"> </span>wg-access-server-data:/data<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_ADMIN_PASSWORD=</span><span class="nv">$WG_ADMIN_PASSWORD</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_WIREGUARD_PRIVATE_KEY=</span><span class="nv">$WG_WIREGUARD_PRIVATE_KEY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_VPN_CIDR=0"</span>
+<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_VPN_CIDR=0"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-p<span class="w"> </span><span class="m">8443</span>:8443/tcp<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-p<span class="w"> </span><span class="m">51820</span>:51820/udp<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>ghcr.io/freifunkmuc/wg-access-server:latest
@@ -810,7 +810,7 @@ In this case you can also get rid of the sysctls:</p>
 <span class="w">  </span>-v<span class="w"> </span>wg-access-server-data:/data<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_ADMIN_PASSWORD=</span><span class="nv">$WG_ADMIN_PASSWORD</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_WIREGUARD_PRIVATE_KEY=</span><span class="nv">$WG_WIREGUARD_PRIVATE_KEY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_VPN_CIDRV6=0"</span>
+<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_VPN_CIDRV6=0"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-p<span class="w"> </span><span class="m">8443</span>:8443/tcp<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-p<span class="w"> </span><span class="m">51820</span>:51820/udp<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>ghcr.io/freifunkmuc/wg-access-server:latest
