@@ -31,43 +31,34 @@ func nftablesRuleset(options ForwardingOptions) (string, error) {
 	}
 
 	var forward, postrouting []string
-	family := func(vpn string, allowed []string, nat bool, ip string) error {
-		if vpn == "" {
-			return nil
-		}
-		prefix, err := netip.ParsePrefix(vpn)
+	for _, f := range options.families() {
+		prefix, err := netip.ParsePrefix(f.cidr)
 		if err != nil {
-			return errors.Wrapf(err, "invalid VPN network %q", vpn)
+			return "", errors.Wrapf(err, "invalid VPN network %q", f.cidr)
 		}
 		cidr := prefix.Masked().String()
+		ip := f.keyword
 
 		if options.ClientIsolation {
 			// reject traffic between devices
 			forward = append(forward, fmt.Sprintf("%s saddr %s %s daddr %s reject", ip, cidr, ip, cidr))
 		}
 		// accept client traffic to the allowed networks
-		for _, network := range allowed {
+		for _, network := range f.allowed {
 			forward = append(forward, fmt.Sprintf("%s saddr %s %s daddr %s accept", ip, cidr, ip, network))
 		}
 		// without NAT, the answers come back to the clients' own addresses
-		if !nat {
-			for _, network := range allowed {
+		if !f.nat {
+			for _, network := range f.allowed {
 				forward = append(forward, fmt.Sprintf("%s saddr %s %s daddr %s accept", ip, network, ip, cidr))
 			}
 		}
 		// and reject everything else the clients send
 		forward = append(forward, fmt.Sprintf("%s saddr %s reject", ip, cidr))
 
-		if options.GatewayIface != "" && nat {
+		if options.GatewayIface != "" && f.nat {
 			postrouting = append(postrouting, fmt.Sprintf("%s saddr %s oifname %q masquerade", ip, cidr, options.GatewayIface))
 		}
-		return nil
-	}
-	if err := family(options.CIDR, options.allowedIPv4s, options.NAT44, "ip"); err != nil {
-		return "", err
-	}
-	if err := family(options.CIDRv6, options.allowedIPv6s, options.NAT66, "ip6"); err != nil {
-		return "", err
 	}
 
 	var b strings.Builder
