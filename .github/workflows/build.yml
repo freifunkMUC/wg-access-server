@@ -1,10 +1,15 @@
-name: Build Docker image
+name: Docker image
 
+# Builds the image for every pull request, and publishes it from master and
+# from release tags. One workflow for both, so that what is published is what
+# was built and scanned here.
 on:
   workflow_dispatch:
   push:
     branches:
       - master
+    tags:
+      - "v*.*.*"
   pull_request:
 
 env:
@@ -37,12 +42,18 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # to push the image
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
+        with:
+          platforms: all
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
@@ -60,11 +71,17 @@ jobs:
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=sha-
           labels: |
             org.opencontainers.image.authors=${{ env.AUTHOR }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
-      - name: Build Docker image
+      # for the scan below; the multi-platform build cannot be loaded into the
+      # local docker, and its layers come from this build's cache
+      - name: Build the image for this machine
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
@@ -79,7 +96,7 @@ jobs:
             VERSION=${{ github.head_ref || github.ref_name }}
             COMMIT=${{ github.sha }}
 
-      # Before anything is published: the Alpine packages and the Go binary in
+      # before anything is published: the Alpine packages and the Go binary in
       # the image. Only what already has a fix fails the build - that can be
       # dealt with here, usually by updating the base image.
       - name: Scan the image with Trivy
@@ -91,5 +108,28 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
-      - name: Inspect Docker image
-        run: docker image inspect ${{ steps.meta.outputs.tags }}
+      - name: Inspect the image
+        run: docker image inspect ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+
+      - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push every published platform
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64/v8,linux/arm/v7,linux/ppc64le,linux/s390x
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ github.head_ref || github.ref_name }}
+            COMMIT=${{ github.sha }}
