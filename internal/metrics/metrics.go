@@ -36,9 +36,17 @@ const (
 	unknownLabelValue = "unknown"
 )
 
+// Deps is what the endpoint needs: the devices it reports on, and the parts
+// of the configuration that say how much of them it may report.
 type Deps struct {
-	Config        *config.AppConfig
 	DeviceManager *devices.DeviceManager
+	// Metadata is EnableMetadata: without it nothing about a device's
+	// connection is collected, so there is nothing to export either.
+	Metadata bool
+	// DeviceMetrics is EnableDeviceMetrics: whether the devices are exported
+	// one by one, on top of the aggregates.
+	DeviceMetrics bool
+	Metrics       config.MetricsConfig
 }
 
 var (
@@ -293,10 +301,10 @@ func Handler(deps *Deps) http.Handler {
 	reg.MustRegister(up)
 
 	// Device-related metrics (included when metadata + device metrics enabled)
-	if deps.DeviceManager != nil && deps.Config.EnableMetadata && deps.Config.EnableDeviceMetrics {
+	if deps.DeviceManager != nil && deps.Metadata && deps.DeviceMetrics {
 		reg.MustRegister(&deviceCollector{
 			deviceManager: deps.DeviceManager,
-			maxSeries:     resolveMaxDeviceSeries(deps.Config.Metrics.MaxDeviceSeries),
+			maxSeries:     resolveMaxDeviceSeries(deps.Metrics.MaxDeviceSeries),
 		})
 	}
 
@@ -306,7 +314,7 @@ func Handler(deps *Deps) http.Handler {
 // Endpoint wraps Handler with optional basic auth protection.
 func Endpoint(deps *Deps) http.Handler {
 	h := Handler(deps)
-	creds := deps.Config.Metrics.BasicAuth
+	creds := deps.Metrics.BasicAuth
 	if creds.Username == "" || creds.PasswordHash == "" {
 		return h
 	}
