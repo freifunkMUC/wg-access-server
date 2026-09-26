@@ -46,9 +46,12 @@ func newDeviceManager(t *testing.T) (*devices.DeviceManager, storage.Storage) {
 }
 
 func metricsDeps(dm *devices.DeviceManager, deviceMetrics bool, maxSeries int) *Deps {
-	conf := &config.AppConfig{EnableMetadata: true, EnableDeviceMetrics: deviceMetrics}
-	conf.Metrics.MaxDeviceSeries = maxSeries
-	return &Deps{Config: conf, DeviceManager: dm}
+	return &Deps{
+		DeviceManager: dm,
+		Metadata:      true,
+		DeviceMetrics: deviceMetrics,
+		Metrics:       config.MetricsConfig{MaxDeviceSeries: maxSeries},
+	}
 }
 
 func scrapeMetrics(t *testing.T, deps *Deps) string {
@@ -219,7 +222,7 @@ func TestDeviceMetrics_ZeroCapKeepsAggregatesOnly(t *testing.T) {
 
 	deps := metricsDeps(dm, true, 0)
 	// A zero value means "not configured" and must not silently disable the cap.
-	if got := resolveMaxDeviceSeries(deps.Config.Metrics.MaxDeviceSeries); got != DefaultMaxDeviceSeries {
+	if got := resolveMaxDeviceSeries(deps.Metrics.MaxDeviceSeries); got != DefaultMaxDeviceSeries {
 		t.Fatalf("expected zero to resolve to the default cap, got %d", got)
 	}
 
@@ -331,10 +334,14 @@ func TestDeviceMetrics_NoDeviceMetricsWithoutMetadata(t *testing.T) {
 	now := time.Now()
 	saveDevice(t, s, &storage.Device{Owner: "user-a", Name: "laptop", LastHandshakeTime: &now})
 
-	conf := &config.AppConfig{EnableMetadata: false, EnableDeviceMetrics: true}
-	conf.Metrics.MaxDeviceSeries = DefaultMaxDeviceSeries
+	deps := &Deps{
+		DeviceManager: dm,
+		Metadata:      false,
+		DeviceMetrics: true,
+		Metrics:       config.MetricsConfig{MaxDeviceSeries: DefaultMaxDeviceSeries},
+	}
 
-	body := scrapeMetrics(t, &Deps{Config: conf, DeviceManager: dm})
+	body := scrapeMetrics(t, deps)
 
 	if strings.Contains(body, "wg_access_server_device") {
 		t.Fatalf("expected no device metrics without metadata collection, got:\n%s", body)

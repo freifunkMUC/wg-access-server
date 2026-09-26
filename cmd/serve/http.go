@@ -54,8 +54,10 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 
 	// Prometheus metrics endpoint (optionally basic-auth protected)
 	router.Path("/metrics").Handler(metrics.Endpoint(&metrics.Deps{
-		Config:        conf,
 		DeviceManager: deviceManager,
+		Metadata:      conf.EnableMetadata,
+		DeviceMetrics: conf.EnableDeviceMetrics,
+		Metrics:       conf.Metrics,
 	}))
 
 	// Authentication middleware
