@@ -15,7 +15,6 @@ type DeviceResource = ReturnType<typeof autorefresh<Device.AsObject[] | null>>;
 export const Devices = observer(
   class Devices extends React.Component {
     devices: DeviceResource | null = null;
-    refreshHandler?: EventListener;
 
     constructor(props: object) {
       super(props);
@@ -46,22 +45,9 @@ export const Devices = observer(
           }
         }),
       );
-
-      // listen for global refresh events (e.g. import/delete from other UI locations)
-      this.refreshHandler = async () => {
-        try {
-          if (this.devices) await this.devices.refresh();
-        } catch (err) {
-          console.error('Failed to refresh devices from global event', err);
-        }
-      };
-      window.addEventListener('wg.devices.refresh', this.refreshHandler as EventListener);
     }
 
     componentWillUnmount() {
-      if (this.refreshHandler) {
-        window.removeEventListener('wg.devices.refresh', this.refreshHandler as EventListener);
-      }
       this.devices?.dispose();
     }
 

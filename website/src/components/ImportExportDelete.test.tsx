@@ -89,9 +89,7 @@ describe('ImportExportDelete import input reset', () => {
       expect(toastMock).toHaveBeenCalledWith({ text: 'Devices imported successfully', intent: 'success' });
     });
     expect(addDevice).toHaveBeenCalledTimes(1);
-    expect(addDevice).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'imported-device', publicKey: 'pubkey-1' }),
-    );
+    expect(addDevice).toHaveBeenCalledWith(expect.objectContaining({ name: 'imported-device', publicKey: 'pubkey-1' }));
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 
@@ -113,7 +111,7 @@ describe('ImportExportDelete import input reset', () => {
   });
 
   it('clears the input even when the import fails, so a retry with the same file works', async () => {
-    render(<ImportExportDelete />);
+    render(<ImportExportDelete onRefresh={() => {}} />);
 
     const input = getFileInput();
     selectFile(input, makeImportFile('not valid json'));
