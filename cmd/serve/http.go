@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	"github.com/freifunkMUC/wg-access-server/internal/api"
 	"github.com/freifunkMUC/wg-access-server/internal/apitokens"
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz"
@@ -77,7 +78,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	site := router.PathPrefix("/").Subrouter()
 	site.Use(authnz.RequireAuthentication)
 
-	apiServices := &services.ApiServices{
+	apiServices := &api.Services{
 		Config:        conf,
 		DeviceManager: deviceManager,
 		Tokens:        tokens,
@@ -85,7 +86,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	}
 
 	// API
-	site.PathPrefix("/api").Handler(http.StripPrefix("/api", services.ApiRouter(apiServices)))
+	site.PathPrefix("/api").Handler(http.StripPrefix("/api", api.Router(apiServices)))
 
 	// Static website
 	site.PathPrefix("/").Handler(services.WebsiteRouter())
