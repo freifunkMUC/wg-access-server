@@ -1,4 +1,4 @@
-package services
+package metrics
 
 import (
 	"net/http"
@@ -34,7 +34,7 @@ const (
 	unknownLabelValue = "unknown"
 )
 
-type MetricsDeps struct {
+type Deps struct {
 	Config        *config.AppConfig
 	DeviceManager *devices.DeviceManager
 }
@@ -251,10 +251,10 @@ func resolveMaxDeviceSeries(configured int) int {
 	return configured
 }
 
-// MetricsHandler returns an http.Handler that exposes Prometheus metrics.
+// Handler returns an http.Handler that exposes Prometheus metrics.
 // Device metrics are only registered when both metadata collection and device
 // metrics are enabled, but process/build metrics are always exposed.
-func MetricsHandler(deps *MetricsDeps) http.Handler {
+func Handler(deps *Deps) http.Handler {
 	reg := prometheus.NewRegistry()
 
 	// Standard process and Go runtime collectors
@@ -301,9 +301,9 @@ func MetricsHandler(deps *MetricsDeps) http.Handler {
 	return promhttp.HandlerFor(reg, promhttp.HandlerOpts{EnableOpenMetrics: true})
 }
 
-// MetricsEndpoint wraps MetricsHandler with optional basic auth protection.
-func MetricsEndpoint(deps *MetricsDeps) http.Handler {
-	h := MetricsHandler(deps)
+// Endpoint wraps Handler with optional basic auth protection.
+func Endpoint(deps *Deps) http.Handler {
+	h := Handler(deps)
 	creds := deps.Config.Metrics.BasicAuth
 	if creds.Username == "" || creds.PasswordHash == "" {
 		return h

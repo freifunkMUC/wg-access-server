@@ -1,4 +1,4 @@
-package services
+package metrics
 
 import (
 	"errors"
@@ -45,18 +45,18 @@ func newDeviceManager(t *testing.T) (*devices.DeviceManager, storage.Storage) {
 	return devices.New(noopWireGuardInterface{}, s, "10.44.0.0/24", ""), s
 }
 
-func metricsDeps(dm *devices.DeviceManager, deviceMetrics bool, maxSeries int) *MetricsDeps {
+func metricsDeps(dm *devices.DeviceManager, deviceMetrics bool, maxSeries int) *Deps {
 	conf := &config.AppConfig{EnableMetadata: true, EnableDeviceMetrics: deviceMetrics}
 	conf.Metrics.MaxDeviceSeries = maxSeries
-	return &MetricsDeps{Config: conf, DeviceManager: dm}
+	return &Deps{Config: conf, DeviceManager: dm}
 }
 
-func scrapeMetrics(t *testing.T, deps *MetricsDeps) string {
+func scrapeMetrics(t *testing.T, deps *Deps) string {
 	t.Helper()
 
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 	rec := httptest.NewRecorder()
-	MetricsHandler(deps).ServeHTTP(rec, req)
+	Handler(deps).ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -334,7 +334,7 @@ func TestDeviceMetrics_NoDeviceMetricsWithoutMetadata(t *testing.T) {
 	conf := &config.AppConfig{EnableMetadata: false, EnableDeviceMetrics: true}
 	conf.Metrics.MaxDeviceSeries = DefaultMaxDeviceSeries
 
-	body := scrapeMetrics(t, &MetricsDeps{Config: conf, DeviceManager: dm})
+	body := scrapeMetrics(t, &Deps{Config: conf, DeviceManager: dm})
 
 	if strings.Contains(body, "wg_access_server_device") {
 		t.Fatalf("expected no device metrics without metadata collection, got:\n%s", body)

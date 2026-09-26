@@ -20,6 +20,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/authnz"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
+	"github.com/freifunkMUC/wg-access-server/internal/metrics"
 	"github.com/freifunkMUC/wg-access-server/internal/services"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
 )
@@ -52,7 +53,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	router.PathPrefix("/health").Handler(services.HealthEndpoint(deviceManager))
 
 	// Prometheus metrics endpoint (optionally basic-auth protected)
-	router.Path("/metrics").Handler(services.MetricsEndpoint(&services.MetricsDeps{
+	router.Path("/metrics").Handler(metrics.Endpoint(&metrics.Deps{
 		Config:        conf,
 		DeviceManager: deviceManager,
 	}))
