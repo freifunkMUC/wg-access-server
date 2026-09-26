@@ -12,8 +12,7 @@ import { confirm } from './Present';
 import { errorMessage } from '../Util';
 import { ExportedDevice, parseExportedAddresses } from './ImportDevices';
 
-
-export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
+export function ImportExportDelete({ onRefresh }: { onRefresh: () => void }) {
   const handleExport = async () => {
     try {
       const response = await grpc.devices.listDevices({});
@@ -104,7 +103,8 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
         }
       }
 
-      const reassignedNote = reassigned.length > 0 ? `, ${reassigned.length} got a new address (${reassigned.join(', ')})` : '';
+      const reassignedNote =
+        reassigned.length > 0 ? `, ${reassigned.length} got a new address (${reassigned.join(', ')})` : '';
       if (failed.length > 0) {
         toast({
           text: `Imported ${imported} devices${reassignedNote}, failed ${failed.length}: ${failed.join('; ')}`,
@@ -116,11 +116,7 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
         toast({ text: 'Devices imported successfully', intent: 'success' });
       }
 
-      if (onRefresh) {
-        onRefresh();
-      } else {
-        window.dispatchEvent(new CustomEvent('wg.devices.refresh'));
-      }
+      onRefresh();
     } catch (error) {
       toast({ text: 'Failed to import devices: ' + (error as Error).message, intent: 'error' });
     }
@@ -131,19 +127,15 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
       try {
         const response = await grpc.devices.listDevices({});
         const devices = response.items;
-        
+
         for (const device of devices) {
           await grpc.devices.deleteDevice({
             name: device.name,
           });
         }
-  
-  toast({ text: 'All devices deleted successfully', intent: 'success' });
-  if (onRefresh) {
-    onRefresh();
-  } else {
-    window.dispatchEvent(new CustomEvent('wg.devices.refresh'));
-  }
+
+        toast({ text: 'All devices deleted successfully', intent: 'success' });
+        onRefresh();
       } catch (error) {
         toast({ text: 'Failed to delete devices: ' + (error as Error).message, intent: 'error' });
       }
@@ -163,12 +155,7 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
           <FileUploadIcon fontSize="small" />
         </ListItemIcon>
         <ListItemText>Import devices</ListItemText>
-        <input
-          type="file"
-          hidden
-          accept=".json"
-          onChange={handleImport}
-        />
+        <input type="file" hidden accept=".json" onChange={handleImport} />
       </MenuItem>
       <MenuItem onClick={handleDeleteAll}>
         <ListItemIcon>
@@ -178,4 +165,4 @@ export function ImportExportDelete({ onRefresh }: { onRefresh?: () => void }) {
       </MenuItem>
     </IconMenu>
   );
-} 
+}
