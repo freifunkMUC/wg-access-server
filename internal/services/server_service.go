@@ -61,7 +61,7 @@ func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoR
 		HostVpnIp:                       hostVPNIP,
 		MetadataEnabled:                 s.Config.EnableMetadata,
 		InactiveDeviceDeletionEnabled:   s.Config.EnableInactiveDeviceDeletion,
-		InactiveDeviceGracePeriod:       DurationToDurationpb(&s.Config.InactiveDeviceGracePeriod),
+		InactiveDeviceGracePeriod:       durationToDurationpb(&s.Config.InactiveDeviceGracePeriod),
 		IsAdmin:                         user.Claims.IsAdmin(),
 		AllowedIps:                      allowedIPs(s.Config),
 		DnsEnabled:                      s.Config.DNS.Enabled,

@@ -131,9 +131,9 @@ func mapToken(t *storage.APIToken) *proto.Token {
 		Id:         t.ID,
 		Name:       t.Name,
 		Owner:      t.Owner,
-		CreatedAt:  TimeToTimestamp(&t.CreatedAt),
-		ExpiresAt:  TimeToTimestamp(t.ExpiresAt),
-		LastUsedAt: TimeToTimestamp(t.LastUsedAt),
+		CreatedAt:  timeToTimestamp(&t.CreatedAt),
+		ExpiresAt:  timeToTimestamp(t.ExpiresAt),
+		LastUsedAt: timeToTimestamp(t.LastUsedAt),
 	}
 	// the display name is part of the identity the token acts as
 	identity := &authsession.Identity{}
