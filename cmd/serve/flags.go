@@ -7,6 +7,7 @@ import (
 
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/dnsproxy"
+	"github.com/freifunkMUC/wg-access-server/internal/metrics"
 )
 
 func Register(app *kingpin.Application) *servecmd {
@@ -23,7 +24,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("enable-device-metrics", "Expose device-level metrics on /metrics (requires enable-metadata)").Envar("WG_ENABLE_DEVICE_METRICS").Default("false").BoolVar(&cmd.AppConfig.EnableDeviceMetrics)
 	cli.Flag("metrics-basic-auth-username", "Require basic auth for /metrics (username)").Envar("WG_METRICS_BASIC_AUTH_USERNAME").StringVar(&cmd.AppConfig.Metrics.BasicAuth.Username)
 	cli.Flag("metrics-basic-auth-password-hash", "Require basic auth for /metrics (bcrypt hash)").Envar("WG_METRICS_BASIC_AUTH_PASSWORD_HASH").StringVar(&cmd.AppConfig.Metrics.BasicAuth.PasswordHash)
-	cli.Flag("metrics-max-device-series", "Maximum number of devices exported as individual series on /metrics (negative: unlimited, 0: aggregates only)").Envar("WG_METRICS_MAX_DEVICE_SERIES").Default("1000").IntVar(&cmd.AppConfig.Metrics.MaxDeviceSeries)
+	cli.Flag("metrics-max-device-series", "Maximum number of devices exported as individual series on /metrics (negative: unlimited, 0: aggregates only)").Envar("WG_METRICS_MAX_DEVICE_SERIES").Default(strconv.Itoa(metrics.DefaultMaxDeviceSeries)).IntVar(&cmd.AppConfig.Metrics.MaxDeviceSeries)
 	cli.Flag("enable-inactive-device-deletion", "Enable inactive device deletion").Envar("WG_ENABLE_INACTIVE_DEVICE_DELETION").Default("false").BoolVar(&cmd.AppConfig.EnableInactiveDeviceDeletion)
 	cli.Flag("inactive-device-grace-period", "Duration after inactive device are deleted").Envar("WG_INACTIVE_DEVICE_GRACE_PERIOD").Default((1 * config.Year).String()).DurationVar(&cmd.AppConfig.InactiveDeviceGracePeriod)
 	cli.Flag("max-devices-per-user", "Maximum number of devices a single user may create (0: no limit)").Envar("WG_MAX_DEVICES_PER_USER").Default("0").IntVar(&cmd.AppConfig.MaxDevicesPerUser)
