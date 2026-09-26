@@ -22,8 +22,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authconfig"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 )
 
 // Prefix starts every token, so that a token pasted somewhere it does not

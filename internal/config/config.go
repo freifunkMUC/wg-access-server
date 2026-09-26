@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authconfig"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
 )
 
 const (

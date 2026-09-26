@@ -9,7 +9,7 @@ import (
 
 	"github.com/gorilla/sessions"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
 )
 
 func simpleAuthHandler(t *testing.T, username, password string) (http.HandlerFunc, *loginThrottle) {

@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/Knetic/govaluate.v2"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 )
 
 func Test_evaluateClaimMapping(t *testing.T) {
