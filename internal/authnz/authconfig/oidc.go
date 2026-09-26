@@ -16,9 +16,9 @@ import (
 	"gopkg.in/Knetic/govaluate.v2"
 	"gopkg.in/yaml.v2"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authutil"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authutil"
 )
 
 const OIDCAuthProvider = "oidc"

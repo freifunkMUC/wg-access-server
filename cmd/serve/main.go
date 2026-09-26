@@ -34,8 +34,8 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/resolvconf"
 	"github.com/freifunkMUC/wg-access-server/internal/services"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authconfig"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
 )
 
 func Register(app *kingpin.Application) *servecmd {

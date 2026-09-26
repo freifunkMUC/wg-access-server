@@ -6,8 +6,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 )
 
 var (

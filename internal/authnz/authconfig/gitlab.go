@@ -1,7 +1,7 @@
 package authconfig
 
 import (
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
 )
 
 const GitlabAuthProvider = "gitlab"

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
 )
 
 func render(t *testing.T, providers ...*authruntime.Provider) string {

@@ -19,8 +19,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 )
 
 // fakeIDP is a minimal OIDC identity provider serving the discovery document,

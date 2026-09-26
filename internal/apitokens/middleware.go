@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/freifunkMUC/wg-access-server/internal/traces"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 )
 
 // apiPrefix is the only part of the site a token opens. The web UI keeps

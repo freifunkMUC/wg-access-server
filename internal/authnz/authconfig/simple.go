@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authtemplates"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authtemplates"
 )
 
 const SimpleAuthProvider = "simple"

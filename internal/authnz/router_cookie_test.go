@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authconfig"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
 )
 
 const sessionCookieName = "auth-session"

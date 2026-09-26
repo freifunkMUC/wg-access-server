@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authconfig"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 )
 
 func alice() *authsession.Identity {

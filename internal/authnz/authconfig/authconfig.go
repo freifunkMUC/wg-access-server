@@ -3,7 +3,7 @@ package authconfig
 import (
 	"github.com/pkg/errors"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
 )
 
 type ProviderConfig struct {

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authconfig"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 )
 
 // signIn logs in through the basic auth provider and returns the session

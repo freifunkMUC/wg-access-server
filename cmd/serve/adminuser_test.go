@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus/hooks/test"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authconfig"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
 )
 
 // adminConfig builds the smallest config ReadConfig accepts without calling

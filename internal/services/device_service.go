@@ -11,7 +11,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/proto/proto"
 )
 

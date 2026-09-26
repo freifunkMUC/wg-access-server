@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authconfig"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
 )
 
 func TestSessionMaxAge(t *testing.T) {

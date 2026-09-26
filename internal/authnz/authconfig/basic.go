@@ -10,9 +10,9 @@ import (
 	"github.com/tg123/go-htpasswd"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authutil"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authutil"
 )
 
 const BasicAuthProvider = "basic"

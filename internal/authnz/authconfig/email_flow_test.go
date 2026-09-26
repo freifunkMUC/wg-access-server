@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
 )
 
 func restrictToExample(config *OIDCConfig) {

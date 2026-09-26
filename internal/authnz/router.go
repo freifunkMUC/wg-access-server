@@ -14,11 +14,11 @@ import (
 
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/traces"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authconfig"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authsession"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authtemplates"
-	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authutil"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authtemplates"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authutil"
 )
 
 type loginErrorCode int
