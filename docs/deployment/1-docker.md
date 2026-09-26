@@ -52,7 +52,7 @@ docker run \
   -v wg-access-server-data:/data \
   -e "WG_ADMIN_PASSWORD=$WG_ADMIN_PASSWORD" \
   -e "WG_WIREGUARD_PRIVATE_KEY=$WG_WIREGUARD_PRIVATE_KEY" \
-  -e "WG_VPN_CIDR=0"
+  -e "WG_VPN_CIDR=0" \
   -p 8443:8443/tcp \
   -p 51820:51820/udp \
   ghcr.io/freifunkmuc/wg-access-server:latest
@@ -72,7 +72,7 @@ docker run \
   -v wg-access-server-data:/data \
   -e "WG_ADMIN_PASSWORD=$WG_ADMIN_PASSWORD" \
   -e "WG_WIREGUARD_PRIVATE_KEY=$WG_WIREGUARD_PRIVATE_KEY" \
-  -e "WG_VPN_CIDRV6=0"
+  -e "WG_VPN_CIDRV6=0" \
   -p 8443:8443/tcp \
   -p 51820:51820/udp \
   ghcr.io/freifunkmuc/wg-access-server:latest
