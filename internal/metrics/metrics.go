@@ -1,3 +1,5 @@
+// Package metrics exports what a Prometheus scrape collects: the server,
+// its users and, if the operator allows it, the single devices.
 package metrics
 
 import (

@@ -1,3 +1,4 @@
+// Package api serves the Connect API the web UI and the API tokens talk to.
 package api
 
 import (

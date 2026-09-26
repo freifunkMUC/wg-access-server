@@ -1,4 +1,4 @@
-package services
+package web
 
 import (
 	"crypto/rand"
