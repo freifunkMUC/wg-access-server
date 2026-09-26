@@ -3,45 +3,31 @@ package services
 import (
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func TimestampToTime(value *timestamppb.Timestamp) time.Time {
-	return time.Unix(value.Seconds, int64(value.Nanos))
-}
+// The API leaves out what a device does not have - a device that never
+// connected has no last handshake - so these keep nil as nil.
 
-func TimeToTimestamp(value *time.Time) *timestamppb.Timestamp {
+func timeToTimestamp(value *time.Time) *timestamppb.Timestamp {
 	if value == nil {
 		return nil
 	}
-	t := timestamppb.New(*value)
-	if t == nil {
-		logrus.Error("bad time value")
-		t = timestamppb.Now()
-	}
-	return t
+	return timestamppb.New(*value)
 }
 
-func DurationToDurationpb(value *time.Duration) *durationpb.Duration {
+func durationToDurationpb(value *time.Duration) *durationpb.Duration {
 	if value == nil {
 		return nil
 	}
-	d := durationpb.New(*value)
-	if d == nil {
-		logrus.Error("bad duration value")
-		d = &durationpb.Duration{}
-	}
-	return d
+	return durationpb.New(*value)
 }
 
 func stringValue(value *string) *wrapperspb.StringValue {
-	if value != nil {
-		return &wrapperspb.StringValue{
-			Value: *value,
-		}
+	if value == nil {
+		return nil
 	}
-	return nil
+	return &wrapperspb.StringValue{Value: *value}
 }
