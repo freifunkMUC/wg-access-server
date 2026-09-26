@@ -1,4 +1,5 @@
-package services
+// Package api serves the Connect API the web UI and the API tokens talk to.
+package api
 
 import (
 	"context"
@@ -21,16 +22,16 @@ import (
 // client sends is a device name and a public key.
 const maxRequestBytes = 1 << 20
 
-type ApiServices struct {
+type Services struct {
 	Config        *config.AppConfig
 	DeviceManager *devices.DeviceManager
 	Tokens        *apitokens.Manager
 	Wg            wgembed.WireGuardInterface
 }
 
-// ApiRouter serves the API through connectrpc. Besides its own protocol,
+// Router serves the API through connectrpc. Besides its own protocol,
 // Connect speaks gRPC-Web - which is what the web UI's client uses.
-func ApiRouter(deps *ApiServices) http.Handler {
+func Router(deps *Services) http.Handler {
 	options := connect.WithHandlerOptions(
 		connect.WithInterceptors(connect.UnaryInterceptorFunc(logInterceptor)),
 		connect.WithRecover(recoverHandler),

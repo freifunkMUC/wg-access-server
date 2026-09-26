@@ -14,13 +14,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	"github.com/freifunkMUC/wg-access-server/internal/api"
 	"github.com/freifunkMUC/wg-access-server/internal/apitokens"
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
-	"github.com/freifunkMUC/wg-access-server/internal/services"
+	"github.com/freifunkMUC/wg-access-server/internal/metrics"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
+	"github.com/freifunkMUC/wg-access-server/internal/web"
 )
 
 // How long a client may take. Without these, a client that sends its request
@@ -34,13 +36,13 @@ const (
 	idleTimeout       = 2 * time.Minute
 )
 
-// newRouter builds the web server: the endpoints anyone may reach, and behind the
-// authentication middleware the API and the web UI.
+// newRouter builds the web server: the endpoints anyone may reach, and
+// behind the authentication middleware the API and the web UI.
 func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, storageBackend storage.Storage, wg wgembed.WireGuardInterface) (http.Handler, error) {
 	router := mux.NewRouter()
-	router.Use(services.TracesMiddleware)
-	router.Use(services.RecoveryMiddleware)
-	router.Use(services.SecurityHeadersMiddleware)
+	router.Use(web.TracesMiddleware)
+	router.Use(web.RecoveryMiddleware)
+	router.Use(web.SecurityHeadersMiddleware)
 	router.Use(audit.Middleware)
 	// Refuses a POST (or PUT, DELETE, ...) a browser sends on behalf of
 	// another site: signing in or out, and the API. Scripts send no such
@@ -48,10 +50,10 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	router.Use(http.NewCrossOriginProtection().Handler)
 
 	// Health check endpoint
-	router.PathPrefix("/health").Handler(services.HealthEndpoint(deviceManager))
+	router.PathPrefix("/health").Handler(web.HealthEndpoint(deviceManager))
 
 	// Prometheus metrics endpoint (optionally basic-auth protected)
-	router.Path("/metrics").Handler(services.MetricsEndpoint(&services.MetricsDeps{
+	router.Path("/metrics").Handler(metrics.Endpoint(&metrics.Deps{
 		Config:        conf,
 		DeviceManager: deviceManager,
 	}))
@@ -77,7 +79,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	site := router.PathPrefix("/").Subrouter()
 	site.Use(authnz.RequireAuthentication)
 
-	apiServices := &services.ApiServices{
+	apiServices := &api.Services{
 		Config:        conf,
 		DeviceManager: deviceManager,
 		Tokens:        tokens,
@@ -85,10 +87,10 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	}
 
 	// API
-	site.PathPrefix("/api").Handler(http.StripPrefix("/api", services.ApiRouter(apiServices)))
+	site.PathPrefix("/api").Handler(http.StripPrefix("/api", api.Router(apiServices)))
 
 	// Static website
-	site.PathPrefix("/").Handler(services.WebsiteRouter())
+	site.PathPrefix("/").Handler(web.Router())
 
 	return router, nil
 }
@@ -129,10 +131,10 @@ func listenAndServe(conf *config.AppConfig, handler http.Handler, stopBackground
 		certPath := conf.HTTPS.CertFile
 		keyPath := conf.HTTPS.KeyFile
 		if certPath == "" || keyPath == "" {
-			certPath, keyPath = services.GetDefaultCertPaths()
+			certPath, keyPath = web.GetDefaultCertPaths()
 		}
 
-		tlsConfig, err := services.LoadTLSCert(certPath, keyPath, services.CertHosts(conf.ExternalHost))
+		tlsConfig, err := web.LoadTLSCert(certPath, keyPath, web.CertHosts(conf.ExternalHost))
 		if err != nil {
 			return errors.Wrap(err, "failed to load TLS certificate")
 		}

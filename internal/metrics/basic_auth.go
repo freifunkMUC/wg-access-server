@@ -1,4 +1,4 @@
-package services
+package metrics
 
 import (
 	"crypto/subtle"

@@ -1,4 +1,6 @@
-package services
+// Package web serves the web UI and holds what the HTTP servers are built
+// from: the middleware, the health endpoint and the TLS certificates.
+package web
 
 import (
 	"net/http"
@@ -14,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func WebsiteRouter() *mux.Router {
+func Router() *mux.Router {
 	router := mux.NewRouter()
 
 	staticFiles, err := filepath.Abs("website/build")
