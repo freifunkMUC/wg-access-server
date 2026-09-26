@@ -1,4 +1,4 @@
-package services
+package api
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 
 	"github.com/freifunkMUC/wg-access-server/internal/apitokens"
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
-	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/proto/proto"
 )
 
