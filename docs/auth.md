@@ -104,7 +104,7 @@ auth:
     # This is an advanced feature that allows you to define OIDC claim mapping expressions.
     # This feature is used to define wg-access-server admins based off a claim in your OIDC token.
     # A JSON-like object of claimKey: claimValue pairs as returned by the issuer is passed to the evaluation function.
-    # See https://github.com/Knetic/govaluate/blob/9aa49832a739dcd78a5542ff189fb82c3e423116/MANUAL.md for the syntax.
+    # See https://github.com/casbin/govaluate/blob/master/MANUAL.md for the syntax.
     claimMapping:
       # This example works if you have a custom group_membership claim which is a list of strings
       admin: "'WireguardAdmins' in group_membership"

@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/casbin/govaluate"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
-	"gopkg.in/Knetic/govaluate.v2"
 	"gopkg.in/yaml.v2"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"

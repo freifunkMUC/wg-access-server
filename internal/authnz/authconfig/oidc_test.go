@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"gopkg.in/Knetic/govaluate.v2"
+	"github.com/casbin/govaluate"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 )
