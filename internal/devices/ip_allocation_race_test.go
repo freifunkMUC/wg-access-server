@@ -10,8 +10,8 @@ import (
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
-	"github.com/freifunkMUC/wg-access-server/internal/storage"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/storage"
 )
 
 // fakeWgInterface is a minimal in-memory implementation of
