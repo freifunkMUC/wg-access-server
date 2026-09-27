@@ -20,6 +20,10 @@ service Devices {
   // date. It is admin only: a user must not be able to lift a block or
   // extend the expiry an admin set on their device.
   rpc SetDeviceAccess(SetDeviceAccessReq) returns (Device) {}
+  // SetDeviceRoutes sets the networks that live behind a device, which is what
+  // makes it a site-to-site link or a subnet router. Admin only: a user who
+  // could claim a network would be claiming everybody's traffic to it.
+  rpc SetDeviceRoutes(SetDeviceRoutesReq) returns (Device) {}
 }
 
 message Device {
@@ -43,6 +47,9 @@ message Device {
   // unset: the device's access does not expire. Once the time has passed the
   // device loses its peer, like a disabled one.
   google.protobuf.Timestamp expires_at = 16;
+  // the networks behind the device, in CIDR notation. They are part of the
+  // peer's allowed IPs, so traffic for them goes through this device.
+  repeated string routes = 17;
 }
 
 message AddDeviceReq {
@@ -84,6 +91,15 @@ message ListAllDevicesReq {
 
 message ListAllDevicesRes {
   repeated Device items = 1;
+}
+
+// SetDeviceRoutesReq replaces the networks behind a device. An empty list
+// removes them all, which makes it an ordinary device again.
+message SetDeviceRoutesReq {
+  string name = 1;
+  // if empty, defaults to the current user
+  google.protobuf.StringValue owner = 2;
+  repeated string routes = 3;
 }
 
 // SetDeviceAccessReq changes whether a device may connect. Both changes are

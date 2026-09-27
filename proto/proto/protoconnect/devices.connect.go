@@ -46,6 +46,8 @@ const (
 	DevicesListAllDevicesProcedure = "/proto.Devices/ListAllDevices"
 	// DevicesSetDeviceAccessProcedure is the fully-qualified name of the Devices's SetDeviceAccess RPC.
 	DevicesSetDeviceAccessProcedure = "/proto.Devices/SetDeviceAccess"
+	// DevicesSetDeviceRoutesProcedure is the fully-qualified name of the Devices's SetDeviceRoutes RPC.
+	DevicesSetDeviceRoutesProcedure = "/proto.Devices/SetDeviceRoutes"
 )
 
 // DevicesClient is a client for the proto.Devices service.
@@ -60,6 +62,10 @@ type DevicesClient interface {
 	// date. It is admin only: a user must not be able to lift a block or
 	// extend the expiry an admin set on their device.
 	SetDeviceAccess(context.Context, *connect.Request[proto.SetDeviceAccessReq]) (*connect.Response[proto.Device], error)
+	// SetDeviceRoutes sets the networks that live behind a device, which is what
+	// makes it a site-to-site link or a subnet router. Admin only: a user who
+	// could claim a network would be claiming everybody's traffic to it.
+	SetDeviceRoutes(context.Context, *connect.Request[proto.SetDeviceRoutesReq]) (*connect.Response[proto.Device], error)
 }
 
 // NewDevicesClient constructs a client for the proto.Devices service. By default, it uses the
@@ -109,6 +115,12 @@ func NewDevicesClient(httpClient connect.HTTPClient, baseURL string, opts ...con
 			connect.WithSchema(devicesMethods.ByName("SetDeviceAccess")),
 			connect.WithClientOptions(opts...),
 		),
+		setDeviceRoutes: connect.NewClient[proto.SetDeviceRoutesReq, proto.Device](
+			httpClient,
+			baseURL+DevicesSetDeviceRoutesProcedure,
+			connect.WithSchema(devicesMethods.ByName("SetDeviceRoutes")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -120,6 +132,7 @@ type devicesClient struct {
 	renameDevice    *connect.Client[proto.RenameDeviceReq, proto.Device]
 	listAllDevices  *connect.Client[proto.ListAllDevicesReq, proto.ListAllDevicesRes]
 	setDeviceAccess *connect.Client[proto.SetDeviceAccessReq, proto.Device]
+	setDeviceRoutes *connect.Client[proto.SetDeviceRoutesReq, proto.Device]
 }
 
 // AddDevice calls proto.Devices.AddDevice.
@@ -152,6 +165,11 @@ func (c *devicesClient) SetDeviceAccess(ctx context.Context, req *connect.Reques
 	return c.setDeviceAccess.CallUnary(ctx, req)
 }
 
+// SetDeviceRoutes calls proto.Devices.SetDeviceRoutes.
+func (c *devicesClient) SetDeviceRoutes(ctx context.Context, req *connect.Request[proto.SetDeviceRoutesReq]) (*connect.Response[proto.Device], error) {
+	return c.setDeviceRoutes.CallUnary(ctx, req)
+}
+
 // DevicesHandler is an implementation of the proto.Devices service.
 type DevicesHandler interface {
 	AddDevice(context.Context, *connect.Request[proto.AddDeviceReq]) (*connect.Response[proto.Device], error)
@@ -164,6 +182,10 @@ type DevicesHandler interface {
 	// date. It is admin only: a user must not be able to lift a block or
 	// extend the expiry an admin set on their device.
 	SetDeviceAccess(context.Context, *connect.Request[proto.SetDeviceAccessReq]) (*connect.Response[proto.Device], error)
+	// SetDeviceRoutes sets the networks that live behind a device, which is what
+	// makes it a site-to-site link or a subnet router. Admin only: a user who
+	// could claim a network would be claiming everybody's traffic to it.
+	SetDeviceRoutes(context.Context, *connect.Request[proto.SetDeviceRoutesReq]) (*connect.Response[proto.Device], error)
 }
 
 // NewDevicesHandler builds an HTTP handler from the service implementation. It returns the path on
@@ -209,6 +231,12 @@ func NewDevicesHandler(svc DevicesHandler, opts ...connect.HandlerOption) (strin
 		connect.WithSchema(devicesMethods.ByName("SetDeviceAccess")),
 		connect.WithHandlerOptions(opts...),
 	)
+	devicesSetDeviceRoutesHandler := connect.NewUnaryHandler(
+		DevicesSetDeviceRoutesProcedure,
+		svc.SetDeviceRoutes,
+		connect.WithSchema(devicesMethods.ByName("SetDeviceRoutes")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/proto.Devices/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DevicesAddDeviceProcedure:
@@ -223,6 +251,8 @@ func NewDevicesHandler(svc DevicesHandler, opts ...connect.HandlerOption) (strin
 			devicesListAllDevicesHandler.ServeHTTP(w, r)
 		case DevicesSetDeviceAccessProcedure:
 			devicesSetDeviceAccessHandler.ServeHTTP(w, r)
+		case DevicesSetDeviceRoutesProcedure:
+			devicesSetDeviceRoutesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -254,4 +284,8 @@ func (UnimplementedDevicesHandler) ListAllDevices(context.Context, *connect.Requ
 
 func (UnimplementedDevicesHandler) SetDeviceAccess(context.Context, *connect.Request[proto.SetDeviceAccessReq]) (*connect.Response[proto.Device], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Devices.SetDeviceAccess is not implemented"))
+}
+
+func (UnimplementedDevicesHandler) SetDeviceRoutes(context.Context, *connect.Request[proto.SetDeviceRoutesReq]) (*connect.Response[proto.Device], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Devices.SetDeviceRoutes is not implemented"))
 }

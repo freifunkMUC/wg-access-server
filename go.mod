@@ -9,7 +9,7 @@ require (
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/freifunkMUC/pg-events v0.5.0
-	github.com/freifunkMUC/wg-embed v0.11.0
+	github.com/freifunkMUC/wg-embed v0.12.0
 	github.com/go-sql-driver/mysql v1.10.1
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/uuid v1.6.0

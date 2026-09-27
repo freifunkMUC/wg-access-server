@@ -93,6 +93,7 @@ export const DeviceListItem = observer(function DeviceListItem({ device, onChang
           : []),
         ...(metadata && !device.connected ? [['Disconnected'] as Row] : []),
         ...(device.expiresAt ? [['Access ends', toDate(device.expiresAt).toLocaleString()] as Row] : []),
+        ...(device.routes?.length ? [['Carries traffic for', device.routes.join(', ')] as Row] : []),
         ['Public key', <PopoverDisplay label="Show">{device.publicKey}</PopoverDisplay>] as Row,
         [
           'Pre-shared key',

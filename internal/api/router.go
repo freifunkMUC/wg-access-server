@@ -50,7 +50,7 @@ func Router(deps *Services) http.Handler {
 			return protoconnect.NewTokensHandler(&TokenService{Tokens: deps.Tokens, Enabled: deps.Config.EnableAPITokens}, options)
 		},
 		func() (string, http.Handler) {
-			return protoconnect.NewServerHandler(&ServerService{Config: deps.Config, Wg: deps.Wg}, options)
+			return protoconnect.NewServerHandler(&ServerService{Config: deps.Config, Wg: deps.Wg, DeviceManager: deps.DeviceManager}, options)
 		},
 	} {
 		path, handler := register()

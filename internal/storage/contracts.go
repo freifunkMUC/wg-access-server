@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -38,6 +39,10 @@ type Storage interface {
 	// public key and the address alone, and emits an update event - which is
 	// how every replica learns that it has to add or remove the peer.
 	SetAccess(device *Device, disabled bool, expiresAt *time.Time) (*Device, error)
+	// SetRoutes stores the networks that live behind a device and returns it
+	// as it is now. Like SetAccess it emits an update event, which is how
+	// every replica learns to route them to the device's peer.
+	SetRoutes(device *Device, routes string) (*Device, error)
 	List(owner string) ([]*Device, error)
 	// Addresses returns the address field of every device. Picking an address
 	// for a new device only needs to know which ones are taken, and reading
@@ -136,6 +141,14 @@ type Device struct {
 	// access. Nil means it never expires.
 	ExpiresAt *time.Time `json:"expires_at"`
 
+	// Routes are the networks that live behind this device, as a
+	// comma-separated list of prefixes - what makes a device a site-to-site
+	// link or a subnet router. They are part of the device's allowed IPs, so
+	// the server accepts that traffic from it and sends traffic for those
+	// networks to it. Only an admin may set them: a device that could claim a
+	// network would be claiming everybody's traffic to it.
+	Routes string `json:"routes"`
+
 	/**
 	 * Metadata fields below.
 	 * All metadata tracking can be disabled
@@ -148,6 +161,35 @@ type Device struct {
 	ReceiveBytes      int64      `json:"received_bytes"`
 	TransmitBytes     int64      `json:"transmit_bytes"`
 	Endpoint          string     `json:"endpoint"`
+}
+
+// AllowedIPs are the networks the WireGuard peer of this device may use: its
+// own addresses, and whatever is routed through it.
+func (d *Device) AllowedIPs() []string {
+	allowed := splitList(d.Address)
+	return append(allowed, splitList(d.Routes)...)
+}
+
+// RouteList returns the device's routes one by one, empty for a device that
+// routes nothing.
+func (d *Device) RouteList() []string {
+	return splitList(d.Routes)
+}
+
+// splitList splits the comma-separated form both addresses and routes are
+// stored in. An empty string is no entries rather than one empty entry.
+func splitList(value string) []string {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	entries := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part != "" {
+			entries = append(entries, part)
+		}
+	}
+	return entries
 }
 
 // Expired reports whether the device's access has run out at the given time.

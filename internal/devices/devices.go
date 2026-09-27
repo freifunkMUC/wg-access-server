@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -28,6 +29,14 @@ type DeviceManager struct {
 	// maxDevicesPerUser caps how many devices one user may have. Zero or
 	// less means no limit.
 	maxDevicesPerUser int
+
+	// routeSync is told the networks routed through the devices whenever that
+	// set changes; routed is what it was told last. The firewall rules are
+	// built from the configuration at startup and know nothing of the routes
+	// an admin adds later.
+	routeSync func(routes []string) error
+	routedMu  sync.Mutex
+	routed    []string
 }
 
 // Option configures a DeviceManager.
@@ -38,6 +47,16 @@ type Option func(*DeviceManager)
 func WithMaxDevicesPerUser(max int) Option {
 	return func(d *DeviceManager) {
 		d.maxDevicesPerUser = max
+	}
+}
+
+// WithRouteSync registers what to do when the networks routed through the
+// devices change - setting up the firewall rules for them, in the server.
+// It is called with every routed network, not only the new ones, and only
+// when the set differs from the last call.
+func WithRouteSync(sync func(routes []string) error) Option {
+	return func(d *DeviceManager) {
+		d.routeSync = sync
 	}
 }
 
@@ -109,6 +128,7 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 		if err := d.applyPeer(device); err != nil {
 			logrus.Error(fmt.Errorf("failed to add WireGuard peer: %w", err))
 		}
+		d.routedNetworksMayHaveChanged(device)
 	})
 
 	// An update is a rename or a change of the device's access. The first
@@ -120,6 +140,7 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 		if err := d.applyPeer(device); err != nil {
 			logrus.Error(fmt.Errorf("failed to update WireGuard peer: %w", err))
 		}
+		d.routedNetworksMayHaveChanged(device)
 	})
 
 	d.storage.OnDelete(func(device *storage.Device) {
@@ -127,6 +148,7 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 		if err := d.wg.RemovePeer(device.PublicKey); err != nil {
 			logrus.Error(fmt.Errorf("failed to remove WireGuard peer: %w", err))
 		}
+		d.routedNetworksMayHaveChanged(device)
 	})
 
 	d.storage.OnReconnect(func() {
@@ -413,10 +435,12 @@ func (d *DeviceManager) sync() error {
 		if peer, ok := configured[device.PublicKey]; ok && peerMatches(peer, device) {
 			continue
 		}
-		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address)); err != nil {
+		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, device.AllowedIPs()); err != nil {
 			logrus.Warn(fmt.Errorf("failed to add device during sync: %s: %w", device.Name, err))
 		}
 	}
+
+	d.syncRoutedNetworks(devices)
 
 	return nil
 }
@@ -432,19 +456,20 @@ func (d *DeviceManager) applyPeer(device *storage.Device) error {
 		}
 		return nil
 	}
-	return d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address))
+	return d.wg.AddPeer(device.PublicKey, device.PresharedKey, device.AllowedIPs())
 }
 
 // peerMatches reports whether the interface carries the device as it is
-// stored: the same addresses and the same pre-shared key. Anything else - a
-// renamed key, an address that moved, a device that is not there at all -
-// means the peer has to be configured again.
+// stored: the same allowed IPs - its addresses and what is routed through it -
+// and the same pre-shared key. Anything else - a renamed key, an address that
+// moved, a route that was added, a device that is not there at all - means the
+// peer has to be configured again.
 func peerMatches(peer wgtypes.Peer, device *storage.Device) bool {
 	if peer.PresharedKey.String() != presharedKeyOf(device) {
 		return false
 	}
 
-	stored := network.SplitAddresses(device.Address)
+	stored := device.AllowedIPs()
 	if len(peer.AllowedIPs) != len(stored) {
 		return false
 	}

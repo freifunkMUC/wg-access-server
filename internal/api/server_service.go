@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -10,6 +11,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/buildinfo"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
+	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/network"
 	"github.com/freifunkMUC/wg-access-server/proto/proto"
 )
@@ -17,6 +19,11 @@ import (
 type ServerService struct {
 	Config *config.AppConfig
 	Wg     wgembed.WireGuardInterface
+	// DeviceManager is where the networks routed through devices come from.
+	// They belong in the client configurations: a client that tunnels only
+	// what it is told to would otherwise never send anything to a site
+	// behind another device.
+	DeviceManager *devices.DeviceManager
 }
 
 func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoReq]) (*connect.Response[proto.InfoRes], error) {
@@ -54,7 +61,7 @@ func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoR
 		InactiveDeviceDeletionEnabled:   s.Config.EnableInactiveDeviceDeletion,
 		InactiveDeviceGracePeriod:       durationToDurationpb(&s.Config.InactiveDeviceGracePeriod),
 		IsAdmin:                         user.Claims.IsAdmin(),
-		AllowedIps:                      allowedIPs(s.Config),
+		AllowedIps:                      s.allowedIPs(),
 		DnsEnabled:                      s.Config.DNS.Enabled,
 		DnsAddress:                      dnsAddress,
 		Filename:                        s.Config.Filename,
@@ -68,8 +75,20 @@ func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoR
 	}), nil
 }
 
-func allowedIPs(config *config.AppConfig) string {
-	return strings.Join(config.VPN.AllowedIPs, ", ")
+// allowedIPs is what a new client configuration will tunnel: the configured
+// networks and whatever is routed through the devices. A configuration that
+// was downloaded earlier does not learn about a route added later - the user
+// has to fetch it again, or add the network by hand.
+func (s *ServerService) allowedIPs() string {
+	allowed := append([]string{}, s.Config.VPN.AllowedIPs...)
+	if s.DeviceManager != nil {
+		for _, routed := range s.DeviceManager.RoutedNetworks() {
+			if !slices.Contains(allowed, routed) {
+				allowed = append(allowed, routed)
+			}
+		}
+	}
+	return strings.Join(allowed, ", ")
 }
 
 func clientConfigDnsServers(config *config.AppConfig) string {
