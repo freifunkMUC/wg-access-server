@@ -954,7 +954,7 @@ config file (config.yaml).</p>
 <span class="w">    </span><span class="c1"># This is an advanced feature that allows you to define OIDC claim mapping expressions.</span>
 <span class="w">    </span><span class="c1"># This feature is used to define wg-access-server admins based off a claim in your OIDC token.</span>
 <span class="w">    </span><span class="c1"># A JSON-like object of claimKey: claimValue pairs as returned by the issuer is passed to the evaluation function.</span>
-<span class="w">    </span><span class="c1"># See https://github.com/Knetic/govaluate/blob/9aa49832a739dcd78a5542ff189fb82c3e423116/MANUAL.md for the syntax.</span>
+<span class="w">    </span><span class="c1"># See https://github.com/casbin/govaluate/blob/master/MANUAL.md for the syntax.</span>
 <span class="w">    </span><span class="nt">claimMapping</span><span class="p">:</span>
 <span class="w">      </span><span class="c1"># This example works if you have a custom group_membership claim which is a list of strings</span>
 <span class="w">      </span><span class="nt">admin</span><span class="p">:</span><span class="w"> </span><span class="s">"'WireguardAdmins'</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">group_membership"</span>
