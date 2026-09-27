@@ -761,7 +761,9 @@ You can generate a wireguard private key by <a href="https://www.wireguard.com/q
 <p>TLDR:</p>
 <div class="highlight"><pre><span></span><code>wg<span class="w"> </span>genkey
 </code></pre></div>
-<p>The config file format is <code>yaml</code> and an example is provided <a href="#the-config-file-configyaml">below</a>.</p>
+<p>The config file format is <code>yaml</code> and an example is provided <a href="#the-config-file-configyaml">below</a>.
+A file that sets the same option twice is refused at start-up, naming both lines - one of the two
+values would otherwise quietly win.</p>
 <p>The format for specifying multiple values for options that allow it is:</p>
 <ul>
 <li>as commandline flags:</li>
