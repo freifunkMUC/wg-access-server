@@ -385,6 +385,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#device-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device access
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -880,6 +891,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#device-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device access
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1021,6 +1043,7 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 <li>Sign-in with OpenID Connect, GitLab, GitHub or a list of users of your own (<a href="https://www.freie-netze.org/wg-access-server/auth/">auth</a>)</li>
 <li><a href="https://www.freie-netze.org/wg-access-server/auth/#api-tokens">API tokens</a> for scripts, using the same API as the web UI</li>
 <li>Devices can be renamed; admins see and manage the devices of all users</li>
+<li>Admins can block a device or give it an expiry date, for temporary access (<a href="#device-access">device access</a>)</li>
 <li>An optional limit on how many devices a user may create</li>
 <li>WireGuard client configurations as a file or a QR code</li>
 <li>IPv6: dual-stack, IPv6-only or IPv4-only, with NAT on or off for each</li>
@@ -1091,6 +1114,24 @@ https://github.com/freifunkMUC/wg-access-server-chart.</p>
 <p><img alt="Connect Desktop Darkmode" src="https://github.com/freifunkMUC/wg-access-server/raw/master/screenshots/connect-desktop-dark.png" /></p>
 <p><img alt="Sign In" src="https://github.com/freifunkMUC/wg-access-server/raw/master/screenshots/signin.png" /></p>
 <p><img alt="Sign In Darkmode" src="https://github.com/freifunkMUC/wg-access-server/raw/master/screenshots/signin-dark.png" /></p>
+<h2 id="device-access">Device access<a class="headerlink" href="#device-access" title="Permanent link"> ¶</a></h2>
+<p>An admin can take a device's access away without deleting it, from the device list under <em>admin</em>:</p>
+<ul>
+<li><strong>Block</strong> removes the device's WireGuard peer, so it cannot connect. Its address stays reserved and
+  its name stays taken. <strong>Unblock</strong> gives the peer back - the configuration file the user already has
+  keeps working, so nobody has to set the device up again.</li>
+<li><strong>Expiry</strong> ends the device's access at the end of a day you pick, which is what temporary access for
+  a contractor or a guest looks like. Extending the date, or removing it, gives the access back the
+  same way. An expiry in the past is refused: blocking is how access is ended now.</li>
+</ul>
+<p>Both are admin-only on purpose. A user can see on their own device why it cannot connect, but cannot
+lift a block or push an expiry out - a block they could lift would be no block. They can still delete
+the device.</p>
+<p>A device whose expiry passes loses its peer within a minute; the server checks for it rather than
+waiting for the next restart. Blocking takes effect right away, on every replica sharing a database.
+Both are recorded in the <a href="https://www.freie-netze.org/wg-access-server/audit/">audit log</a>, and
+<code>wg_access_server_devices_blocked</code> counts the devices in that state wherever the device
+<a href="#metrics">metrics</a> are enabled.</p>
 <h2 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link"> ¶</a></h2>
 <p>Prometheus metrics are served at <code>/metrics</code>, on the same ports as the web UI. <strong>The endpoint needs no
 sign-in unless you set up basic auth for it</strong>, and it shows the exact version of wg-access-server and
@@ -1103,6 +1144,7 @@ of Go it was built with - which tells anybody whether an installation is out of 
 <li><code>wg_access_server_up</code>: 1 if storage and WireGuard are reachable</li>
 <li><code>wg_access_server_devices_total</code>: total devices in storage</li>
 <li><code>wg_access_server_devices_connected</code>: devices with a recent handshake</li>
+<li><code>wg_access_server_devices_blocked</code>: devices that may not connect (blocked, or past their expiry)</li>
 <li><code>wg_access_server_devices_bytes_received_total</code>: sum of received bytes across devices</li>
 <li><code>wg_access_server_devices_bytes_transmitted_total</code>: sum of transmitted bytes across devices</li>
 <li><code>wg_access_server_device_connected{device,owner}</code>, <code>wg_access_server_device_bytes_received_total{device,owner}</code>, <code>wg_access_server_device_bytes_transmitted_total{device,owner}</code>, <code>wg_access_server_device_last_handshake_timestamp_seconds{device,owner}</code>: the same, per device</li>

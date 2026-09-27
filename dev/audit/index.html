@@ -763,6 +763,16 @@ which is what you filter on:</p>
 <td><code>device</code>, <code>previous</code>, <code>owner</code></td>
 </tr>
 <tr>
+<td><code>device.access</code></td>
+<td>An admin blocked a device or changed its expiry</td>
+<td><code>device</code>, <code>owner</code>, <code>disabled</code>, <code>expires_at</code>**</td>
+</tr>
+<tr>
+<td><code>device.expire</code></td>
+<td>A device lost its access because its expiry passed</td>
+<td><code>device</code>, <code>owner</code></td>
+</tr>
+<tr>
 <td><code>user.delete</code></td>
 <td>An admin deleted a user, their devices and tokens</td>
 <td><code>target_user</code></td>
@@ -781,6 +791,10 @@ which is what you filter on:</p>
 </table>
 <p>* <code>reason=inactive</code> marks a device the server deleted by itself because it exceeded the inactive
 device grace period.</p>
+<p>** The record says what the device's access looks like after the change, not what was changed.
+<code>expires_at</code> is absent when the device's access does not expire.</p>
+<p><code>device.expire</code> is recorded by the server itself, so its actor is <code>system</code>: nobody asked for it, the
+date an admin set earlier simply passed. It is recorded once per device, when the peer is removed.</p>
 <h2 id="who-did-it">Who did it<a class="headerlink" href="#who-did-it" title="Permanent link"> ¶</a></h2>
 <table>
 <thead>
