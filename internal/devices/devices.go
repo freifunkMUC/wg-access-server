@@ -510,10 +510,16 @@ func (d *DeviceManager) GetByPublicKey(publicKey string) (*storage.Device, error
 
 // nextClientAddressLocked returns the next free client address.
 // Callers must hold the storage's allocation lock.
+//
+// It asks storage which addresses are taken and then walks the subnet from
+// its start until it finds one that is not, so the gaps that deleted devices
+// leave are filled again. Both parts are linear in the number of devices:
+// about two milliseconds at five thousand, two thirds of it spent parsing the
+// stored addresses rather than walking, which BenchmarkNextClientAddress
+// measures. Nothing is remembered between calls on purpose - the replicas
+// share the allocation lock but not their memory, and an address that a
+// device gave up elsewhere has to come back into use.
 func (d *DeviceManager) nextClientAddressLocked() (string, error) {
-	// TODO: read up on better ways to allocate client's IP
-	// addresses from a configurable CIDR
-
 	usedIPv4s, usedIPv6s, err := d.usedAddresses()
 	if err != nil {
 		return "", fmt.Errorf("failed to get used addresses: %w", err)
