@@ -1,4 +1,6 @@
-package services
+// Package metrics exports what a Prometheus scrape collects: the server,
+// its users and, if the operator allows it, the single devices.
+package metrics
 
 import (
 	"net/http"
@@ -34,9 +36,17 @@ const (
 	unknownLabelValue = "unknown"
 )
 
-type MetricsDeps struct {
-	Config        *config.AppConfig
+// Deps is what the endpoint needs: the devices it reports on, and the parts
+// of the configuration that say how much of them it may report.
+type Deps struct {
 	DeviceManager *devices.DeviceManager
+	// Metadata is EnableMetadata: without it nothing about a device's
+	// connection is collected, so there is nothing to export either.
+	Metadata bool
+	// DeviceMetrics is EnableDeviceMetrics: whether the devices are exported
+	// one by one, on top of the aggregates.
+	DeviceMetrics bool
+	Metrics       config.MetricsConfig
 }
 
 var (
@@ -251,10 +261,10 @@ func resolveMaxDeviceSeries(configured int) int {
 	return configured
 }
 
-// MetricsHandler returns an http.Handler that exposes Prometheus metrics.
+// Handler returns an http.Handler that exposes Prometheus metrics.
 // Device metrics are only registered when both metadata collection and device
 // metrics are enabled, but process/build metrics are always exposed.
-func MetricsHandler(deps *MetricsDeps) http.Handler {
+func Handler(deps *Deps) http.Handler {
 	reg := prometheus.NewRegistry()
 
 	// Standard process and Go runtime collectors
@@ -291,20 +301,20 @@ func MetricsHandler(deps *MetricsDeps) http.Handler {
 	reg.MustRegister(up)
 
 	// Device-related metrics (included when metadata + device metrics enabled)
-	if deps.DeviceManager != nil && deps.Config.EnableMetadata && deps.Config.EnableDeviceMetrics {
+	if deps.DeviceManager != nil && deps.Metadata && deps.DeviceMetrics {
 		reg.MustRegister(&deviceCollector{
 			deviceManager: deps.DeviceManager,
-			maxSeries:     resolveMaxDeviceSeries(deps.Config.Metrics.MaxDeviceSeries),
+			maxSeries:     resolveMaxDeviceSeries(deps.Metrics.MaxDeviceSeries),
 		})
 	}
 
 	return promhttp.HandlerFor(reg, promhttp.HandlerOpts{EnableOpenMetrics: true})
 }
 
-// MetricsEndpoint wraps MetricsHandler with optional basic auth protection.
-func MetricsEndpoint(deps *MetricsDeps) http.Handler {
-	h := MetricsHandler(deps)
-	creds := deps.Config.Metrics.BasicAuth
+// Endpoint wraps Handler with optional basic auth protection.
+func Endpoint(deps *Deps) http.Handler {
+	h := Handler(deps)
+	creds := deps.Metrics.BasicAuth
 	if creds.Username == "" || creds.PasswordHash == "" {
 		return h
 	}

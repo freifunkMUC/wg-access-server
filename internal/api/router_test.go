@@ -1,4 +1,4 @@
-package services
+package api
 
 import (
 	"context"
@@ -9,10 +9,10 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
-	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/proto/proto"
 	"github.com/freifunkMUC/wg-access-server/proto/proto/protoconnect"
 )
@@ -31,7 +31,7 @@ func connectServerFor(t *testing.T, subject string, authenticated bool, seed ...
 	}
 	manager := devices.New(noopWireGuardInterface{}, s, "10.44.0.0/24", "")
 
-	api := ApiRouter(&ApiServices{
+	api := Router(&Services{
 		Config:        &config.AppConfig{},
 		DeviceManager: manager,
 		Wg:            noopWireGuardInterface{},
