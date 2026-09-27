@@ -359,6 +359,14 @@ func (s *SQLStorage) Rename(device *Device, newName string) (*Device, error) {
 	return &renamed, nil
 }
 
+func (s *SQLStorage) Addresses() ([]string, error) {
+	addresses := []string{}
+	if err := s.db.Model(&Device{}).Pluck("address", &addresses).Error; err != nil {
+		return nil, errors.Wrap(err, "failed to read device addresses from sql")
+	}
+	return addresses, nil
+}
+
 func (s *SQLStorage) List(username string) ([]*Device, error) {
 	var err error
 	devices := []*Device{}

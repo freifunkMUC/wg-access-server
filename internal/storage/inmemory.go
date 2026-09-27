@@ -79,6 +79,16 @@ func (s *InMemoryStorage) RecordMetadata(updates []MetadataUpdate) error {
 	return nil
 }
 
+func (s *InMemoryStorage) Addresses() ([]string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	addresses := make([]string, 0, len(s.db))
+	for _, device := range s.db {
+		addresses = append(addresses, device.Address)
+	}
+	return addresses, nil
+}
+
 func (s *InMemoryStorage) List(username string) ([]*Device, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

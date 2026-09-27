@@ -35,6 +35,11 @@ type Storage interface {
 	// which is how the authoritative DNS zone learns the new name.
 	Rename(device *Device, newName string) (*Device, error)
 	List(owner string) ([]*Device, error)
+	// Addresses returns the address field of every device. Picking an address
+	// for a new device only needs to know which ones are taken, and reading
+	// whole rows for that is what made every creation wait for the entire
+	// table - while holding the allocation lock.
+	Addresses() ([]string, error)
 	Get(owner string, name string) (*Device, error)
 	GetByPublicKey(publicKey string) (*Device, error)
 	Delete(device *Device) error

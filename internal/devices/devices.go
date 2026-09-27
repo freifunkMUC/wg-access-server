@@ -148,22 +148,22 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 }
 
 func (d *DeviceManager) usedAddresses() (map[netip.Addr]bool, map[netip.Addr]bool, error) {
-	devices, err := d.ListDevices("")
+	stored, err := d.storage.Addresses()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to list devices")
+		return nil, nil, errors.Wrap(err, "failed to list device addresses")
 	}
 
-	usedIPv4s := make(map[netip.Addr]bool, len(devices)+3)
-	usedIPv6s := make(map[netip.Addr]bool, len(devices)+3)
+	usedIPv4s := make(map[netip.Addr]bool, len(stored)+3)
+	usedIPv6s := make(map[netip.Addr]bool, len(stored)+3)
 
 	// Check what IP addresses are already occupied
-	for _, device := range devices {
-		addresses, unusable := network.ParseAddresses(device.Address)
+	for _, stored := range stored {
+		addresses, unusable := network.ParseAddresses(stored)
 		if len(unusable) > 0 {
 			// Don't fail: one broken row would otherwise stop every user from
 			// adding a device. It cannot be reserved either, so say so.
-			logrus.Warnf("device '%s' of user '%s' has an address that cannot be parsed ('%s') - it is not reserved for that device",
-				device.Name, device.Owner, strings.Join(unusable, ", "))
+			logrus.Warnf("a device has an address that cannot be parsed ('%s') - it is not reserved for that device",
+				strings.Join(unusable, ", "))
 		}
 		for _, addr := range addresses {
 			if addr.Is4() {
