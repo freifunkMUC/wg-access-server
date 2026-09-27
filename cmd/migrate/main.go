@@ -26,34 +26,59 @@ func (cmd *migratecmd) Name() string {
 }
 
 func (cmd *migratecmd) Run() {
-	srcBackend, err := storage.NewStorage(cmd.src)
+	srcBackend, err := open(cmd.src, "src")
 	if err != nil {
-		logrus.Fatal(errors.Wrap(err, "failed to create src storage backend"))
-	}
-	if err := srcBackend.Open(); err != nil {
-		logrus.Fatal(errors.Wrap(err, "failed to connect/open src storage backend"))
+		logrus.Fatal(err)
 	}
 	defer srcBackend.Close()
 
-	destBackend, err := storage.NewStorage(cmd.dest)
+	destBackend, err := open(cmd.dest, "destination")
 	if err != nil {
-		logrus.Fatal(errors.Wrap(err, "failed to create destination storage backend"))
-	}
-	if err := destBackend.Open(); err != nil {
-		logrus.Fatal(errors.Wrap(err, "failed to connect/open destination storage backend"))
+		logrus.Fatal(err)
 	}
 	defer destBackend.Close()
 
-	srcDevices, err := srcBackend.List("")
+	if err := copyAll(srcBackend, destBackend); err != nil {
+		logrus.Fatal(err)
+	}
+}
+
+func open(uri, what string) (storage.Storage, error) {
+	backend, err := storage.NewStorage(uri)
 	if err != nil {
-		logrus.Fatal(errors.Wrap(err, "failed to list all devices from source storage backend"))
+		return nil, errors.Wrapf(err, "failed to create %s storage backend", what)
+	}
+	if err := backend.Open(); err != nil {
+		return nil, errors.Wrapf(err, "failed to connect/open %s storage backend", what)
+	}
+	return backend, nil
+}
+
+// copyAll writes everything the source holds to the destination: the devices,
+// and the API tokens that act for their owners. A token left behind would
+// stop working the moment the server is pointed at the new backend, without
+// anything saying so.
+func copyAll(src, dest storage.Storage) error {
+	devices, err := src.List("")
+	if err != nil {
+		return errors.Wrap(err, "failed to list all devices from source storage backend")
+	}
+	tokens, err := src.ListTokens("")
+	if err != nil {
+		return errors.Wrap(err, "failed to list all api tokens from source storage backend")
 	}
 
-	logrus.Infof("copying %v devices from source --> destination backend", len(srcDevices))
+	logrus.Infof("copying %v devices and %v api tokens from source --> destination backend", len(devices), len(tokens))
 
-	for _, device := range srcDevices {
-		if err := destBackend.Save(device); err != nil {
-			logrus.Fatal(errors.Wrap(err, "failed to write device to destination storage backend"))
+	for _, device := range devices {
+		if err := dest.Save(device); err != nil {
+			return errors.Wrap(err, "failed to write device to destination storage backend")
 		}
 	}
+	for _, token := range tokens {
+		if err := dest.SaveToken(token); err != nil {
+			return errors.Wrap(err, "failed to write api token to destination storage backend")
+		}
+	}
+	return nil
 }
