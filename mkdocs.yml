@@ -46,6 +46,33 @@ markdown_extensions:
 
 plugins:
   - search
+  # The pages used to be numbered, which put them in order but also put the
+  # numbers in every link to them. The order now lives in nav:, and these
+  # keep the old addresses working.
+  - redirects:
+      redirect_maps:
+        2-configuration.md: configuration.md
+        3-storage.md: storage.md
+        4-auth.md: auth.md
+        5-audit.md: audit.md
+        6-about.md: about.md
+        deployment/1-docker.md: deployment/docker.md
+        deployment/2-docker-compose.md: deployment/docker-compose.md
+        deployment/3-kubernetes.md: deployment/kubernetes.md
+        deployment/4-raspberry-pi-pi-hole.md: deployment/raspberry-pi-pi-hole.md
+
+nav:
+  - Home: index.md
+  - Configuration: configuration.md
+  - Storage: storage.md
+  - Authentication: auth.md
+  - Audit log: audit.md
+  - Deployment:
+      - Docker: deployment/docker.md
+      - Docker Compose: deployment/docker-compose.md
+      - Kubernetes: deployment/kubernetes.md
+      - Raspberry Pi with Pi-hole: deployment/raspberry-pi-pi-hole.md
+  - About: about.md
 
 # a version selector; see scripts/docs/deploy.sh
 extra:

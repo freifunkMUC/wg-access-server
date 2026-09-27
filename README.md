@@ -17,17 +17,17 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 
 ## Features
 
-- Sign-in with OpenID Connect, GitLab, GitHub or a list of users of your own ([auth](https://www.freie-netze.org/wg-access-server/4-auth/))
-- [API tokens](https://www.freie-netze.org/wg-access-server/4-auth/#api-tokens) for scripts, using the same API as the web UI
+- Sign-in with OpenID Connect, GitLab, GitHub or a list of users of your own ([auth](https://www.freie-netze.org/wg-access-server/auth/))
+- [API tokens](https://www.freie-netze.org/wg-access-server/auth/#api-tokens) for scripts, using the same API as the web UI
 - Devices can be renamed; admins see and manage the devices of all users
 - An optional limit on how many devices a user may create
 - WireGuard client configurations as a file or a QR code
 - IPv6: dual-stack, IPv6-only or IPv4-only, with NAT on or off for each
 - Client isolation and a choice of the networks clients may reach
-- Firewall rules with iptables or nftables ([firewall](https://www.freie-netze.org/wg-access-server/2-configuration/#firewall))
+- Firewall rules with iptables or nftables ([firewall](https://www.freie-netze.org/wg-access-server/configuration/#firewall))
 - A caching DNS proxy for the clients, with names for their devices
 - PostgreSQL, MySQL or SQLite storage; several replicas can share PostgreSQL or MySQL
-- An [audit log](https://www.freie-netze.org/wg-access-server/5-audit/) and Prometheus [metrics](#metrics)
+- An [audit log](https://www.freie-netze.org/wg-access-server/audit/) and Prometheus [metrics](#metrics)
 - Commands to run when the WireGuard interface comes up or goes down
 - The WireGuard kernel module where available, with an embedded userspace implementation as fallback
 - Dark and light mode
@@ -40,11 +40,11 @@ documentation of the latest release; the version selector at the top has the old
 
 Quick Links:
 
-- [Configuration overview](https://www.freie-netze.org/wg-access-server/2-configuration/)
-- [Deploy with Docker](https://www.freie-netze.org/wg-access-server/deployment/1-docker/)
-- [Deploy with Docker Compose](https://www.freie-netze.org/wg-access-server/deployment/2-docker-compose/)
-- [Deploy with Helm](https://www.freie-netze.org/wg-access-server/deployment/3-kubernetes/)
-- [Raspberry Pi with Pi-hole](https://www.freie-netze.org/wg-access-server/deployment/4-raspberry-pi-pi-hole/)
+- [Configuration overview](https://www.freie-netze.org/wg-access-server/configuration/)
+- [Deploy with Docker](https://www.freie-netze.org/wg-access-server/deployment/docker/)
+- [Deploy with Docker Compose](https://www.freie-netze.org/wg-access-server/deployment/docker-compose/)
+- [Deploy with Helm](https://www.freie-netze.org/wg-access-server/deployment/kubernetes/)
+- [Raspberry Pi with Pi-hole](https://www.freie-netze.org/wg-access-server/deployment/raspberry-pi-pi-hole/)
 
 ## Try it out
 
@@ -78,9 +78,9 @@ certificate is self-signed, so the browser warns once.
 
 For an installation that stays - Docker Compose, a reverse proxy with a real certificate, a
 database, single sign-on - follow the deployment documentation:
-[Docker](https://www.freie-netze.org/wg-access-server/deployment/1-docker/),
-[Docker Compose](https://www.freie-netze.org/wg-access-server/deployment/2-docker-compose/) or
-[Raspberry Pi with Pi-hole](https://www.freie-netze.org/wg-access-server/deployment/4-raspberry-pi-pi-hole/).
+[Docker](https://www.freie-netze.org/wg-access-server/deployment/docker/),
+[Docker Compose](https://www.freie-netze.org/wg-access-server/deployment/docker-compose/) or
+[Raspberry Pi with Pi-hole](https://www.freie-netze.org/wg-access-server/deployment/raspberry-pi-pi-hole/).
 It also covers what to do when the kernel modules cannot be loaded, and how to keep the private key
 so that the devices you added keep working.
 
@@ -214,7 +214,7 @@ curl -c cookies -d username=admin -d password=<password> https://localhost:8443/
 curl -b cookies -H 'Content-Type: application/json' -d '{}' https://localhost:8443/api/proto.Server/Info
 ```
 
-For scripts, [API tokens](https://www.freie-netze.org/wg-access-server/4-auth/#api-tokens) replace the session.
+For scripts, [API tokens](https://www.freie-netze.org/wg-access-server/auth/#api-tokens) replace the session.
 
 ### gRPC code generation:
 

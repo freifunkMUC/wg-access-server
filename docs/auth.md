@@ -178,7 +178,7 @@ admin's token has admin rights. It works for the API under `/api` only, not for 
   through the tokens it created. Creating a token needs a web session.
 
 Requests with a token that does not work get a `401` (a disabled feature too), an owner who has lost
-access a `403`. Creating and revoking tokens is recorded in the [audit log](./5-audit.md), and so is
+access a `403`. Creating and revoking tokens is recorded in the [audit log](./audit.md), and so is
 which token made a change.
 
 ## GitHub

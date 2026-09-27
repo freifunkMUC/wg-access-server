@@ -40,4 +40,4 @@ logged as an error instead. Reads - listing devices or users - are not recorded,
 constantly and the records would drown everything else.
 
 Logins are logged separately: a new session is logged with the provider and the user, and a failed
-login attempt is logged with a warning (see [Authentication](./4-auth.md)).
+login attempt is logged with a warning (see [Authentication](./auth.md)).

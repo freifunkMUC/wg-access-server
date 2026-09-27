@@ -1,5 +1,5 @@
 # wg-access-server with Docker Compose. More setups - behind Traefik, IPv4- or
-# IPv6-only, with Docker secrets - are in docs/deployment/2-docker-compose.md.
+# IPv6-only, with Docker secrets - are in docs/deployment/docker-compose.md.
 services:
   wg-access-server:
     image: ghcr.io/freifunkmuc/wg-access-server:latest
