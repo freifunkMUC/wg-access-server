@@ -25,81 +25,73 @@ interface Props {
   onChange: () => void;
 }
 
-export const DeviceListItem = observer(
-  class DeviceListItem extends React.Component<Props> {
-    removeDevice = async () => {
-      if (await confirm('Are you sure you want to delete ' + this.props.device.name + '?')) {
-        try {
-          await grpc.devices.deleteDevice({
-            name: this.props.device.name,
-          });
-          this.props.onChange();
-        } catch {
-          window.alert('api request failed');
-        }
-      }
-    };
-
-    renameDevice = async () => {
-      const device = this.props.device;
-      const newName = await prompt('Rename "' + device.name + '" to:', device.name);
-      if (newName === null || newName === device.name) {
-        return;
-      }
-
+export const DeviceListItem = observer(function DeviceListItem({ device, onChange }: Props) {
+  const removeDevice = async () => {
+    if (await confirm('Are you sure you want to delete ' + device.name + '?')) {
       try {
-        // The key and the address stay as they are, so the client
-        // configuration the user already has keeps working.
-        await grpc.devices.renameDevice({ name: device.name, newName });
-        toast({ text: 'Device renamed to "' + newName + '"', intent: 'success' });
-        this.props.onChange();
-      } catch (error) {
-        toast({ text: 'Failed to rename device: ' + errorMessage(error), intent: 'error' });
+        await grpc.devices.deleteDevice({ name: device.name });
+        onChange();
+      } catch {
+        window.alert('api request failed');
       }
-    };
-
-    render() {
-      const device = this.props.device;
-      const metadata = AppState.info?.metadataEnabled;
-      return (
-        <DeviceCard
-          title={<Typography style={{ wordBreak: 'break-word' }}>{device.name}</Typography>}
-          subheader={'Last seen: ' + lastSeen(device.lastHandshakeTime)}
-          avatar={
-            <Avatar style={{ backgroundColor: device.connected ? '#76de8a' : '#bdbdbd' }}>
-              {device.connected ? <WifiIcon /> : <WifiOffIcon />}
-            </Avatar>
-          }
-          action={
-            <>
-              <IconButton onClick={this.renameDevice} title="Rename device">
-                <EditIcon />
-              </IconButton>
-              <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={this.removeDevice} title="Delete device">
-                <DeleteIcon />
-              </IconButton>
-            </>
-          }
-          rows={[
-            ...(metadata && device.connected
-              ? [
-                  ['Endpoint', device.endpoint] as Row,
-                  ['Download', numeral(device.transmitBytes).format('0b')] as Row,
-                  ['Upload', numeral(device.receiveBytes).format('0b')] as Row,
-                ]
-              : []),
-            ...(metadata && !device.connected ? [['Disconnected'] as Row] : []),
-            ['Public key', <PopoverDisplay label="Show">{device.publicKey}</PopoverDisplay>] as Row,
-            [
-              'Pre-shared key',
-              device.presharedKey ? <PopoverDisplay label="Show">{device.presharedKey}</PopoverDisplay> : 'None',
-            ] as Row,
-          ]}
-        />
-      );
     }
-  },
-);
+  };
+
+  const renameDevice = async () => {
+    const newName = await prompt('Rename "' + device.name + '" to:', device.name);
+    if (newName === null || newName === device.name) {
+      return;
+    }
+
+    try {
+      // The key and the address stay as they are, so the client
+      // configuration the user already has keeps working.
+      await grpc.devices.renameDevice({ name: device.name, newName });
+      toast({ text: 'Device renamed to "' + newName + '"', intent: 'success' });
+      onChange();
+    } catch (error) {
+      toast({ text: 'Failed to rename device: ' + errorMessage(error), intent: 'error' });
+    }
+  };
+
+  const metadata = AppState.info?.metadataEnabled;
+  return (
+    <DeviceCard
+      title={<Typography style={{ wordBreak: 'break-word' }}>{device.name}</Typography>}
+      subheader={'Last seen: ' + lastSeen(device.lastHandshakeTime)}
+      avatar={
+        <Avatar style={{ backgroundColor: device.connected ? '#76de8a' : '#bdbdbd' }}>
+          {device.connected ? <WifiIcon /> : <WifiOffIcon />}
+        </Avatar>
+      }
+      action={
+        <>
+          <IconButton onClick={renameDevice} title="Rename device">
+            <EditIcon />
+          </IconButton>
+          <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={removeDevice} title="Delete device">
+            <DeleteIcon />
+          </IconButton>
+        </>
+      }
+      rows={[
+        ...(metadata && device.connected
+          ? [
+              ['Endpoint', device.endpoint] as Row,
+              ['Download', numeral(device.transmitBytes).format('0b')] as Row,
+              ['Upload', numeral(device.receiveBytes).format('0b')] as Row,
+            ]
+          : []),
+        ...(metadata && !device.connected ? [['Disconnected'] as Row] : []),
+        ['Public key', <PopoverDisplay label="Show">{device.publicKey}</PopoverDisplay>] as Row,
+        [
+          'Pre-shared key',
+          device.presharedKey ? <PopoverDisplay label="Show">{device.presharedKey}</PopoverDisplay> : 'None',
+        ] as Row,
+      ]}
+    />
+  );
+});
 
 // Row is a line of the card's table: a label, and the value beside it. A row
 // without a value spans the whole width, as "Disconnected" does.
