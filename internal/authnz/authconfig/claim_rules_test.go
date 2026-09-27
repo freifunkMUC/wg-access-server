@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"gopkg.in/yaml.v2"
+	"github.com/goccy/go-yaml"
 )
 
 // TestClaimMappingSyntax covers the expressions an operator writes into

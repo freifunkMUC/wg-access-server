@@ -5,11 +5,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/goccy/go-yaml"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/crypto/bcrypt"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
-	"gopkg.in/yaml.v2"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
@@ -24,8 +24,18 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		if err != nil {
 			logrus.Fatal(fmt.Errorf("failed to read configuration file: %w", err))
 		}
-		if err := yaml.Unmarshal(b, &cmd.AppConfig); err != nil {
+		// A file that configures nothing - the empty one the container image
+		// ships, or one with only comments - has to leave the flags and the
+		// environment as they are. Decoding it into the configuration would
+		// hand us a document that is null, and that clears every field.
+		var configured any
+		if err := yaml.Unmarshal(b, &configured); err != nil {
 			logrus.Fatal(fmt.Errorf("failed to bind configuration file: %w", err))
+		}
+		if configured != nil {
+			if err := yaml.Unmarshal(b, &cmd.AppConfig); err != nil {
+				logrus.Fatal(fmt.Errorf("failed to bind configuration file: %w", err))
+			}
 		}
 	}
 
