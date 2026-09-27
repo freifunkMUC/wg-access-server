@@ -7,33 +7,29 @@ interface Props {
   children: React.ReactNode;
 }
 
-export class PopoverDisplay extends React.Component<Props> {
-  state = {
-    anchorEl: undefined as HTMLElement | undefined,
-  };
+export function PopoverDisplay(props: Props) {
+  const [anchorEl, setAnchorEl] = React.useState<HTMLElement | undefined>(undefined);
 
-  render() {
-    return (
-      <React.Fragment>
-        <Button
-          size="small"
-          variant="outlined"
-          color="secondary"
-          style={{ padding: 0 }}
-          onClick={(event) => this.setState({ anchorEl: event.currentTarget })}
-        >
-          {this.props.label}
-        </Button>
-        <Popover
-          open={Boolean(this.state.anchorEl)}
-          anchorEl={this.state.anchorEl}
-          onClose={() => this.setState({ anchorEl: undefined })}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-        >
-          <div style={{ padding: '2rem' }}>{this.props.children}</div>
-        </Popover>
-      </React.Fragment>
-    );
-  }
+  return (
+    <>
+      <Button
+        size="small"
+        variant="outlined"
+        color="secondary"
+        style={{ padding: 0 }}
+        onClick={(event) => setAnchorEl(event.currentTarget)}
+      >
+        {props.label}
+      </Button>
+      <Popover
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        onClose={() => setAnchorEl(undefined)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <div style={{ padding: '2rem' }}>{props.children}</div>
+      </Popover>
+    </>
+  );
 }
