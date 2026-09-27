@@ -119,7 +119,6 @@ export declare namespace InfoRes {
 		publicKey: string,
 		host?: googleProtobufWrappers.StringValue.AsObject,
 		port: number,
-		hostVpnIp: string,
 		metadataEnabled: boolean,
 		isAdmin: boolean,
 		allowedIps: string,
@@ -170,13 +169,6 @@ export class InfoRes extends jspb.Message {
 
 	setPort(value: number): void {
 		(jspb.Message as any).setProto3IntField(this, 3, value);
-	}
-
-	getHostVpnIp(): string {return jspb.Message.getFieldWithDefault(this, 4, "");
-	}
-
-	setHostVpnIp(value: string): void {
-		(jspb.Message as any).setProto3StringField(this, 4, value);
 	}
 
 	getMetadataEnabled(): boolean {return jspb.Message.getFieldWithDefault(this, 5, false);
@@ -298,7 +290,6 @@ export class InfoRes extends jspb.Message {
 			publicKey: this.getPublicKey(),
 			host: (f = this.getHost()) && f.toObject(),
 			port: this.getPort(),
-			hostVpnIp: this.getHostVpnIp(),
 			metadataEnabled: this.getMetadataEnabled(),
 			isAdmin: this.getIsAdmin(),
 			allowedIps: this.getAllowedIps(),
@@ -329,10 +320,6 @@ export class InfoRes extends jspb.Message {
 		const field3 = message.getPort();
 		if (field3 != 0) {
 			writer.writeInt32(3, field3);
-		}
-		const field4 = message.getHostVpnIp();
-		if (field4.length > 0) {
-			writer.writeString(4, field4);
 		}
 		const field5 = message.getMetadataEnabled();
 		if (field5 != false) {
@@ -421,10 +408,6 @@ export class InfoRes extends jspb.Message {
 			case 3:
 				const field3 = reader.readInt32()
 				message.setPort(field3);
-				break;
-			case 4:
-				const field4 = reader.readString()
-				message.setHostVpnIp(field4);
 				break;
 			case 5:
 				const field5 = reader.readBool()
@@ -515,7 +498,6 @@ function InfoResFromObject(obj: InfoRes.AsObject | undefined): InfoRes | undefin
 	message.setPublicKey(obj.publicKey);
 	message.setHost(StringValueFromObject(obj.host));
 	message.setPort(obj.port);
-	message.setHostVpnIp(obj.hostVpnIp);
 	message.setMetadataEnabled(obj.metadataEnabled);
 	message.setIsAdmin(obj.isAdmin);
 	message.setAllowedIps(obj.allowedIps);

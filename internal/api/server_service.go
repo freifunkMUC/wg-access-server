@@ -46,19 +46,10 @@ func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoR
 	}
 	dnsAddress := network.StringJoinIPs(vpnip, vpnipv6)
 
-	var hostVPNIP string
-	if vpnip.IsValid() {
-		hostVPNIP = vpnip.Addr().String()
-	} else {
-		hostVPNIP = ""
-	}
-
 	return connect.NewResponse(&proto.InfoRes{
-		Host:      stringValue(&host),
-		PublicKey: publicKey,
-		Port:      int32(s.Config.WireGuard.Port),
-		// TODO IPv6 what is HostVpnIp used for, do we need HostVpnIpv6 as well?
-		HostVpnIp:                       hostVPNIP,
+		Host:                            stringValue(&host),
+		PublicKey:                       publicKey,
+		Port:                            int32(s.Config.WireGuard.Port),
 		MetadataEnabled:                 s.Config.EnableMetadata,
 		InactiveDeviceDeletionEnabled:   s.Config.EnableInactiveDeviceDeletion,
 		InactiveDeviceGracePeriod:       durationToDurationpb(&s.Config.InactiveDeviceGracePeriod),

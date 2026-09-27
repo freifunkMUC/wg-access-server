@@ -145,3 +145,19 @@ func BenchmarkSync(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkNextClientAddress measures the address picking on its own: the
+// walk through the subnet, on top of the addresses storage hands over.
+func BenchmarkNextClientAddress(b *testing.B) {
+	for _, count := range []int{100, 1000, 5000} {
+		b.Run(fmt.Sprintf("%d-devices", count), func(b *testing.B) {
+			manager := benchManager(b, count)
+			b.ResetTimer()
+			for range b.N {
+				if _, err := manager.nextClientAddressLocked(); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}

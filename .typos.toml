@@ -1,2 +1,8 @@
 [files]
 extend-exclude = ["go.sum", "package-lock.json", "go.mod"]
+
+[default.extend-words]
+# the name of a JWT header field, not a shortened "typo"
+typ = "typ"
+# the "MUC" of freifunkMUC is the airport code of Munich
+MUC = "MUC"
