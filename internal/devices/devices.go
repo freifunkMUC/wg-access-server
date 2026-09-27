@@ -11,7 +11,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
@@ -106,26 +105,26 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 	d.storage.OnAdd(func(device *storage.Device) {
 		logrus.Infof("Storage event: add device '%s' (public key: '%s') for user: %s %s", device.Name, device.PublicKey, device.OwnerName, device.Owner)
 		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address)); err != nil {
-			logrus.Error(errors.Wrap(err, "failed to add WireGuard peer"))
+			logrus.Error(fmt.Errorf("failed to add WireGuard peer: %w", err))
 		}
 	})
 
 	d.storage.OnDelete(func(device *storage.Device) {
 		logrus.Infof("Storage event: remove device '%s' (public key: '%s') for user: %s %s", device.Name, device.PublicKey, device.OwnerName, device.Owner)
 		if err := d.wg.RemovePeer(device.PublicKey); err != nil {
-			logrus.Error(errors.Wrap(err, "failed to remove WireGuard peer"))
+			logrus.Error(fmt.Errorf("failed to remove WireGuard peer: %w", err))
 		}
 	})
 
 	d.storage.OnReconnect(func() {
 		if err := d.sync(); err != nil {
-			logrus.Error(errors.Wrap(err, "device sync after storage backend reconnect event failed"))
+			logrus.Error(fmt.Errorf("device sync after storage backend reconnect event failed: %w", err))
 		}
 	})
 
 	// Do an initial sync of existing devices
 	if err := d.sync(); err != nil {
-		return errors.Wrap(err, "initial device sync from storage failed")
+		return fmt.Errorf("initial device sync from storage failed: %w", err)
 	}
 
 	// start the metrics loop
@@ -150,7 +149,7 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 func (d *DeviceManager) usedAddresses() (map[netip.Addr]bool, map[netip.Addr]bool, error) {
 	stored, err := d.storage.Addresses()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to list device addresses")
+		return nil, nil, fmt.Errorf("failed to list device addresses: %w", err)
 	}
 
 	usedIPv4s := make(map[netip.Addr]bool, len(stored)+3)
@@ -214,7 +213,7 @@ func (d *DeviceManager) addDeviceLocked(identity *authsession.Identity, name str
 	nameTaken := false
 	devices, err := d.ListDevices(identity.Subject)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to list devices")
+		return nil, fmt.Errorf("failed to list devices: %w", err)
 	}
 
 	for _, x := range devices {
@@ -242,7 +241,7 @@ func (d *DeviceManager) addDeviceLocked(identity *authsession.Identity, name str
 
 		usedIPv4s, usedIPv6s, err := d.usedAddresses()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get used addresses")
+			return nil, fmt.Errorf("failed to get used addresses: %w", err)
 		}
 
 		var ipv4Addr, ipv6Addr string
@@ -320,7 +319,7 @@ func (d *DeviceManager) addDeviceLocked(identity *authsession.Identity, name str
 	} else {
 		clientAddr, err = d.nextClientAddressLocked()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to generate an ip address for device")
+			return nil, fmt.Errorf("failed to generate an ip address for device: %w", err)
 		}
 	}
 
@@ -337,7 +336,7 @@ func (d *DeviceManager) addDeviceLocked(identity *authsession.Identity, name str
 	}
 
 	if err := d.SaveDevice(device); err != nil {
-		return nil, errors.Wrap(err, "failed to save the new device")
+		return nil, fmt.Errorf("failed to save the new device: %w", err)
 	}
 
 	return device, nil
@@ -356,12 +355,12 @@ func (d *DeviceManager) RecordMetadata(updates []storage.MetadataUpdate) error {
 func (d *DeviceManager) sync() error {
 	devices, err := d.ListAllDevices()
 	if err != nil {
-		return errors.Wrap(err, "failed to list devices")
+		return fmt.Errorf("failed to list devices: %w", err)
 	}
 
 	peers, err := d.wg.ListPeers()
 	if err != nil {
-		return errors.Wrap(err, "failed to list peers")
+		return fmt.Errorf("failed to list peers: %w", err)
 	}
 
 	// Remove any peers for devices that are no longer in storage. The keys go
@@ -375,7 +374,7 @@ func (d *DeviceManager) sync() error {
 	for _, peer := range peers {
 		if !inStorage[peer.PublicKey.String()] {
 			if err := d.wg.RemovePeer(peer.PublicKey.String()); err != nil {
-				logrus.Error(errors.Wrapf(err, "failed to remove peer during sync: %s", peer.PublicKey.String()))
+				logrus.Error(fmt.Errorf("failed to remove peer during sync: %s: %w", peer.PublicKey.String(), err))
 			}
 		}
 	}
@@ -383,7 +382,7 @@ func (d *DeviceManager) sync() error {
 	// Add peers for all devices in storage
 	for _, device := range devices {
 		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address)); err != nil {
-			logrus.Warn(errors.Wrapf(err, "failed to add device during sync: %s", device.Name))
+			logrus.Warn(fmt.Errorf("failed to add device during sync: %s: %w", device.Name, err))
 		}
 	}
 
@@ -416,12 +415,12 @@ func (d *DeviceManager) RenameDevice(user string, name string, newName string) (
 	err := d.storage.WithAllocationLock(func() error {
 		device, err := d.storage.Get(user, name)
 		if err != nil {
-			return errors.Wrap(err, "failed to retrieve device")
+			return fmt.Errorf("failed to retrieve device: %w", err)
 		}
 
 		devices, err := d.ListDevices(user)
 		if err != nil {
-			return errors.Wrap(err, "failed to list devices")
+			return fmt.Errorf("failed to list devices: %w", err)
 		}
 		for _, existing := range devices {
 			if existing.Name == newName {
@@ -442,7 +441,7 @@ func (d *DeviceManager) RenameDevice(user string, name string, newName string) (
 func (d *DeviceManager) DeleteDevice(user string, name string) error {
 	device, err := d.storage.Get(user, name)
 	if err != nil {
-		return errors.Wrap(err, "failed to retrieve device")
+		return fmt.Errorf("failed to retrieve device: %w", err)
 	}
 
 	if err := d.storage.Delete(device); err != nil {
@@ -464,7 +463,7 @@ func (d *DeviceManager) nextClientAddressLocked() (string, error) {
 
 	usedIPv4s, usedIPv6s, err := d.usedAddresses()
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get used addresses")
+		return "", fmt.Errorf("failed to get used addresses: %w", err)
 	}
 
 	var ipv4 string
@@ -524,7 +523,7 @@ func (d *DeviceManager) nextClientAddressLocked() (string, error) {
 func (d *DeviceManager) ListUsers() ([]*User, error) {
 	devices, err := d.storage.List("")
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve devices")
+		return nil, fmt.Errorf("failed to retrieve devices: %w", err)
 	}
 
 	seen := map[string]bool{}
@@ -546,7 +545,7 @@ func (d *DeviceManager) ListUsers() ([]*User, error) {
 func (d *DeviceManager) DeleteDevicesForUser(user string) error {
 	deleted, err := d.storage.DeleteForOwner(user)
 	if err != nil {
-		return errors.Wrapf(err, "failed to delete the devices of user '%s'", user)
+		return fmt.Errorf("failed to delete the devices of user '%s': %w", user, err)
 	}
 
 	logrus.Infof("Deleted %d devices of user '%s'", len(deleted), user)
@@ -555,11 +554,11 @@ func (d *DeviceManager) DeleteDevicesForUser(user string) error {
 
 func (d *DeviceManager) Ping() error {
 	if err := d.storage.Ping(); err != nil {
-		return errors.Wrap(err, "failed to ping storage")
+		return fmt.Errorf("failed to ping storage: %w", err)
 	}
 
 	if err := d.wg.Ping(); err != nil {
-		return errors.Wrap(err, "failed to ping WireGuard")
+		return fmt.Errorf("failed to ping WireGuard: %w", err)
 	}
 
 	return nil

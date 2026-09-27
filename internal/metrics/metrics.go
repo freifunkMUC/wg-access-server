@@ -3,12 +3,12 @@
 package metrics
 
 import (
+	"fmt"
 	"net/http"
 	"sort"
 	"strings"
 	"unicode/utf8"
 
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -139,7 +139,7 @@ func (c *deviceCollector) Collect(ch chan<- prometheus.Metric) {
 	if err != nil {
 		// Reporting zeros here would be indistinguishable from "no devices",
 		// so report the failure and export nothing else.
-		logrus.Error(errors.Wrap(err, "failed to list devices while scraping metrics"))
+		logrus.Error(fmt.Errorf("failed to list devices while scraping metrics: %w", err))
 		emitMetric(ch, deviceScrapeErrorDesc, 1)
 		return
 	}
@@ -220,7 +220,7 @@ func (c *deviceCollector) collectPerDevice(ch chan<- prometheus.Metric, devs []*
 func emitMetric(ch chan<- prometheus.Metric, desc *prometheus.Desc, value float64, labelValues ...string) {
 	metric, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, value, labelValues...)
 	if err != nil {
-		logrus.Error(errors.Wrapf(err, "failed to build metric %s", desc))
+		logrus.Error(fmt.Errorf("failed to build metric %s: %w", desc, err))
 		return
 	}
 	ch <- metric

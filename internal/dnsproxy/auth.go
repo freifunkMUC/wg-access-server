@@ -1,13 +1,13 @@
 package dnsproxy
 
 import (
+	"errors"
 	"fmt"
 	"net/netip"
 	"strings"
 	"sync"
 
 	"github.com/miekg/dns"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 

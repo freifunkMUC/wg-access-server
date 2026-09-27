@@ -1,6 +1,7 @@
 package dnsproxy
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -8,7 +9,6 @@ import (
 
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/miekg/dns"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,7 +31,7 @@ type DNSServer struct {
 // The returned server needs to be started using DNSServer.ListenAndServe()
 func New(opts DNSServerOpts) (*DNSServer, error) {
 	if len(opts.Upstream) == 0 {
-		return nil, errors.New("At least 1 upstream dns server is required for the dns proxy server to function")
+		return nil, errors.New("at least 1 upstream dns server is required for the dns proxy server to function")
 	}
 
 	var responseCache *lru.Cache[string, cachedResponse]
@@ -39,7 +39,7 @@ func New(opts DNSServerOpts) (*DNSServer, error) {
 		var err error
 		responseCache, err = newResponseCache(opts.CacheSize)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to create the dns response cache")
+			return nil, fmt.Errorf("failed to create the dns response cache: %w", err)
 		}
 	} else {
 		logrus.Info("DNS response caching is disabled")
@@ -116,7 +116,7 @@ func (d *DNSServer) ListenAndServe() {
 		}
 		go func(server *dns.Server) {
 			if err := server.ListenAndServe(); err != nil {
-				logrus.Error(errors.Errorf("Failed to start DNS server on %s/%s: %s", server.Addr, server.Net, err))
+				logrus.Error(fmt.Errorf("failed to start DNS server on %s/%s: %w", server.Addr, server.Net, err))
 				wg.Done()
 			}
 		}(server)
@@ -134,7 +134,7 @@ func (d *DNSServer) Close() error {
 		}
 	}
 	if firstErr != nil {
-		return errors.Wrap(firstErr, "DNS server shutdown failed")
+		return fmt.Errorf("DNS server shutdown failed: %w", firstErr)
 	}
 	return nil
 }

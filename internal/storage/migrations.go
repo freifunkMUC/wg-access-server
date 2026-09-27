@@ -1,10 +1,10 @@
 package storage
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -27,7 +27,7 @@ var migrations = []migration{
 		id: "0001_devices",
 		apply: func(db *gorm.DB) error {
 			if err := db.AutoMigrate(&deviceV1{}); err != nil {
-				return errors.Wrap(err, migrationFailed)
+				return fmt.Errorf("%s: %w", migrationFailed, err)
 			}
 			return nil
 		},
@@ -69,12 +69,12 @@ func (s *SQLStorage) withSchemaLock(fn func() error) error {
 
 func runMigrations(db *gorm.DB, migrations []migration) error {
 	if err := db.AutoMigrate(&schemaMigration{}); err != nil {
-		return errors.Wrap(err, "failed to create the schema_migrations table")
+		return fmt.Errorf("failed to create the schema_migrations table: %w", err)
 	}
 
 	var applied []schemaMigration
 	if err := db.Find(&applied).Error; err != nil {
-		return errors.Wrap(err, "failed to read the applied migrations")
+		return fmt.Errorf("failed to read the applied migrations: %w", err)
 	}
 
 	known := make(map[string]bool, len(migrations))
@@ -93,7 +93,7 @@ func runMigrations(db *gorm.DB, migrations []migration) error {
 	// A newer version has changed the schema in ways this one knows nothing
 	// about. Running on it could mean writing rows that no longer fit.
 	if len(unknown) > 0 {
-		return errors.Errorf("the database was migrated by a newer version of wg-access-server (unknown migrations: %s). "+
+		return fmt.Errorf("the database was migrated by a newer version of wg-access-server (unknown migrations: %s). "+
 			"Run that version or newer, or restore a backup taken before the upgrade", strings.Join(unknown, ", "))
 	}
 
@@ -112,7 +112,7 @@ func runMigrations(db *gorm.DB, migrations []migration) error {
 			return tx.Create(&schemaMigration{ID: m.id, AppliedAt: time.Now()}).Error
 		})
 		if err != nil {
-			return errors.Wrapf(err, "database migration %s failed", m.id)
+			return fmt.Errorf("database migration %s failed: %w", m.id, err)
 		}
 	}
 

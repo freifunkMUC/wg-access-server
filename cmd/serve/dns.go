@@ -1,11 +1,11 @@
 package serve
 
 import (
+	"fmt"
 	"net"
 	"net/netip"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/internal/config"
@@ -37,7 +37,7 @@ func startDNS(conf *config.AppConfig, deviceManager *devices.DeviceManager, stor
 		CacheSize:  conf.DNS.CacheSize,
 	})
 	if err != nil {
-		return func() {}, errors.Wrap(err, "failed to create dns server")
+		return func() {}, fmt.Errorf("failed to create dns server: %w", err)
 	}
 	dns.ListenAndServe()
 	stop := func() { _ = dns.Close() }
@@ -113,7 +113,7 @@ func (u *zoneUpdater) stop() {
 func generateZone(deviceManager *devices.DeviceManager, vpnips []netip.Addr) dnsproxy.Zone {
 	devs, err := deviceManager.ListAllDevices()
 	if err != nil {
-		logrus.Error(errors.Wrap(err, "could not query devices to generate the DNS zone"))
+		logrus.Error(fmt.Errorf("could not query devices to generate the DNS zone: %w", err))
 	}
 
 	zone := make(dnsproxy.Zone)

@@ -2,6 +2,8 @@ package authconfig
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"slices"
@@ -11,7 +13,6 @@ import (
 	"github.com/casbin/govaluate"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v2"
@@ -43,7 +44,7 @@ func (c *OIDCConfig) Provider() *authruntime.Provider {
 	ctx := context.Background()
 	provider, err := oidc.NewProvider(ctx, c.Issuer)
 	if err != nil {
-		panic(errors.Wrap(err, "failed to create OIDC provider"))
+		panic(fmt.Errorf("failed to create OIDC provider: %w", err))
 	}
 	verifier := provider.Verifier(&oidc.Config{ClientID: c.ClientID})
 
@@ -59,7 +60,7 @@ func (c *OIDCConfig) Provider() *authruntime.Provider {
 
 	redirectURL, err := url.Parse(c.RedirectURL)
 	if err != nil {
-		panic(errors.Wrapf(err, "redirect URL is not valid: %s", c.RedirectURL))
+		panic(fmt.Errorf("redirect URL is not valid: %s: %w", c.RedirectURL, err))
 	}
 
 	return &authruntime.Provider{
@@ -124,7 +125,7 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 		// 7. Client receives a response that contains an ID Token and Access Token in the response body.
 		oauth2Token, err := oauthConfig.Exchange(r.Context(), authCode)
 		if err != nil {
-			panic(errors.Wrap(err, "unable to exchange tokens"))
+			panic(fmt.Errorf("unable to exchange tokens: %w", err))
 		}
 
 		// 8. Client validates the ID token and retrieves the End-User's Subject Identifier.
@@ -134,25 +135,25 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 			logrus.Debug("Retrieving claims from UserInfo endpoint")
 			info, err := provider.UserInfo(r.Context(), oauthConfig.TokenSource(r.Context(), oauth2Token))
 			if err != nil {
-				panic(errors.Wrap(err, "unable to get UserInfo"))
+				panic(fmt.Errorf("unable to get UserInfo: %w", err))
 			}
 
 			// Dump the claims
 			err = info.Claims(&oidcClaims)
 			if err != nil {
-				panic(errors.Wrap(err, "unable to unmarshal claims from UserInfo JSON"))
+				panic(fmt.Errorf("unable to unmarshal claims from UserInfo JSON: %w", err))
 			}
 		} else {
 			// Extract and parse the ID token to retrieve the claims
 			logrus.Debug("Retrieving claims from ID Token")
 			rawIDToken, ok := oauth2Token.Extra("id_token").(string)
 			if !ok {
-				panic(errors.New("No id_token field in OAuth2 token"))
+				panic(errors.New("no id_token field in OAuth2 token"))
 			}
 			// Parse and verify ID Token payload
 			idToken, err := verifier.Verify(r.Context(), rawIDToken)
 			if err != nil {
-				panic(errors.Wrap(err, "failed to verify ID token"))
+				panic(fmt.Errorf("failed to verify ID token: %w", err))
 			}
 
 			// Verify the nonce in the ID token matches the one stored in the session
@@ -168,7 +169,7 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 			// Dump the claims
 			err = idToken.Claims(&oidcClaims)
 			if err != nil {
-				panic(errors.Wrap(err, "unable to unmarshal claims from ID token JSON"))
+				panic(fmt.Errorf("unable to unmarshal claims from ID token JSON: %w", err))
 			}
 		}
 
@@ -202,7 +203,7 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 		if sub, ok := oidcClaims["sub"].(string); ok {
 			subject = sub
 		} else {
-			panic(errors.New("No 'sub' claim returned from authorization provider"))
+			panic(errors.New("no 'sub' claim returned from authorization provider"))
 		}
 		identity := &authsession.Identity{
 			Provider: c.Name,
@@ -318,7 +319,7 @@ func (r *ruleExpression) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	}
 	parsedRule, err := govaluate.NewEvaluableExpression(ruleStr)
 	if err != nil {
-		return errors.Wrap(err, "unable to process OIDC rule")
+		return fmt.Errorf("unable to process OIDC rule: %w", err)
 	}
 	ruleExpression := &ruleExpression{parsedRule}
 	*r = *ruleExpression

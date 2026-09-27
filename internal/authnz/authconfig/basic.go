@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/tg123/go-htpasswd"
 	"golang.org/x/crypto/bcrypt"
@@ -102,7 +101,7 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime, th
 var dummyHash = func() string {
 	hash, err := bcrypt.GenerateFromPassword([]byte(authutil.RandomString(32)), bcrypt.DefaultCost)
 	if err != nil {
-		logrus.Error(errors.Wrap(err, "failed to prepare the login timing hash"))
+		logrus.Error(fmt.Errorf("failed to prepare the login timing hash: %w", err))
 		return ""
 	}
 	return string(hash)

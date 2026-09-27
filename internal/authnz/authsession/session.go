@@ -3,10 +3,11 @@ package authsession
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/sessions"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -35,17 +36,17 @@ func GetSession(store sessions.Store, r *http.Request) (*AuthSession, error) {
 	if data, ok := session.Values[string(sessionKey)].([]byte); ok {
 		s := &AuthSession{}
 		if err := json.Unmarshal(data, s); err != nil {
-			return nil, errors.Wrap(err, "failed to parse session")
+			return nil, fmt.Errorf("failed to parse session: %w", err)
 		}
 		return s, nil
 	}
-	return nil, errors.New("Session not authenticated")
+	return nil, errors.New("session not authenticated")
 }
 
 func SetSession(store sessions.Store, r *http.Request, w http.ResponseWriter, s *AuthSession) error {
 	data, err := json.Marshal(s)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal session")
+		return fmt.Errorf("failed to marshal session: %w", err)
 	}
 	session, _ := store.Get(r, string(sessionKey))
 	session.Values[string(sessionKey)] = data
@@ -63,12 +64,12 @@ func SetSession(store sessions.Store, r *http.Request, w http.ResponseWriter, s 
 func AddFlash(store sessions.Store, r *http.Request, w http.ResponseWriter, key string, value string) {
 	session, err := store.Get(r, string(sessionKey))
 	if err != nil {
-		logrus.Warn(errors.Wrap(err, "failed to get session for flash message"))
+		logrus.Warn(fmt.Errorf("failed to get session for flash message: %w", err))
 		return
 	}
 	session.AddFlash(value, key)
 	if err := session.Save(r, w); err != nil {
-		logrus.Warn(errors.Wrap(err, "failed to save flash message"))
+		logrus.Warn(fmt.Errorf("failed to save flash message: %w", err))
 	}
 }
 
@@ -81,7 +82,7 @@ func GetFlash(store sessions.Store, r *http.Request, w http.ResponseWriter, key 
 	if len(results) >= 1 {
 		if v, ok := results[0].(string); ok {
 			if err := session.Save(r, w); err != nil {
-				logrus.Warn(errors.Wrap(err, "failed to save session after getting flash"))
+				logrus.Warn(fmt.Errorf("failed to save session after getting flash: %w", err))
 			}
 			return v, true
 		}

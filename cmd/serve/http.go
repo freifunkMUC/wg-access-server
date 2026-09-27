@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/internal/api"
@@ -64,7 +64,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	claims := authnz.ClaimsMiddleware(conf)
 	middleware, err := authnz.NewMiddleware(conf.Auth, claims)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to set up authnz middleware")
+		return nil, fmt.Errorf("failed to set up authnz middleware: %w", err)
 	}
 	router.Use(middleware)
 
@@ -121,7 +121,7 @@ func listenAndServe(conf *config.AppConfig, handler http.Handler, stopBackground
 			logrus.Infof("Web UI listening on http://%v", address)
 			err := httpSrv.ListenAndServe()
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				errChan <- errors.Wrap(err, "unable to start http server")
+				errChan <- fmt.Errorf("unable to start http server: %w", err)
 			}
 		}()
 	}
@@ -138,7 +138,7 @@ func listenAndServe(conf *config.AppConfig, handler http.Handler, stopBackground
 
 		tlsConfig, err := web.LoadTLSCert(certPath, keyPath, web.CertHosts(conf.ExternalHost))
 		if err != nil {
-			return errors.Wrap(err, "failed to load TLS certificate")
+			return fmt.Errorf("failed to load TLS certificate: %w", err)
 		}
 
 		httpsSrv = &http.Server{
@@ -155,7 +155,7 @@ func listenAndServe(conf *config.AppConfig, handler http.Handler, stopBackground
 			logrus.Infof("Web UI listening on https://%v", httpsAddress)
 			err := httpsSrv.ListenAndServeTLS("", "") // Cert and key are already in TLSConfig
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				errChan <- errors.Wrap(err, "unable to start https server")
+				errChan <- fmt.Errorf("unable to start https server: %w", err)
 			}
 		}()
 	}
@@ -168,12 +168,12 @@ func listenAndServe(conf *config.AppConfig, handler http.Handler, stopBackground
 		defer cancel()
 		if httpSrv != nil {
 			if err := httpSrv.Shutdown(ctx); err != nil {
-				logrus.Error(errors.Wrap(err, "unable to shutdown http server"))
+				logrus.Error(fmt.Errorf("unable to shutdown http server: %w", err))
 			}
 		}
 		if httpsSrv != nil {
 			if err := httpsSrv.Shutdown(ctx); err != nil {
-				logrus.Error(errors.Wrap(err, "unable to shutdown https server"))
+				logrus.Error(fmt.Errorf("unable to shutdown https server: %w", err))
 			}
 		}
 		return nil

@@ -1,10 +1,11 @@
 package storage
 
 import (
+	"errors"
+	"fmt"
 	"sort"
 	"time"
 
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -137,7 +138,7 @@ func (s *InMemoryStorage) DeleteTokensForOwner(owner string) error {
 
 func (s *SQLStorage) SaveToken(token *APIToken) error {
 	if err := s.db.Create(token).Error; err != nil {
-		return errors.Wrap(err, "failed to write api token")
+		return fmt.Errorf("failed to write api token: %w", err)
 	}
 	return nil
 }
@@ -149,7 +150,7 @@ func (s *SQLStorage) ListTokens(owner string) ([]*APIToken, error) {
 		query = query.Where("owner = ?", owner)
 	}
 	if err := query.Order("created_at").Find(&tokens).Error; err != nil {
-		return nil, errors.Wrap(err, "failed to read api tokens")
+		return nil, fmt.Errorf("failed to read api tokens: %w", err)
 	}
 	return tokens, nil
 }
@@ -169,14 +170,14 @@ func (s *SQLStorage) firstToken(query string, value string) (*APIToken, error) {
 		return nil, ErrTokenNotFound
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read api token")
+		return nil, fmt.Errorf("failed to read api token: %w", err)
 	}
 	return token, nil
 }
 
 func (s *SQLStorage) TouchToken(id string, at time.Time) error {
 	if err := s.db.Model(&APIToken{}).Where("id = ?", id).UpdateColumn("last_used_at", at).Error; err != nil {
-		return errors.Wrap(err, "failed to record the use of an api token")
+		return fmt.Errorf("failed to record the use of an api token: %w", err)
 	}
 	return nil
 }
@@ -184,7 +185,7 @@ func (s *SQLStorage) TouchToken(id string, at time.Time) error {
 func (s *SQLStorage) DeleteToken(id string) error {
 	q := s.db.Where("id = ?", id).Delete(&APIToken{})
 	if q.Error != nil {
-		return errors.Wrap(q.Error, "failed to delete api token")
+		return fmt.Errorf("failed to delete api token: %w", q.Error)
 	}
 	if q.RowsAffected == 0 {
 		return ErrTokenNotFound
@@ -194,7 +195,7 @@ func (s *SQLStorage) DeleteToken(id string) error {
 
 func (s *SQLStorage) DeleteTokensForOwner(owner string) error {
 	if err := s.db.Where("owner = ?", owner).Delete(&APIToken{}).Error; err != nil {
-		return errors.Wrap(err, "failed to delete the api tokens of the user")
+		return fmt.Errorf("failed to delete the api tokens of the user: %w", err)
 	}
 	return nil
 }

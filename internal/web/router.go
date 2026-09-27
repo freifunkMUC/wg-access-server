@@ -3,6 +3,7 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -12,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,7 +21,7 @@ func Router() *mux.Router {
 
 	staticFiles, err := filepath.Abs("website/build")
 	if err != nil {
-		logrus.Fatal(errors.Wrap(err, "failed to create absolute path to website static files"))
+		logrus.Fatal(fmt.Errorf("failed to create absolute path to website static files: %w", err))
 	}
 
 	if _, err := os.Stat(staticFiles); os.IsNotExist(err) {
@@ -84,7 +84,7 @@ func FileServerWith404(root http.FileSystem, handler404 FSHandler404) http.Handl
 		if err == nil {
 			err = f.Close()
 			if err != nil {
-				logrus.Error(errors.Wrap(err, "failed to close file"))
+				logrus.Error(fmt.Errorf("failed to close file: %w", err))
 			}
 		}
 

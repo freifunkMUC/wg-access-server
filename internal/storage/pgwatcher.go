@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/freifunkMUC/pg-events/pkg/pgevents"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,7 +21,7 @@ func NewPgWatcher(db *sql.DB, connectionString string, table string) (*PgWatcher
 	logrus.Debug("creating postgres watcher")
 	listener, err := pgevents.OpenListener(connectionString)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to open pg listener")
+		return nil, fmt.Errorf("failed to open pg listener: %w", err)
 	}
 
 	// Only inserts and deletes are acted on through pg-events (see OnAdd).
@@ -31,7 +30,7 @@ func NewPgWatcher(db *sql.DB, connectionString string, table string) (*PgWatcher
 	// row to all replicas.
 	if err := listener.AttachActions(table, pgevents.Insert, pgevents.Delete); err != nil {
 		_ = listener.Close()
-		return nil, errors.Wrapf(err, "failed to attach listener to table: %s", table)
+		return nil, fmt.Errorf("failed to attach listener to table: %s: %w", table, err)
 	}
 
 	if err := attachRenameTrigger(db, table); err != nil {
@@ -54,13 +53,13 @@ func attachRenameTrigger(db *sql.DB, table string) error {
 	trigger := table + renameTriggerSuffix
 
 	if _, err := db.Exec(fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s", trigger, table)); err != nil {
-		return errors.Wrapf(err, "failed to drop the rename trigger on %s", table)
+		return fmt.Errorf("failed to drop the rename trigger on %s: %w", table, err)
 	}
 	statement := fmt.Sprintf(
 		"CREATE TRIGGER %s AFTER UPDATE OF name ON %s FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event()",
 		trigger, table)
 	if _, err := db.Exec(statement); err != nil {
-		return errors.Wrapf(err, "failed to create the rename trigger on %s", table)
+		return fmt.Errorf("failed to create the rename trigger on %s: %w", table, err)
 	}
 
 	return nil
@@ -116,7 +115,7 @@ func (w *PgWatcher) OnReconnect(cb func()) {
 func (w *PgWatcher) emit(cb Callback, event *pgevents.TableEvent) {
 	device := &Device{}
 	if err := json.Unmarshal([]byte(event.Data), device); err != nil {
-		logrus.Error(errors.Wrap(err, "failed to unmarshal postgres event data into device struct"))
+		logrus.Error(fmt.Errorf("failed to unmarshal postgres event data into device struct: %w", err))
 	} else {
 		cb(device)
 	}

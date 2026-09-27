@@ -1,7 +1,7 @@
 package authconfig
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
 )
@@ -49,13 +49,13 @@ func (c *AuthConfig) IsEnabled() bool {
 func (c *AuthConfig) Validate() error {
 	if c.Github != nil {
 		if err := c.Github.Validate(); err != nil {
-			return errors.Wrap(err, "auth.github")
+			return fmt.Errorf("auth.github: %w", err)
 		}
 	}
 	for name, provider := range c.Multiple {
 		if provider.Github != nil {
 			if err := provider.Github.Validate(); err != nil {
-				return errors.Wrapf(err, "auth.multiple.%s.github", name)
+				return fmt.Errorf("auth.multiple.%s.github: %w", name, err)
 			}
 		}
 	}
