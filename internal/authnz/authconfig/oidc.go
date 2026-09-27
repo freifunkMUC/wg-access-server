@@ -15,7 +15,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
-	"gopkg.in/yaml.v2"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
@@ -306,9 +305,9 @@ type ruleExpression struct {
 	*govaluate.EvaluableExpression
 }
 
-// MarshalYAML will encode a RuleExpression/govalidate into yaml string
+// MarshalYAML writes the rule back as the expression it was read from.
 func (r ruleExpression) MarshalYAML() (interface{}, error) {
-	return yaml.Marshal(r.String())
+	return r.String(), nil
 }
 
 // UnmarshalYAML will decode a RuleExpression/govalidate into yaml string

@@ -5,11 +5,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/goccy/go-yaml"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/crypto/bcrypt"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
-	"gopkg.in/yaml.v2"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
 	"github.com/freifunkMUC/wg-access-server/internal/config"

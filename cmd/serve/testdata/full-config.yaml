@@ -1,0 +1,97 @@
+loglevel: debug
+adminUsername: admin
+adminPassword: secret
+port: 8000
+httpHost: "127.0.0.1"
+httpEnabled: true
+externalHost: https://vpn.example.com
+storage: postgresql://user:pass@localhost:5432/db?sslmode=disable
+enableMetadata: true
+enableDeviceMetrics: true
+enableInactiveDeviceDeletion: true
+inactiveDeviceGracePeriod: 720h
+maxDevicesPerUser: 5
+enableApiTokens: true
+filename: WireGuard-Home
+wireguard:
+  enabled: true
+  interface: wg0
+  privateKey: "aGVsbG8gd29ybGQgdGhpcyBpcyBhIGtleSEhIQ=="
+  port: 51820
+  mtu: 1420
+  preUp: ["echo up"]
+  postUp:
+    - echo post
+    - echo more
+  preDown: []
+  postDown: ["echo down"]
+vpn:
+  allowedIPs:
+    - 0.0.0.0/0
+    - ::/0
+  cidr: 10.44.0.0/24
+  cidrv6: "fd48:4c4:7aa9::/64"
+  gatewayInterface: eth0
+  nat44: true
+  nat66: false
+  clientIsolation: true
+  firewall: nftables
+  disableIPTables: false
+dns:
+  enabled: true
+  upstream: ["1.1.1.1", "2606:4700:4700::1111"]
+  cacheSize: 5000
+  domain: vpn.home.arpa.
+clientConfig:
+  dnsServers: ["10.44.0.1"]
+  dnsSearchDomain: home.arpa
+  mtu: 1280
+  PersistentKeepalive: 25
+metrics:
+  basicAuth:
+    username: prom
+    passwordHash: "$2a$10$abcdefghijklmnopqrstuv"
+  maxDeviceSeries: 500
+https:
+  enabled: true
+  certFile: /data/cert.pem
+  keyFile: /data/key.pem
+  port: 8443
+  host: "0.0.0.0"
+auth:
+  sessionStore:
+    secret: "0123456789abcdef0123456789abcdef"
+    secure: true
+  oidc:
+    name: Keycloak
+    issuer: https://id.example.com/realms/demo
+    clientID: wg
+    clientSecret: shh
+    redirectURL: https://vpn.example.com/callback
+    emailDomains: ["example.com"]
+    claimMapping:
+      admin: "'WireguardAdmins' in group_membership"
+      access: "'WireguardAccess' in group_membership"
+    claimsFromIDToken: true
+    accessClaim: access
+  gitlab:
+    name: GitLab
+    baseURL: https://gitlab.example.com
+    clientID: wg
+    clientSecret: shh
+    redirectURL: https://vpn.example.com/callback/gitlab
+  github:
+    name: GitHub
+    clientID: wg
+    clientSecret: shh
+    redirectURL: https://vpn.example.com/callback/github
+    organizations: ["freifunkMUC"]
+    teams: ["freifunkMUC/wg-access"]
+    adminTeams: ["freifunkMUC/admins"]
+    users: ["someone"]
+  basic:
+    users:
+      - "user:$2a$10$abcdefghijklmnopqrstuv"
+  simple:
+    users:
+      - "someone:$2a$10$abcdefghijklmnopqrstuv"

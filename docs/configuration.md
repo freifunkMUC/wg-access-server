@@ -15,6 +15,8 @@ wg genkey
 ```
 
 The config file format is `yaml` and an example is provided [below](#the-config-file-configyaml).
+A file that sets the same option twice is refused at start-up, naming both lines - one of the two
+values would otherwise quietly win.
 
 The format for specifying multiple values for options that allow it is:
 
