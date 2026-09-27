@@ -75,13 +75,26 @@ jobs:
 
   test-databases:
     runs-on: ubuntu-latest
-    name: Go tests against Postgres and MySQL
+    name: Go tests against ${{ matrix.postgres }} and ${{ matrix.mysql }}
     # The HA paths - the shared allocation lock and the LISTEN/NOTIFY watcher -
     # only run when a real server is configured. Without this job they are
     # skipped everywhere and only ever tested by hand.
+    #
+    # Both ends of what the documentation says is supported are tested, plus
+    # MariaDB, which it calls a compatible flavour of MySQL.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - postgres: postgres:13-alpine
+            mysql: mysql:8.0
+          - postgres: postgres:18-alpine
+            mysql: mysql:9
+          - postgres: postgres:17-alpine
+            mysql: mariadb:11.4
     services:
       postgres:
-        image: postgres:17-alpine
+        image: ${{ matrix.postgres }}
         env:
           POSTGRES_USER: wgtest
           POSTGRES_PASSWORD: wgtest
@@ -94,7 +107,7 @@ jobs:
           --health-timeout 5s
           --health-retries 20
       mysql:
-        image: mysql:9
+        image: ${{ matrix.mysql }}
         env:
           MYSQL_ROOT_PASSWORD: wgtest
           MYSQL_DATABASE: wgtest
@@ -103,7 +116,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pwgtest"
+          --health-cmd "mariadb-admin ping -h 127.0.0.1 -uroot -pwgtest || mysqladmin ping -h 127.0.0.1 -uroot -pwgtest"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
