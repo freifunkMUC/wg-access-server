@@ -31,6 +31,12 @@ RUN go build -o wg-access-server
 FROM alpine:3.24.1
 RUN apk add --no-cache iptables ip6tables nftables wireguard-tools curl openssl
 ENV WG_CONFIG="/config.yaml"
+# An empty config file at the path above, so that the server starts on its
+# defaults and the environment variables when no config file is mounted over
+# it. Without the file, reading the configured path fails and the server
+# refuses to start - which is what an operator wants for a path they typed
+# themselves, but this path is the image's own.
+RUN touch /config.yaml
 ENV WG_STORAGE="sqlite3:///data/db.sqlite3"
 # Keep the generated self-signed certificate on the data volume, otherwise a
 # recreated container serves a new certificate and every browser warns again
