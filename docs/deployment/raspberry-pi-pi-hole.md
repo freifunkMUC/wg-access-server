@@ -12,7 +12,7 @@ anybody else, and port 53 of the host stays free.
 
 - Docker with the Compose plugin
 - The WireGuard kernel module. Raspberry Pi OS Bookworm and newer ship it; check with
-  `sudo modprobe wireguard`. See [Docker](1-docker.md#modules) for loading it on boot.
+  `sudo modprobe wireguard`. See [Docker](docker.md#modules) for loading it on boot.
 - UDP port 51820 forwarded to the Raspberry Pi if clients connect from outside your network
 
 ## docker-compose.yml
