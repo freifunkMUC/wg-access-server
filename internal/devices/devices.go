@@ -106,8 +106,19 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 	// Start listening to the device add/remove events
 	d.storage.OnAdd(func(device *storage.Device) {
 		logrus.Infof("Storage event: add device '%s' (public key: '%s') for user: %s %s", device.Name, device.PublicKey, device.OwnerName, device.Owner)
-		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address)); err != nil {
+		if err := d.applyPeer(device); err != nil {
 			logrus.Error(fmt.Errorf("failed to add WireGuard peer: %w", err))
+		}
+	})
+
+	// An update is a rename or a change of the device's access. The first
+	// leaves the peer alone, the second is the whole point: a device that was
+	// blocked loses its peer, one that was allowed again gets it back. Every
+	// replica sees the event, so a change reaches all of them.
+	d.storage.OnUpdate(func(device *storage.Device) {
+		logrus.Infof("Storage event: update device '%s' (public key: '%s') for user: %s %s", device.Name, device.PublicKey, device.OwnerName, device.Owner)
+		if err := d.applyPeer(device); err != nil {
+			logrus.Error(fmt.Errorf("failed to update WireGuard peer: %w", err))
 		}
 	})
 
@@ -134,6 +145,9 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 		logrus.Info("Start collecting device metadata")
 		go metadataLoop(ctx, d)
 	}
+
+	// start the loop that enforces the expiry dates
+	go accessLoop(ctx, d)
 
 	// start inactive devices loop
 	if enableInactiveDeviceDeletion {
@@ -365,16 +379,20 @@ func (d *DeviceManager) sync() error {
 		return fmt.Errorf("failed to list peers: %w", err)
 	}
 
-	// Remove any peers for devices that are no longer in storage. The keys go
-	// into a set first: searching the devices for every peer would compare
-	// each device against each peer, which a server with a few thousand of
-	// them feels at every start and every storage reconnect.
-	inStorage := make(map[string]bool, len(devices))
+	// Remove any peers for devices that are no longer in storage, or that may
+	// not connect. The keys go into a set first: searching the devices for
+	// every peer would compare each device against each peer, which a server
+	// with a few thousand of them feels at every start and every storage
+	// reconnect.
+	now := time.Now()
+	allowed := make(map[string]bool, len(devices))
 	for _, device := range devices {
-		inStorage[device.PublicKey] = true
+		if device.AccessAllowed(now) {
+			allowed[device.PublicKey] = true
+		}
 	}
 	for _, peer := range peers {
-		if !inStorage[peer.PublicKey.String()] {
+		if !allowed[peer.PublicKey.String()] {
 			if err := d.wg.RemovePeer(peer.PublicKey.String()); err != nil {
 				logrus.Error(fmt.Errorf("failed to remove peer during sync: %s: %w", peer.PublicKey.String(), err))
 			}
@@ -389,6 +407,9 @@ func (d *DeviceManager) sync() error {
 		configured[peer.PublicKey.String()] = peer
 	}
 	for _, device := range devices {
+		if !allowed[device.PublicKey] {
+			continue
+		}
 		if peer, ok := configured[device.PublicKey]; ok && peerMatches(peer, device) {
 			continue
 		}
@@ -398,6 +419,20 @@ func (d *DeviceManager) sync() error {
 	}
 
 	return nil
+}
+
+// applyPeer brings the WireGuard peer of one device in line with what is
+// stored: a device that may connect has a peer, a blocked or expired one has
+// none. Removing a peer that is not there is not an error, so this can run for
+// any device without looking first.
+func (d *DeviceManager) applyPeer(device *storage.Device) error {
+	if !device.AccessAllowed(time.Now()) {
+		if err := d.wg.RemovePeer(device.PublicKey); err != nil {
+			return fmt.Errorf("failed to remove the peer of a device that may not connect: %w", err)
+		}
+		return nil
+	}
+	return d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address))
 }
 
 // peerMatches reports whether the interface carries the device as it is
@@ -489,6 +524,58 @@ func (d *DeviceManager) RenameDevice(user string, name string, newName string) (
 	}
 
 	return renamed, nil
+}
+
+// AccessChange is what SetDeviceAccess should change about a device. A field
+// that is not set is left as it is, so one of the two can be changed without
+// sending the other back - two admins working at the same time then cannot
+// undo each other's change.
+type AccessChange struct {
+	// Disabled blocks the device, or lifts a block.
+	Disabled *bool
+	// ExpiresAt is when the device's access ends. It must be in the future:
+	// ending access now is what Disabled is for.
+	ExpiresAt *time.Time
+	// ClearExpiresAt removes the expiry, so the device's access no longer
+	// ends. It takes precedence over ExpiresAt.
+	ClearExpiresAt bool
+}
+
+// SetDeviceAccess blocks a device from connecting or gives it an expiry date,
+// and returns the device as it is now. The name, the key and the address stay
+// as they are: the client configuration the user has stays valid, and once the
+// device may connect again it works without them setting it up anew.
+//
+// Whether the caller may change this is decided by the API - a user must not
+// be able to lift a block or extend an expiry an admin set on their device.
+func (d *DeviceManager) SetDeviceAccess(user string, name string, change AccessChange) (*storage.Device, error) {
+	device, err := d.storage.Get(user, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve device: %w", err)
+	}
+
+	disabled := device.Disabled
+	if change.Disabled != nil {
+		disabled = *change.Disabled
+	}
+
+	expiresAt := device.ExpiresAt
+	switch {
+	case change.ClearExpiresAt:
+		expiresAt = nil
+	case change.ExpiresAt != nil:
+		if !change.ExpiresAt.After(time.Now()) {
+			return nil, invalid("The expiry date must be in the future. Disable the device to end its access now.")
+		}
+		expiresAt = change.ExpiresAt
+	}
+
+	changed, err := d.storage.SetAccess(device, disabled, expiresAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to change the access of the device: %w", err)
+	}
+
+	return changed, nil
 }
 
 func (d *DeviceManager) DeleteDevice(user string, name string) error {

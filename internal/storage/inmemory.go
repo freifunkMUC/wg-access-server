@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"sync"
+	"time"
 )
 
 // implements Storage interface
@@ -161,6 +162,36 @@ func (s *InMemoryStorage) rename(device *Device, newName string) (*Device, error
 	delete(s.db, key(stored))
 	s.db[key(&renamed)] = &renamed
 	return &renamed, nil
+}
+
+// SetAccess writes the access fields of one device, like Rename writes its
+// name: the stored device is replaced, so a caller holding the old one does
+// not see the change behind its back.
+func (s *InMemoryStorage) SetAccess(device *Device, disabled bool, expiresAt *time.Time) (*Device, error) {
+	changed, err := s.setAccess(device, disabled, expiresAt)
+	if err != nil {
+		return nil, err
+	}
+
+	// outside the lock, like every other event this storage emits
+	s.EmitUpdate(changed)
+	return changed, nil
+}
+
+func (s *InMemoryStorage) setAccess(device *Device, disabled bool, expiresAt *time.Time) (*Device, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	stored, ok := s.db[key(device)]
+	if !ok {
+		return nil, errors.New("device doesn't exist")
+	}
+
+	changed := *stored
+	changed.Disabled = disabled
+	changed.ExpiresAt = expiresAt
+	s.db[key(&changed)] = &changed
+	return &changed, nil
 }
 
 // DeleteForOwner removes every device of one user. Nothing can fail halfway

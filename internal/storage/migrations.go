@@ -38,6 +38,16 @@ var migrations = []migration{
 			return db.AutoMigrate(&apiTokenV1{})
 		},
 	},
+	{
+		// Adds the two columns that say whether a device may connect:
+		// disabled and expires_at. Both are empty for every existing device,
+		// which is what "may connect" looks like - an upgrade changes nothing
+		// about the devices that are there.
+		id: "0003_device_access",
+		apply: func(db *gorm.DB) error {
+			return db.AutoMigrate(&deviceV2{})
+		},
+	},
 }
 
 type migration struct {
@@ -137,6 +147,30 @@ type deviceV1 struct {
 }
 
 func (deviceV1) TableName() string {
+	return "devices"
+}
+
+// deviceV2 is the devices table as 0003_device_access left it: deviceV1 plus
+// the two access columns.
+type deviceV2 struct {
+	Owner             string `gorm:"type:varchar(100);primaryKey"`
+	OwnerName         string
+	OwnerEmail        string
+	OwnerProvider     string
+	Name              string `gorm:"type:varchar(100);primaryKey"`
+	PublicKey         string `gorm:"uniqueIndex:uix_devices_public_key"`
+	PresharedKey      string `gorm:"type:varchar(100)"`
+	Address           string
+	CreatedAt         time.Time `gorm:"column:created_at"`
+	Disabled          bool
+	ExpiresAt         *time.Time
+	LastHandshakeTime *time.Time
+	ReceiveBytes      int64
+	TransmitBytes     int64
+	Endpoint          string
+}
+
+func (deviceV2) TableName() string {
 	return "devices"
 }
 

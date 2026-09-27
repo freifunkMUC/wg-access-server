@@ -16,6 +16,10 @@ service Devices {
 
   // admin only
   rpc ListAllDevices(ListAllDevicesReq) returns (ListAllDevicesRes) {}
+  // SetDeviceAccess blocks a device from connecting, or gives it an expiry
+  // date. It is admin only: a user must not be able to lift a block or
+  // extend the expiry an admin set on their device.
+  rpc SetDeviceAccess(SetDeviceAccessReq) returns (Device) {}
 }
 
 message Device {
@@ -33,6 +37,12 @@ message Device {
   string owner_email = 12;
   string owner_provider = 13;
   string preshared_key = 14;
+  // disabled: an admin blocked the device, so it has no WireGuard peer and
+  // cannot connect until the block is lifted.
+  bool disabled = 15;
+  // unset: the device's access does not expire. Once the time has passed the
+  // device loses its peer, like a disabled one.
+  google.protobuf.Timestamp expires_at = 16;
 }
 
 message AddDeviceReq {
@@ -74,4 +84,21 @@ message ListAllDevicesReq {
 
 message ListAllDevicesRes {
   repeated Device items = 1;
+}
+
+// SetDeviceAccessReq changes whether a device may connect. Both changes are
+// optional, so one of them can be made without reading and sending back the
+// other - two admins working at once then cannot undo each other's change.
+message SetDeviceAccessReq {
+  string name = 1;
+  // if empty, defaults to the current user
+  google.protobuf.StringValue owner = 2;
+  // unset: leave the block as it is
+  google.protobuf.BoolValue disabled = 3;
+  // unset: leave the expiry as it is. Must be in the future - to end access
+  // now, disable the device.
+  google.protobuf.Timestamp expires_at = 4;
+  // true: the device's access no longer expires. Takes precedence over
+  // expires_at.
+  bool clear_expires_at = 5;
 }

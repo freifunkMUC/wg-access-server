@@ -9,9 +9,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// renameTriggerSuffix names the trigger that reports renames. pg-events
-// installs its own trigger for inserts and deletes; this one sits next to it.
-const renameTriggerSuffix = "_rename_events"
+// updateTriggerSuffix names the trigger that reports the updates that matter.
+// pg-events installs its own trigger for inserts and deletes; this one sits
+// next to it.
+const updateTriggerSuffix = "_update_events"
+
+// legacyRenameTriggerSuffix is what the same trigger was called while it only
+// reported renames. It is dropped, so an upgraded database does not end up
+// notifying twice per rename.
+const legacyRenameTriggerSuffix = "_rename_events"
 
 type PgWatcher struct {
 	*pgevents.Listener
@@ -33,7 +39,7 @@ func NewPgWatcher(db *sql.DB, connectionString string, table string) (*PgWatcher
 		return nil, fmt.Errorf("failed to attach listener to table: %s: %w", table, err)
 	}
 
-	if err := attachRenameTrigger(db, table); err != nil {
+	if err := attachUpdateTrigger(db, table); err != nil {
 		_ = listener.Close()
 		return nil, err
 	}
@@ -43,23 +49,25 @@ func NewPgWatcher(db *sql.DB, connectionString string, table string) (*PgWatcher
 	}, nil
 }
 
-// attachRenameTrigger reports the one kind of update that matters: a device
-// that was renamed. "AFTER UPDATE OF name" fires only when a statement
-// assigns that column, so the metadata sync - which writes the traffic
-// counters and the handshake time - stays silent. The trigger reuses the
-// function and the channel pg-events set up, so the events arrive through the
-// same listener.
-func attachRenameTrigger(db *sql.DB, table string) error {
-	trigger := table + renameTriggerSuffix
+// attachUpdateTrigger reports the updates that matter: a device that was
+// renamed, and one whose access changed. "AFTER UPDATE OF ..." fires only when
+// a statement assigns one of those columns, so the metadata sync - which
+// writes the traffic counters and the handshake time - stays silent. The
+// trigger reuses the function and the channel pg-events set up, so the events
+// arrive through the same listener.
+func attachUpdateTrigger(db *sql.DB, table string) error {
+	trigger := table + updateTriggerSuffix
 
-	if _, err := db.Exec(fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s", trigger, table)); err != nil {
-		return fmt.Errorf("failed to drop the rename trigger on %s: %w", table, err)
+	for _, name := range []string{trigger, table + legacyRenameTriggerSuffix} {
+		if _, err := db.Exec(fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s", name, table)); err != nil {
+			return fmt.Errorf("failed to drop the update trigger on %s: %w", table, err)
+		}
 	}
 	statement := fmt.Sprintf(
-		"CREATE TRIGGER %s AFTER UPDATE OF name ON %s FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event()",
+		"CREATE TRIGGER %s AFTER UPDATE OF name, disabled, expires_at ON %s FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event()",
 		trigger, table)
 	if _, err := db.Exec(statement); err != nil {
-		return fmt.Errorf("failed to create the rename trigger on %s: %w", table, err)
+		return fmt.Errorf("failed to create the update trigger on %s: %w", table, err)
 	}
 
 	return nil
@@ -80,7 +88,7 @@ func (w *PgWatcher) OnAdd(cb Callback) {
 
 func (w *PgWatcher) OnUpdate(cb Callback) {
 	w.OnEvent(func(event *pgevents.TableEvent) {
-		// only the rename trigger reports updates, see attachRenameTrigger
+		// only the update trigger reports updates, see attachUpdateTrigger
 		if event.Action == "UPDATE" && !event.Truncated {
 			w.emit(cb, event)
 		}

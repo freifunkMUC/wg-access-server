@@ -33,6 +33,11 @@ type Storage interface {
 	// is untouched and the tunnel keeps running. It emits an update event,
 	// which is how the authoritative DNS zone learns the new name.
 	Rename(device *Device, newName string) (*Device, error)
+	// SetAccess stores whether a device is blocked and when its access
+	// expires, and returns the device as it is now. Like Rename it leaves the
+	// public key and the address alone, and emits an update event - which is
+	// how every replica learns that it has to add or remove the peer.
+	SetAccess(device *Device, disabled bool, expiresAt *time.Time) (*Device, error)
 	List(owner string) ([]*Device, error)
 	// Addresses returns the address field of every device. Picking an address
 	// for a new device only needs to know which ones are taken, and reading
@@ -119,6 +124,19 @@ type Device struct {
 	CreatedAt    time.Time `json:"created_at" gorm:"column:created_at"`
 
 	/**
+	 * Access fields below. They say whether the device may connect at all;
+	 * see AccessAllowed. Only an admin changes them.
+	 */
+
+	// Disabled blocks the device without deleting it: its WireGuard peer is
+	// removed, so it cannot connect, but its address stays reserved and the
+	// client configuration the user has keeps working once it is enabled again.
+	Disabled bool `json:"disabled"`
+	// ExpiresAt is when the device loses access, for handing out temporary
+	// access. Nil means it never expires.
+	ExpiresAt *time.Time `json:"expires_at"`
+
+	/**
 	 * Metadata fields below.
 	 * All metadata tracking can be disabled
 	 * from the config file.
@@ -130,6 +148,18 @@ type Device struct {
 	ReceiveBytes      int64      `json:"received_bytes"`
 	TransmitBytes     int64      `json:"transmit_bytes"`
 	Endpoint          string     `json:"endpoint"`
+}
+
+// Expired reports whether the device's access has run out at the given time.
+func (d *Device) Expired(at time.Time) bool {
+	return d.ExpiresAt != nil && !d.ExpiresAt.After(at)
+}
+
+// AccessAllowed reports whether the device may connect at the given time, and
+// with that whether it has a WireGuard peer. A device that is blocked keeps
+// everything else - its address stays reserved, its name stays taken.
+func (d *Device) AccessAllowed(at time.Time) bool {
+	return !d.Disabled && !d.Expired(at)
 }
 
 func NewStorage(uri string) (Storage, error) {

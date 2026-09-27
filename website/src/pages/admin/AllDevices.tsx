@@ -1,4 +1,12 @@
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -12,23 +20,25 @@ import WifiOffIcon from '@mui/icons-material/WifiOff';
 import Avatar from '@mui/material/Avatar';
 import { observer } from 'mobx-react';
 import React from 'react';
-import { grpc } from '../../Api';
+import { dateToTimestamp, grpc, toDate } from '../../Api';
 import { AppState } from '../../AppState';
 import { confirm } from '../../components/Present';
 import { toast } from '../../components/Toast';
-import { Device } from '../../sdk/devices_pb';
+import { Device, SetDeviceAccessReq } from '../../sdk/devices_pb';
 import { User } from '../../sdk/users_pb';
-import { errorMessage, lastSeen } from '../../Util';
+import { accessRank, deviceAccess, errorMessage, lastSeen } from '../../Util';
 import { useLoaded } from '../../hooks';
 import numeral from 'numeral';
 import { Loading } from '../../components/Loading';
 import { Error } from '../../components/Error';
 
-type SortColumn = keyof Device.AsObject | 'download' | 'upload' | 'connected';
+type SortColumn = keyof Device.AsObject | 'download' | 'upload' | 'connected' | 'access';
 
 export const AllDevices = observer(function AllDevices() {
   const [sortBy, setSortBy] = React.useState<SortColumn>('lastHandshakeTime');
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
+  // the device whose expiry date is being changed, if any
+  const [expiryDevice, setExpiryDevice] = React.useState<Device.AsObject>();
 
   const userResource = useLoaded(async () => {
     try {
@@ -75,6 +85,36 @@ export const AllDevices = observer(function AllDevices() {
         toast({ text: 'Failed to delete the user: ' + errorMessage(error), intent: 'error' });
       }
     }
+  };
+
+  // setAccess sends one change - blocking a device, or its expiry date - and
+  // leaves the other as it is, so two admins working at the same time do not
+  // undo each other.
+  const setAccess = async (device: Device.AsObject, change: Partial<SetDeviceAccessReq.AsObject>, done: string) => {
+    try {
+      await grpc.devices.setDeviceAccess({
+        name: device.name,
+        owner: { value: device.owner },
+        clearExpiresAt: false,
+        ...change,
+      });
+      toast({ text: done, intent: 'success' });
+      await deviceResource.refresh();
+    } catch (error) {
+      console.error('Failed to change the access of the device:', error);
+      toast({ text: 'Failed to change the access of the device: ' + errorMessage(error), intent: 'error' });
+    }
+  };
+
+  const toggleBlocked = (device: Device.AsObject) => {
+    const blocked = !device.disabled;
+    return setAccess(
+      device,
+      { disabled: { value: blocked } },
+      blocked
+        ? `${device.name} is blocked and cannot connect any more`
+        : `${device.name} may connect again - the configuration the user has keeps working`,
+    );
   };
 
   const deleteDevice = async (device: Device.AsObject) => {
@@ -202,6 +242,15 @@ export const AllDevices = observer(function AllDevices() {
                   Last seen
                 </TableSortLabel>
               </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'access'}
+                  direction={sortBy === 'access' ? sortOrder : 'asc'}
+                  onClick={() => requestSort('access')}
+                >
+                  Access
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -227,9 +276,24 @@ export const AllDevices = observer(function AllDevices() {
                 </TableCell>
                 <TableCell>{lastSeen(device.lastHandshakeTime)}</TableCell>
                 <TableCell>
-                  <Button variant="outlined" color="secondary" onClick={() => deleteDevice(device)}>
-                    Delete
-                  </Button>
+                  <AccessCell device={device} />
+                </TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="outlined"
+                      color={device.disabled ? 'primary' : 'secondary'}
+                      onClick={() => toggleBlocked(device)}
+                    >
+                      {device.disabled ? 'Unblock' : 'Block'}
+                    </Button>
+                    <Button variant="outlined" color="secondary" onClick={() => setExpiryDevice(device)}>
+                      Expiry
+                    </Button>
+                    <Button variant="outlined" color="secondary" onClick={() => deleteDevice(device)}>
+                      Delete
+                    </Button>
+                  </Stack>
                 </TableCell>
               </TableRow>
             ))}
@@ -272,9 +336,121 @@ export const AllDevices = observer(function AllDevices() {
       <code>
         <pre>{JSON.stringify(AppState.info, null, 2)}</pre>
       </code>
+
+      {expiryDevice && (
+        <ExpiryDialog
+          device={expiryDevice}
+          onClose={() => setExpiryDevice(undefined)}
+          onSubmit={async (change, done) => {
+            const device = expiryDevice;
+            setExpiryDevice(undefined);
+            await setAccess(device, change, done);
+          }}
+        />
+      )}
     </div>
   );
 });
+
+// AccessCell says whether a device may connect. A device with unlimited access
+// is the normal case and shows nothing, so the eye is drawn to the others.
+function AccessCell({ device }: { device: Device.AsObject }) {
+  const access = deviceAccess(device);
+  if (!access) {
+    return <>-</>;
+  }
+  return (
+    <Chip
+      size="small"
+      color={access.blocked ? 'error' : 'warning'}
+      label={access.label}
+      title={device.expiresAt ? 'Access ends ' + toDate(device.expiresAt).toLocaleString() : undefined}
+    />
+  );
+}
+
+interface ExpiryDialogProps {
+  device: Device.AsObject;
+  onClose: () => void;
+  onSubmit: (change: Partial<SetDeviceAccessReq.AsObject>, done: string) => void;
+}
+
+// ExpiryDialog asks for the day a device's access ends. A date is what an admin
+// handing out temporary access thinks in; the time of day is the end of it, so
+// the device works through the day the admin picked.
+export function ExpiryDialog({ device, onClose, onSubmit }: ExpiryDialogProps) {
+  const [day, setDay] = React.useState(device.expiresAt ? isoDay(toDate(device.expiresAt)) : '');
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const at = endOfDay(day);
+    if (!at) {
+      return;
+    }
+    onSubmit({ expiresAt: dateToTimestamp(at) }, `${device.name} may connect until ${at.toLocaleString()}`);
+  };
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
+      <form onSubmit={submit}>
+        <DialogTitle>Access of {device.name}</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            The device loses its access at the end of the day you pick. It keeps its key and its address, so it works
+            again without the user setting it up anew if you extend the date.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            fullWidth
+            type="date"
+            label="Access ends"
+            value={day}
+            onChange={(event) => setDay(event.target.value)}
+            slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: isoDay(new Date()) } }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cancel</Button>
+          {device.expiresAt && (
+            <Button
+              color="secondary"
+              onClick={() => onSubmit({ clearExpiresAt: true }, `The access of ${device.name} no longer expires`)}
+            >
+              Remove expiry
+            </Button>
+          )}
+          <Button type="submit" variant="contained" disabled={!endOfDay(day)}>
+            Save
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
+  );
+}
+
+// isoDay formats a date the way the date input expects it, in local time - not
+// toISOString, which would name the previous day west of UTC.
+export function isoDay(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+// endOfDay turns the picked day into the moment access ends: its last second,
+// in the admin's own time zone. It returns undefined for an empty or unparsable
+// input, and for a day that has already passed - the server refuses those, and
+// blocking a device is how access is ended now.
+export function endOfDay(day: string, now: Date = new Date()): Date | undefined {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!match) {
+    return undefined;
+  }
+  const at = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 23, 59, 59);
+  if (Number.isNaN(at.getTime()) || at <= now) {
+    return undefined;
+  }
+  return at;
+}
 
 // sortDevices orders the table by the column its header was last clicked on.
 export function sortDevices(
@@ -301,6 +477,9 @@ export function sortDevices(
     }
     if (sortBy === 'connected') {
       return device.connected ? 1 : 0;
+    }
+    if (sortBy === 'access') {
+      return accessRank(device);
     }
     const raw = (device as unknown as Record<string, unknown>)[sortBy];
     return typeof raw === 'string' || typeof raw === 'number' ? raw : undefined;

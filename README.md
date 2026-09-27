@@ -20,6 +20,7 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 - Sign-in with OpenID Connect, GitLab, GitHub or a list of users of your own ([auth](https://www.freie-netze.org/wg-access-server/auth/))
 - [API tokens](https://www.freie-netze.org/wg-access-server/auth/#api-tokens) for scripts, using the same API as the web UI
 - Devices can be renamed; admins see and manage the devices of all users
+- Admins can block a device or give it an expiry date, for temporary access ([device access](#device-access))
 - An optional limit on how many devices a user may create
 - WireGuard client configurations as a file or a QR code
 - IPv6: dual-stack, IPv6-only or IPv4-only, with NAT on or off for each
@@ -109,6 +110,27 @@ https://github.com/freifunkMUC/wg-access-server-chart.
 
 ![Sign In Darkmode](https://github.com/freifunkMUC/wg-access-server/raw/master/screenshots/signin-dark.png)
 
+## Device access
+
+An admin can take a device's access away without deleting it, from the device list under _admin_:
+
+- **Block** removes the device's WireGuard peer, so it cannot connect. Its address stays reserved and
+  its name stays taken. **Unblock** gives the peer back - the configuration file the user already has
+  keeps working, so nobody has to set the device up again.
+- **Expiry** ends the device's access at the end of a day you pick, which is what temporary access for
+  a contractor or a guest looks like. Extending the date, or removing it, gives the access back the
+  same way. An expiry in the past is refused: blocking is how access is ended now.
+
+Both are admin-only on purpose. A user can see on their own device why it cannot connect, but cannot
+lift a block or push an expiry out - a block they could lift would be no block. They can still delete
+the device.
+
+A device whose expiry passes loses its peer within a minute; the server checks for it rather than
+waiting for the next restart. Blocking takes effect right away, on every replica sharing a database.
+Both are recorded in the [audit log](https://www.freie-netze.org/wg-access-server/audit/), and
+`wg_access_server_devices_blocked` counts the devices in that state wherever the device
+[metrics](#metrics) are enabled.
+
 ## Metrics
 
 Prometheus metrics are served at `/metrics`, on the same ports as the web UI. **The endpoint needs no
@@ -122,6 +144,7 @@ of Go it was built with - which tells anybody whether an installation is out of 
   - `wg_access_server_up`: 1 if storage and WireGuard are reachable
   - `wg_access_server_devices_total`: total devices in storage
   - `wg_access_server_devices_connected`: devices with a recent handshake
+  - `wg_access_server_devices_blocked`: devices that may not connect (blocked, or past their expiry)
   - `wg_access_server_devices_bytes_received_total`: sum of received bytes across devices
   - `wg_access_server_devices_bytes_transmitted_total`: sum of transmitted bytes across devices
   - `wg_access_server_device_connected{device,owner}`, `wg_access_server_device_bytes_received_total{device,owner}`, `wg_access_server_device_bytes_transmitted_total{device,owner}`, `wg_access_server_device_last_handshake_timestamp_seconds{device,owner}`: the same, per device
