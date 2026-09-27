@@ -15,12 +15,12 @@ import InputLabel from '@mui/material/InputLabel';
 import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import { codeBlock } from 'common-tags';
-import { makeObservable, observable, runInAction } from 'mobx';
 import { observer } from 'mobx-react';
 import React from 'react';
 import { box_keyPair, randomBytes } from 'tweetnacl-ts';
 import { grpc } from '../Api';
 import { AppState } from '../AppState';
+import { InfoRes } from '../sdk/server_pb';
 import { GetConnected } from './GetConnected';
 import { Info } from './Info';
 
@@ -38,155 +38,277 @@ interface Props {
   onRefresh: () => void;
 }
 
-export const AddDevice = observer(
-  class AddDevice extends React.Component<Props> {
-    dialogOpen = false;
+export const AddDevice = observer(function AddDevice({ onAdd, onRefresh }: Props) {
+  const keepaliveDefault = AppState.info?.clientConfigPersistentKeepalive || 0;
+  const [deviceName, setDeviceName] = React.useState('');
+  const [devicePublicKey, setDevicePublicKey] = React.useState('');
+  const [usePresharedKey, setUsePresharedKey] = React.useState(false);
+  const [persistentKeepalive, setPersistentKeepalive] = React.useState(keepaliveDefault);
+  const [manualIPAssignment, setManualIPAssignment] = React.useState(false);
+  const [manualIPv4Address, setManualIPv4Address] = React.useState('');
+  const [manualIPv6Address, setManualIPv6Address] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [configFile, setConfigFile] = React.useState<string | undefined>(undefined);
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [showMobile, setShowMobile] = React.useState(true);
 
-    error?: string;
+  const reset = () => {
+    setDeviceName('');
+    setDevicePublicKey('');
+    setUsePresharedKey(false);
+    setPersistentKeepalive(keepaliveDefault);
+    setError('');
+    setManualIPAssignment(false);
+    setManualIPv4Address('');
+    setManualIPv6Address('');
+  };
 
-    deviceName = '';
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
 
-    devicePublickey = '';
-
-    manualIPAssignment = false;
-
-    manualIPv4Address = '';
-
-    manualIPv6Address = '';
-
-    useDevicePresharekey = false;
-    
-    persistentKeepalive = AppState.info?.clientConfigPersistentKeepalive || 0;
-
-    showAdvancedOptions = false;
-
-    configFile?: string;
-
-    showMobile = true;
-
-    setDialogOpen(dialogOpen: boolean){
-      runInAction(() => {
-        this.dialogOpen = dialogOpen;
-      });
+    const keypair = box_keyPair();
+    let publicKey: string;
+    let privateKey: string;
+    if (devicePublicKey) {
+      // someone brought their own key, so there is no private key to hand out
+      // and nothing for the phone to scan
+      publicKey = devicePublicKey;
+      privateKey = 'pleaseReplaceThisPrivatekey';
+      setShowMobile(false);
+    } else {
+      publicKey = window.btoa(String.fromCharCode(...Array.from(new Uint8Array(keypair.publicKey))));
+      privateKey = window.btoa(String.fromCharCode(...Array.from(new Uint8Array(keypair.secretKey))));
+      setShowMobile(true);
     }
 
-    setError(error: string){
-      runInAction(() => {
-        this.error = error;
+    const presharedKey = usePresharedKey ? window.btoa(String.fromCharCode(...Array.from(randomBytes(32)))) : '';
+
+    try {
+      const device = await grpc.devices.addDevice({
+        name: deviceName,
+        publicKey,
+        presharedKey,
+        manualIpAssignment: manualIPAssignment,
+        manualIpv4Address: manualIPv4Address,
+        manualIpv6Address: manualIPv6Address,
       });
-    }
+      onAdd();
 
-    setDeviceName(deviceName: string){
-      runInAction(() => {
-        this.deviceName = deviceName;
-      });
-    }
-
-    setDevicePublickey(devicePublickey: string){
-      runInAction(() => {
-        this.devicePublickey = devicePublickey;
-      });
-    }
-
-    setManualIPAssignment(manualIPAssignment: boolean){
-      runInAction(() => {
-        this.manualIPAssignment = manualIPAssignment;
-      });
-    }
-
-    setManualIPv4Address(manualIPv4Address: string){
-      runInAction(() => {
-        this.manualIPv4Address = manualIPv4Address;
-      });
-    }
-
-    setManualIPv6Address(manualIPv6Address: string){
-      runInAction(() => {
-        this.manualIPv6Address = manualIPv6Address;
-      });
-    }
-
-    setUseDevicePresharekey(useDevicePresharekey: boolean){
-      runInAction(() => {
-        this.useDevicePresharekey = useDevicePresharekey;
-      });
-    }
-
-    setConfigFile(configFile: string){
-      runInAction(() => {
-        this.configFile = configFile;
-      });
-    }
-
-    setShowMobile(showMobile: boolean){
-      runInAction(() => {
-        this.showMobile = showMobile;
-      });
-    }
-
-    setPersistentKeepalive(persistentKeepalive: number){
-      runInAction(() => {
-        this.persistentKeepalive = persistentKeepalive;
-      });
-    }
-
-    setShowAdvancedOptions(showAdvancedOptions: boolean){
-      runInAction(() => {
-        this.showAdvancedOptions = showAdvancedOptions;
-      });
-    }
-
-    submit = async (event: React.FormEvent) => {
-      event.preventDefault();
-
-      const keypair = box_keyPair();
-      let publicKey: string;
-      let privateKey: string;
-      if (this.devicePublickey) {
-        publicKey = this.devicePublickey;
-        privateKey = 'pleaseReplaceThisPrivatekey';
-        this.setShowMobile(false)
-      } else {
-        publicKey = window.btoa(String.fromCharCode(...Array.from(new Uint8Array(keypair.publicKey))));
-        privateKey = window.btoa(String.fromCharCode(...Array.from(new Uint8Array(keypair.secretKey))));
-        this.setShowMobile(true)
-      }
-
-      const presharedKey = this.useDevicePresharekey
-        ? window.btoa(String.fromCharCode(...Array.from(randomBytes(32))))
-        : '';
-
-      try {
-        const device = await grpc.devices.addDevice({
-          name: this.deviceName,
-          publicKey,
+      setConfigFile(
+        clientConfig({
+          info: AppState.info!,
+          privateKey,
+          address: device.address,
           presharedKey,
-          manualIpAssignment: this.manualIPAssignment,
-          manualIpv4Address: this.manualIPv4Address,
-          manualIpv6Address: this.manualIPv6Address,
-        });
-        this.props.onAdd();
+          persistentKeepalive,
+        }),
+      );
+      setDialogOpen(true);
+      reset();
+    } catch (error) {
+      console.log(error);
+      setError('Failed to add device: ' + errorMessage(error));
+    }
+  };
 
-        const info = AppState.info!;
+  const handleClose = (event: unknown, reason: string) => {
+    if (reason === 'backdropClick') {
+      return false;
+    }
 
-        const dnsInfo = [];
-        if (info.clientConfigDnsServers) {
-          // If custom DNS entries are specified via client config, prefer them over the calculated ones.
-          dnsInfo.push(info.clientConfigDnsServers);
-        } else if (info.dnsEnabled) {
-          // Otherwise, and if DNS is enabled, use the ones from the server.
-          dnsInfo.push(info.dnsAddress);
-        }
+    if (reason === 'escapeKeyDown') {
+      return false;
+    }
 
-        if (info.clientConfigDnsSearchDomain) {
-          // In any case, if there is a custom search domain configured in the client config, append it to the list of DNS servers.
-          dnsInfo.push(info.clientConfigDnsSearchDomain);
-        }
+    return true;
+  };
 
-        const configFile = codeBlock`
+  return (
+    <>
+      <Card>
+        <CardHeader title="Add a device" action={<ImportExportDelete onRefresh={() => onRefresh()} />} />
+        <CardContent>
+          <form onSubmit={submit}>
+            <FormControl fullWidth>
+              <InputLabel htmlFor="device-name">Device name</InputLabel>
+              <Input
+                id="device-name"
+                value={deviceName}
+                onChange={(event) => setDeviceName(event.currentTarget.value)}
+                aria-describedby="device-name-text"
+              />
+            </FormControl>
+            <Box sx={{ mt: 2, mb: 2 }}>
+              <Accordion>
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon />}
+                  aria-controls="advanced-options-content"
+                  id="advanced-options-header"
+                >
+                  <Typography>Advanced</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <FormControl fullWidth>
+                    <InputLabel htmlFor="device-publickey">Device public key (optional)</InputLabel>
+                    <Input
+                      id="device-publickey"
+                      value={devicePublicKey}
+                      onChange={(event) => setDevicePublicKey(event.currentTarget.value)}
+                      aria-describedby="device-publickey-text"
+                    />
+                    <FormHelperText id="device-publickey-text">
+                      Put your public key to a pre-generated private key here. Replace the private key in the config
+                      file after downloading it.
+                    </FormHelperText>
+                  </FormControl>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        id="device-presharedkey"
+                        checked={usePresharedKey}
+                        onChange={(event) => setUsePresharedKey(event.currentTarget.checked)}
+                      />
+                    }
+                    label="Use pre-shared key"
+                  />
+                  <FormControl fullWidth>
+                    <InputLabel htmlFor="persistent-keepalive">Persistent keepalive (optional)</InputLabel>
+                    <Input
+                      id="persistent-keepalive"
+                      type="number"
+                      placeholder="25"
+                      value={persistentKeepalive || ''}
+                      onChange={(event) => setPersistentKeepalive(parseInt(event.currentTarget.value) || 0)}
+                      aria-describedby="persistent-keepalive-text"
+                    />
+                    <FormHelperText id="persistent-keepalive-text">
+                      Interval in seconds between keepalive packets (empty to disable)
+                    </FormHelperText>
+                  </FormControl>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        id="manual-ip-assignment"
+                        checked={manualIPAssignment}
+                        onChange={(event) => {
+                          setManualIPAssignment(event.currentTarget.checked);
+                          if (!event.currentTarget.checked) {
+                            setManualIPv4Address('');
+                            setManualIPv6Address('');
+                          }
+                        }}
+                      />
+                    }
+                    label="Manually assign IP address"
+                  />
+                  {manualIPAssignment && (
+                    <>
+                      <FormControl fullWidth>
+                        <InputLabel htmlFor="manual-ipv4-address">IPv4 address</InputLabel>
+                        <Input
+                          id="manual-ipv4-address"
+                          value={manualIPv4Address}
+                          onChange={(event) => setManualIPv4Address(event.currentTarget.value)}
+                          aria-describedby="manual-ipv4-address-text"
+                          placeholder="e.g. 10.0.0.123"
+                        />
+                        <FormHelperText id="manual-ipv4-address-text">
+                          Enter a valid IPv4 address for this device.
+                        </FormHelperText>
+                      </FormControl>
+                      <FormControl fullWidth>
+                        <InputLabel htmlFor="manual-ipv6-address">IPv6 address</InputLabel>
+                        <Input
+                          id="manual-ipv6-address"
+                          value={manualIPv6Address}
+                          onChange={(event) => setManualIPv6Address(event.currentTarget.value)}
+                          aria-describedby="manual-ipv6-address-text"
+                          placeholder="e.g. fd00::123"
+                        />
+                        <FormHelperText id="manual-ipv6-address-text">
+                          Enter a valid IPv6 address for this device.
+                        </FormHelperText>
+                      </FormControl>
+                    </>
+                  )}
+                </AccordionDetails>
+              </Accordion>
+            </Box>
+            {error && (
+              <FormHelperText id="device-error-text" error={true}>
+                <Warning />
+                <span>{error}</span>
+              </FormHelperText>
+            )}
+            <Typography component="div" align="right">
+              <Button color="secondary" type="button" onClick={reset}>
+                Cancel
+              </Button>
+              <Button color="primary" variant="contained" endIcon={<AddIcon />} type="submit">
+                Add
+              </Button>
+            </Typography>
+          </form>
+        </CardContent>
+      </Card>
+      <Dialog maxWidth="xl" open={dialogOpen} onClose={handleClose}>
+        <DialogTitle>
+          Get connected
+          <Info>
+            <Typography component="p" style={{ paddingBottom: 8 }}>
+              Your VPN connection file is not stored by this portal.
+            </Typography>
+            <Typography component="p" style={{ paddingBottom: 8 }}>
+              If you lose this file you can simply create a new device on this portal to generate a new connection file.
+            </Typography>
+            <Typography component="p">
+              The connection file contains your WireGuard Private Key (i.e. password) and should <strong>never</strong>{' '}
+              be shared.
+            </Typography>
+          </Info>
+        </DialogTitle>
+        <DialogContent>
+          <GetConnected configFile={configFile!} showMobile={showMobile} />
+        </DialogContent>
+        <DialogActions>
+          <Button color="secondary" variant="outlined" onClick={() => setDialogOpen(false)}>
+            Done
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+});
+
+// clientConfig is the WireGuard configuration file a new device is handed,
+// either as a download or as the QR code a phone scans.
+export function clientConfig(opts: {
+  info: InfoRes.AsObject;
+  privateKey: string;
+  address: string;
+  presharedKey: string;
+  persistentKeepalive: number;
+}): string {
+  const info = opts.info;
+
+  const dnsInfo = [];
+  if (info.clientConfigDnsServers) {
+    // If custom DNS entries are specified via client config, prefer them over the calculated ones.
+    dnsInfo.push(info.clientConfigDnsServers);
+  } else if (info.dnsEnabled) {
+    // Otherwise, and if DNS is enabled, use the ones from the server.
+    dnsInfo.push(info.dnsAddress);
+  }
+
+  if (info.clientConfigDnsSearchDomain) {
+    // In any case, if there is a custom search domain configured in the client config, append it to the list of DNS servers.
+    dnsInfo.push(info.clientConfigDnsSearchDomain);
+  }
+
+  return codeBlock`
         [Interface]
-        PrivateKey = ${privateKey}
-        Address = ${device.address}
+        PrivateKey = ${opts.privateKey}
+        Address = ${opts.address}
         ${0 < dnsInfo.length && `DNS = ${dnsInfo.join(', ')}`}
         ${info.clientConfigMtu != 0 && `MTU = ${info.clientConfigMtu}`}
 
@@ -194,219 +316,7 @@ export const AddDevice = observer(
         PublicKey = ${info.publicKey}
         AllowedIPs = ${info.allowedIps}
         Endpoint = ${`${info.host?.value || window.location.hostname}:${info.port || '51820'}`}
-        ${this.useDevicePresharekey ? `PresharedKey = ${presharedKey}` : ``}
-        ${this.persistentKeepalive > 0 ? `PersistentKeepalive = ${this.persistentKeepalive}` : ``}
+        ${opts.presharedKey ? `PresharedKey = ${opts.presharedKey}` : ``}
+        ${opts.persistentKeepalive > 0 ? `PersistentKeepalive = ${opts.persistentKeepalive}` : ``}
       `;
-
-        this.setConfigFile(configFile)
-        this.setDialogOpen(true)
-        this.reset();
-      } catch (error) {
-        console.log(error);
-        this.setError('Failed to add device: ' + errorMessage(error))
-      }
-    };
-
-    reset = () => {
-      this.setDeviceName('')
-      this.setDevicePublickey('')
-      this.setUseDevicePresharekey(false)
-      this.setPersistentKeepalive(AppState.info?.clientConfigPersistentKeepalive || 0);
-      this.setShowAdvancedOptions(false);
-      this.setError('')
-      this.setManualIPAssignment(false);
-      this.setManualIPv4Address('');
-      this.setManualIPv6Address('');
-    };
-
-
-    constructor(props: Props) {
-      super(props);
-
-      makeObservable(this, {
-        dialogOpen: observable,
-        error: observable,
-        deviceName: observable,
-        devicePublickey: observable,
-        useDevicePresharekey: observable,
-        persistentKeepalive: observable,
-        configFile: observable,
-        showMobile: observable,
-        manualIPAssignment: observable,
-        manualIPv4Address: observable,
-        manualIPv6Address: observable,
-      });
-    }
-
-    render() {
-      const handleClose = (event: unknown, reason: string) => {
-        if (reason === 'backdropClick') {
-          return false;
-        }
-
-        if (reason === 'escapeKeyDown') {
-          return false;
-        }
-
-        return true;
-      };
-
-      return (
-        <>
-          <Card>
-            <CardHeader title="Add a device" 
-              action={<ImportExportDelete onRefresh={() => this.props.onRefresh()} />}
-            />
-            <CardContent>
-              <form onSubmit={this.submit}>
-                <FormControl fullWidth>
-                  <InputLabel htmlFor="device-name">Device name</InputLabel>
-                  <Input
-                    id="device-name"
-                    value={this.deviceName}
-                    onChange={(event) => (this.setDeviceName(event.currentTarget.value) )}
-                    aria-describedby="device-name-text"
-                  />
-                </FormControl>
-                <Box sx={{ mt: 2, mb: 2 }}>
-                  <Accordion>
-                    <AccordionSummary
-                      expandIcon={<ExpandMoreIcon />}
-                      aria-controls="advanced-options-content"
-                      id="advanced-options-header"
-                    >
-                      <Typography>Advanced</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <FormControl fullWidth>
-                        <InputLabel htmlFor="device-publickey">Device public key (optional)</InputLabel>
-                        <Input
-                          id="device-publickey"
-                          value={this.devicePublickey}
-                          onChange={(event) => (this.setDevicePublickey(event.currentTarget.value) )}
-                          aria-describedby="device-publickey-text"
-                        />
-                        <FormHelperText id="device-publickey-text">
-                          Put your public key to a pre-generated private key here. Replace the private key in the config file after downloading it.
-                        </FormHelperText>
-                      </FormControl>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            id="device-presharedkey"
-                            checked={this.useDevicePresharekey}
-                            onChange={(event) => (this.setUseDevicePresharekey(event.currentTarget.checked) )}
-                          />
-                        }
-                        label="Use pre-shared key"
-                      />
-                      <FormControl fullWidth >
-                        <InputLabel htmlFor="persistent-keepalive">Persistent keepalive (optional)</InputLabel>
-                        <Input
-                          id="persistent-keepalive"
-                          type="number"
-                          placeholder="25"
-                          value={this.persistentKeepalive || ''}
-                          onChange={(event) => (this.persistentKeepalive = parseInt(event.currentTarget.value) || 0)}
-                          aria-describedby="persistent-keepalive-text"
-                        />
-                        <FormHelperText id="persistent-keepalive-text">
-                          Interval in seconds between keepalive packets (empty to disable)
-                        </FormHelperText>
-                      </FormControl>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            id="manual-ip-assignment"
-                            checked={this.manualIPAssignment}
-                            onChange={(event) => {
-                              this.setManualIPAssignment(event.currentTarget.checked);
-                              if (!event.currentTarget.checked) {
-                                this.setManualIPv4Address('');
-                                this.setManualIPv6Address('');
-                              }
-                            }}
-                          />
-                        }
-                        label="Manually assign IP address"
-                      />
-                      {this.manualIPAssignment && (
-                        <>
-                          <FormControl fullWidth>
-                            <InputLabel htmlFor="manual-ipv4-address">IPv4 address</InputLabel>
-                            <Input
-                              id="manual-ipv4-address"
-                              value={this.manualIPv4Address}
-                              onChange={(event) => (this.setManualIPv4Address(event.currentTarget.value) )}
-                              aria-describedby="manual-ipv4-address-text"
-                              placeholder="e.g. 10.0.0.123"
-                            />
-                            <FormHelperText id="manual-ipv4-address-text">
-                              Enter a valid IPv4 address for this device.
-                            </FormHelperText>
-                          </FormControl>
-                          <FormControl fullWidth>
-                            <InputLabel htmlFor="manual-ipv6-address">IPv6 address</InputLabel>
-                            <Input
-                              id="manual-ipv6-address"
-                              value={this.manualIPv6Address}
-                              onChange={(event) => (this.setManualIPv6Address(event.currentTarget.value) )}
-                              aria-describedby="manual-ipv6-address-text"
-                              placeholder="e.g. fd00::123"
-                            />
-                            <FormHelperText id="manual-ipv6-address-text">
-                              Enter a valid IPv6 address for this device.
-                            </FormHelperText>
-                          </FormControl>
-                        </>
-                      )}
-                    </AccordionDetails>
-                  </Accordion>
-                </Box>
-                {this.error && (
-                  <FormHelperText id="device-error-text" error={true}>
-                    <Warning />
-                    <span>{this.error}</span>
-                  </FormHelperText>
-                )}
-                <Typography component="div" align="right">
-                  <Button color="secondary" type="button" onClick={this.reset}>
-                    Cancel
-                  </Button>
-                  <Button color="primary" variant="contained" endIcon={<AddIcon />} type="submit">
-                    Add
-                  </Button>
-                </Typography>
-              </form>
-            </CardContent>
-          </Card>
-          <Dialog maxWidth="xl" open={this.dialogOpen} onClose={handleClose}>
-            <DialogTitle>
-              Get connected
-              <Info>
-                <Typography component="p" style={{ paddingBottom: 8 }}>
-                  Your VPN connection file is not stored by this portal.
-                </Typography>
-                <Typography component="p" style={{ paddingBottom: 8 }}>
-                  If you lose this file you can simply create a new device on this portal to generate a new connection file.
-                </Typography>
-                <Typography component="p">
-                  The connection file contains your WireGuard Private Key (i.e. password) and should{' '}
-                  <strong>never</strong> be shared.
-                </Typography>
-              </Info>
-            </DialogTitle>
-            <DialogContent>
-              <GetConnected configFile={this.configFile!} showMobile={this.showMobile} />
-            </DialogContent>
-            <DialogActions>
-              <Button color="secondary" variant="outlined" onClick={() => (this.setDialogOpen(false))}>
-                Done
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </>
-      );
-    }
-  },
-);
+}
