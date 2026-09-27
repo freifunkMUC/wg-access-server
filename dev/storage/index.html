@@ -992,7 +992,9 @@ upgrade rebuilds the <code>devices</code> table once. The data is carried over, 
 leave the table alone. PostgreSQL and MySQL schemas are unchanged.</p>
 </div>
 <h3 id="postgresql">PostgreSQL<a class="headerlink" href="#postgresql" title="Permanent link"> ¶</a></h3>
-<p>This backend requires an external Postgres database to be deployed.</p>
+<p>This backend requires an external Postgres database to be deployed. Every release is tested against
+PostgreSQL 13 and 18, the oldest and the newest version their vendor supports; the versions in
+between are expected to work and are checked before releases.</p>
 <p>Postgres experimentally supports highly-available deployments of wg-access-server
 and is the recommended storage backend where possible.
 If you have pgbouncer running in front of PostgreSQL, make sure it is running in "Session pooling" mode,
@@ -1004,9 +1006,9 @@ address to two devices created at the same time.</p>
 <li><code>postgresql://user:password@localhost:5432/database?sslmode=disable</code></li>
 </ul>
 <h3 id="mysql">MySQL<a class="headerlink" href="#mysql" title="Permanent link"> ¶</a></h3>
-<p>This backend requires an external Mysql database to be deployed. Mysql flavours should be compatible.
-wg-access-server uses <a href="https://github.com/go-sql-driver/mysql">this golang driver</a> if you want to check the
-compatibility of your favorite flavour.</p>
+<p>This backend requires an external MySQL database to be deployed. Every release is tested against
+MySQL 8.0 and 9, and against MariaDB 11.4 - other flavours are expected to work, as wg-access-server
+talks to all of them through <a href="https://github.com/go-sql-driver/mysql">this golang driver</a>.</p>
 <p>Example connection string:</p>
 <ul>
 <li><code>mysql://user:password@localhost:3306/database?tls=false</code></li>
