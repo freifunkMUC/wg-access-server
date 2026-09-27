@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // secretSource describes a setting that may alternatively be read from a file,
@@ -63,7 +61,7 @@ func (s secretSource) load() error {
 	}
 	secret, err := readSecretFile(s.file)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read %s", s.fileEnv)
+		return fmt.Errorf("failed to read %s: %w", s.fileEnv, err)
 	}
 	*s.value = secret
 	return nil

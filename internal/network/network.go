@@ -1,12 +1,12 @@
 package network
 
 import (
+	"fmt"
 	"net"
 	"net/netip"
 	"strings"
 
 	"github.com/coreos/go-iptables/iptables"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -131,11 +131,11 @@ func ResolveFirewall(firewall string, disableIPTables bool) (string, error) {
 		return FirewallIPTables, nil
 	case FirewallIPTables, FirewallNftables, FirewallNone:
 		if disableIPTables && firewall != FirewallNone {
-			return "", errors.Errorf("vpn.disableIPTables and vpn.firewall: %s contradict each other - set only vpn.firewall", firewall)
+			return "", fmt.Errorf("vpn.disableIPTables and vpn.firewall: %s contradict each other - set only vpn.firewall", firewall)
 		}
 		return firewall, nil
 	}
-	return "", errors.Errorf("unknown firewall %q: use iptables, nftables or none", firewall)
+	return "", fmt.Errorf("unknown firewall %q: use iptables, nftables or none", firewall)
 }
 
 // ConfigureForwarding sets up the rules that send the clients' traffic to
@@ -199,7 +199,7 @@ func configureIPTables(options ForwardingOptions) error {
 func configureIPTablesFamily(options ForwardingOptions, f family) error {
 	ipt, err := iptables.NewWithProtocol(f.protocol)
 	if err != nil {
-		return errors.Wrap(err, "failed to init iptables")
+		return fmt.Errorf("failed to init iptables: %w", err)
 	}
 
 	// Cleanup our chains first so that we don't leak
@@ -212,22 +212,22 @@ func configureIPTablesFamily(options ForwardingOptions, f family) error {
 	}
 
 	if err := ipt.AppendUnique("filter", "FORWARD", "-j", forwardChain); err != nil {
-		return errors.Wrap(err, "failed to append FORWARD rule to filter chain")
+		return fmt.Errorf("failed to append FORWARD rule to filter chain: %w", err)
 	}
 	if err := ipt.AppendUnique("nat", "POSTROUTING", "-j", postroutingChain); err != nil {
-		return errors.Wrap(err, "failed to append POSTROUTING rule to nat chain")
+		return fmt.Errorf("failed to append POSTROUTING rule to nat chain: %w", err)
 	}
 
 	if options.ClientIsolation {
 		// Reject inter-device traffic
 		if err := ipt.AppendUnique("filter", forwardChain, "-s", f.cidr, "-d", f.cidr, "-j", "REJECT"); err != nil {
-			return errors.Wrap(err, "failed to set ip tables rule")
+			return fmt.Errorf("failed to set ip tables rule: %w", err)
 		}
 	}
 	// Accept client traffic for given allowed ips
 	for _, allowedCIDR := range f.allowed {
 		if err := ipt.AppendUnique("filter", forwardChain, "-s", f.cidr, "-d", allowedCIDR, "-j", "ACCEPT"); err != nil {
-			return errors.Wrap(err, "failed to set ip tables rule")
+			return fmt.Errorf("failed to set ip tables rule: %w", err)
 		}
 	}
 
@@ -235,19 +235,19 @@ func configureIPTablesFamily(options ForwardingOptions, f family) error {
 	if !f.nat {
 		for _, allowedCIDR := range f.allowed {
 			if err := ipt.AppendUnique("filter", forwardChain, "-s", allowedCIDR, "-d", f.cidr, "-j", "ACCEPT"); err != nil {
-				return errors.Wrap(err, "failed to set ip tables rule for return traffic")
+				return fmt.Errorf("failed to set ip tables rule for return traffic: %w", err)
 			}
 		}
 	}
 
 	// And reject everything else
 	if err := ipt.AppendUnique("filter", forwardChain, "-s", f.cidr, "-j", "REJECT"); err != nil {
-		return errors.Wrap(err, "failed to set ip tables rule")
+		return fmt.Errorf("failed to set ip tables rule: %w", err)
 	}
 
 	if options.GatewayIface != "" && f.nat {
 		if err := ipt.AppendUnique("nat", postroutingChain, "-s", f.cidr, "-o", options.GatewayIface, "-j", "MASQUERADE"); err != nil {
-			return errors.Wrap(err, "failed to set ip tables rule")
+			return fmt.Errorf("failed to set ip tables rule: %w", err)
 		}
 	}
 	return nil
@@ -256,18 +256,18 @@ func configureIPTablesFamily(options ForwardingOptions, f family) error {
 func clearOrCreateChain(ipt *iptables.IPTables, table, chain string) error {
 	exists, err := ipt.ChainExists(table, chain)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read table %s", table)
+		return fmt.Errorf("failed to read table %s: %w", table, err)
 	}
 	if exists {
 		err = ipt.ClearChain(table, chain)
 		if err != nil {
-			return errors.Wrapf(err, "failed to clear chain %s in table %s", chain, table)
+			return fmt.Errorf("failed to clear chain %s in table %s: %w", chain, table, err)
 		}
 	} else {
 		// Create our own chain for forwarding rules
 		err = ipt.NewChain(table, chain)
 		if err != nil {
-			return errors.Wrapf(err, "failed to create chain %s in table %s", chain, table)
+			return fmt.Errorf("failed to create chain %s in table %s: %w", chain, table, err)
 		}
 	}
 	return nil
@@ -281,7 +281,7 @@ func splitAllowedIPs(options ForwardingOptions) (ForwardingOptions, error) {
 	for _, allowedCIDR := range options.AllowedIPs {
 		parsedAddress, parsedNetwork, err := net.ParseCIDR(allowedCIDR)
 		if err != nil {
-			return options, errors.Wrap(err, "invalid cidr in AllowedIPs")
+			return options, fmt.Errorf("invalid cidr in AllowedIPs: %w", err)
 		}
 		if as4 := parsedAddress.To4(); as4 != nil {
 			// Handle IPv4-mapped IPv6 addresses, if they go into ip6tables they don't get hit
@@ -314,11 +314,11 @@ func removeIPTables() {
 				continue
 			}
 			if err := ipt.DeleteIfExists(chain.table, chain.parent, "-j", chain.name); err != nil {
-				logrus.Warn(errors.Wrapf(err, "failed to remove the jump to %s", chain.name))
+				logrus.Warn(fmt.Errorf("failed to remove the jump to %s: %w", chain.name, err))
 				continue
 			}
 			if err := ipt.ClearAndDeleteChain(chain.table, chain.name); err != nil {
-				logrus.Warn(errors.Wrapf(err, "failed to remove %s", chain.name))
+				logrus.Warn(fmt.Errorf("failed to remove %s: %w", chain.name, err))
 			}
 		}
 	}

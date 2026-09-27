@@ -5,8 +5,8 @@ package serve
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/buildinfo"
@@ -43,11 +43,11 @@ func (cmd *servecmd) Run() {
 	// Storage
 	storageBackend, err := storage.NewStorage(conf.Storage)
 	if err != nil {
-		logrus.Error(errors.Wrap(err, "failed to create storage backend"))
+		logrus.Error(fmt.Errorf("failed to create storage backend: %w", err))
 		return
 	}
 	if err := storageBackend.Open(); err != nil {
-		logrus.Error(errors.Wrap(err, "failed to connect/open storage backend"))
+		logrus.Error(fmt.Errorf("failed to connect/open storage backend: %w", err))
 		return
 	}
 	defer storageBackend.Close()
@@ -69,7 +69,7 @@ func (cmd *servecmd) Run() {
 	defer stopBackground()
 
 	if err := deviceManager.StartSync(backgroundCtx, conf.EnableMetadata, conf.EnableInactiveDeviceDeletion, conf.InactiveDeviceGracePeriod); err != nil {
-		logrus.Error(errors.Wrap(err, "failed to sync"))
+		logrus.Error(fmt.Errorf("failed to sync: %w", err))
 		return
 	}
 

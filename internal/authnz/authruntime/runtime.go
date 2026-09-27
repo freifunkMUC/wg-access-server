@@ -2,11 +2,11 @@ package authruntime
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/traces"
-	"github.com/pkg/errors"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -75,7 +75,7 @@ func (p *ProviderRuntime) Done(w http.ResponseWriter, r *http.Request) {
 func (p *ProviderRuntime) ShowBanner(w http.ResponseWriter, r *http.Request, banner authsession.Banner) {
 	data, err := json.Marshal(banner)
 	if err != nil {
-		traces.Logger(r.Context()).Error(errors.Wrap(err, "failed to serialize banner message"))
+		traces.Logger(r.Context()).Error(fmt.Errorf("failed to serialize banner message: %w", err))
 		return
 	}
 	authsession.AddFlash(p.store, r, w, "banner", string(data))

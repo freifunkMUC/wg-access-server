@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/url"
 	"path/filepath"
@@ -9,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
@@ -158,7 +158,7 @@ func (s *SQLStorage) dialector() (gorm.Dialector, error) {
 	case "sqlite3":
 		return sqlite.Open(s.connectionString), nil
 	}
-	return nil, errors.Errorf("unknown sql storage backend %s", s.sqlType)
+	return nil, fmt.Errorf("unknown sql storage backend %s", s.sqlType)
 }
 
 func (s *SQLStorage) Open() error {
@@ -169,7 +169,7 @@ func (s *SQLStorage) Open() error {
 
 	db, err := gorm.Open(dialector, &gorm.Config{Logger: newGormLogger()})
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to connect to %s", s.sqlType))
+		return fmt.Errorf("failed to connect to %s: %w", s.sqlType, err)
 	}
 	s.db = db
 
@@ -204,7 +204,7 @@ func (s *SQLStorage) attachWatcher(db *gorm.DB, sqlDB *sql.DB, table string) err
 	case "postgres":
 		watcher, err := NewPgWatcher(sqlDB, s.connectionString, table)
 		if err != nil {
-			return errors.Wrap(err, "failed to create pg watcher")
+			return fmt.Errorf("failed to create pg watcher: %w", err)
 		}
 		s.Watcher = watcher
 	case "mysql":
@@ -222,7 +222,7 @@ func (s *SQLStorage) attachWatcher(db *gorm.DB, sqlDB *sql.DB, table string) err
 func deviceTable(db *gorm.DB) (string, error) {
 	stmt := &gorm.Statement{DB: db}
 	if err := stmt.Parse(&Device{}); err != nil {
-		return "", errors.Wrap(err, "failed to determine the devices table name")
+		return "", fmt.Errorf("failed to determine the devices table name: %w", err)
 	}
 	return stmt.Schema.Table, nil
 }
@@ -262,12 +262,12 @@ func (s *SQLStorage) Save(device *Device) error {
 	if err := s.db.Model(&Device{}).
 		Where("owner = ? AND name = ?", device.Owner, device.Name).
 		Count(&existing).Error; err != nil {
-		return errors.Wrap(err, "failed to look up the device")
+		return fmt.Errorf("failed to look up the device: %w", err)
 	}
 
 	if existing == 0 {
 		if err := s.db.Create(device).Error; err != nil {
-			return errors.Wrap(err, "failed to write device")
+			return fmt.Errorf("failed to write device: %w", err)
 		}
 		s.EmitAdd(device)
 		return nil
@@ -276,7 +276,7 @@ func (s *SQLStorage) Save(device *Device) error {
 	// Select("*") so that zeroed fields are written too - clearing the
 	// endpoint of a device that went away has to stick.
 	if err := s.db.Model(device).Select("*").Updates(device).Error; err != nil {
-		return errors.Wrap(err, "failed to write device")
+		return fmt.Errorf("failed to write device: %w", err)
 	}
 	s.EmitAdd(device)
 	return nil
@@ -291,7 +291,7 @@ func (s *SQLStorage) RecordMetadata(updates []MetadataUpdate) error {
 	// instead of once per device.
 	tx := s.db.Begin()
 	if tx.Error != nil {
-		return errors.Wrap(tx.Error, "failed to begin metadata transaction")
+		return fmt.Errorf("failed to begin metadata transaction: %w", tx.Error)
 	}
 
 	for _, update := range updates {
@@ -320,7 +320,7 @@ func (s *SQLStorage) RecordMetadata(updates []MetadataUpdate) error {
 		q := tx.Model(&Device{}).Where("public_key = ?", update.PublicKey).UpdateColumns(columns)
 		if q.Error != nil {
 			tx.Rollback()
-			return errors.Wrap(q.Error, "failed to record device metadata")
+			return fmt.Errorf("failed to record device metadata: %w", q.Error)
 		}
 		if q.RowsAffected == 0 {
 			logrus.Debugf("device with public key %s no longer exists - skipped metadata update", update.PublicKey)
@@ -328,7 +328,7 @@ func (s *SQLStorage) RecordMetadata(updates []MetadataUpdate) error {
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		return errors.Wrap(err, "failed to commit device metadata")
+		return fmt.Errorf("failed to commit device metadata: %w", err)
 	}
 	return nil
 }
@@ -342,10 +342,10 @@ func (s *SQLStorage) Rename(device *Device, newName string) (*Device, error) {
 	// back to a device.
 	q := s.db.Model(&Device{}).Where("owner = ? AND name = ?", device.Owner, device.Name).UpdateColumn("name", newName)
 	if q.Error != nil {
-		return nil, errors.Wrap(q.Error, "failed to rename device")
+		return nil, fmt.Errorf("failed to rename device: %w", q.Error)
 	}
 	if q.RowsAffected == 0 {
-		return nil, errors.Errorf("device '%s' of user '%s' no longer exists", device.Name, device.Owner)
+		return nil, fmt.Errorf("device '%s' of user '%s' no longer exists", device.Name, device.Owner)
 	}
 
 	renamed := *device
@@ -362,7 +362,7 @@ func (s *SQLStorage) Rename(device *Device, newName string) (*Device, error) {
 func (s *SQLStorage) Addresses() ([]string, error) {
 	addresses := []string{}
 	if err := s.db.Model(&Device{}).Pluck("address", &addresses).Error; err != nil {
-		return nil, errors.Wrap(err, "failed to read device addresses from sql")
+		return nil, fmt.Errorf("failed to read device addresses from sql: %w", err)
 	}
 	return addresses, nil
 }
@@ -378,7 +378,7 @@ func (s *SQLStorage) List(username string) ([]*Device, error) {
 
 	logrus.Debugf("found %d device(s)", len(devices))
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read devices from sql")
+		return nil, fmt.Errorf("failed to read devices from sql: %w", err)
 	}
 	return devices, nil
 }
@@ -386,7 +386,7 @@ func (s *SQLStorage) List(username string) ([]*Device, error) {
 func (s *SQLStorage) Get(owner string, name string) (*Device, error) {
 	device := &Device{}
 	if err := s.db.Where("owner = ? AND name = ?", owner, name).First(&device).Error; err != nil {
-		return nil, errors.Wrapf(err, "failed to read device")
+		return nil, fmt.Errorf("failed to read device: %w", err)
 	}
 	return device, nil
 }
@@ -394,14 +394,14 @@ func (s *SQLStorage) Get(owner string, name string) (*Device, error) {
 func (s *SQLStorage) GetByPublicKey(publicKey string) (*Device, error) {
 	device := &Device{}
 	if err := s.db.Where("public_key = ?", publicKey).First(&device).Error; err != nil {
-		return nil, errors.Wrapf(err, "failed to read device")
+		return nil, fmt.Errorf("failed to read device: %w", err)
 	}
 	return device, nil
 }
 
 func (s *SQLStorage) Delete(device *Device) error {
 	if err := s.db.Delete(device).Error; err != nil {
-		return errors.Wrap(err, "failed to delete device file")
+		return fmt.Errorf("failed to delete device file: %w", err)
 	}
 	s.EmitDelete(device)
 	return nil
@@ -416,7 +416,7 @@ func (s *SQLStorage) DeleteForOwner(owner string) ([]*Device, error) {
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("owner = ?", owner).Find(&deleted).Error; err != nil {
-			return errors.Wrap(err, "failed to list the devices of the user")
+			return fmt.Errorf("failed to list the devices of the user: %w", err)
 		}
 
 		// One statement per device, not a bulk delete: the watcher reports
@@ -428,7 +428,7 @@ func (s *SQLStorage) DeleteForOwner(owner string) ([]*Device, error) {
 		// device's primary key to the same WHERE until it matches nothing.
 		for _, device := range deleted {
 			if err := tx.Set(silentSetting, true).Delete(device).Error; err != nil {
-				return errors.Wrapf(err, "failed to delete device '%s'", device.Name)
+				return fmt.Errorf("failed to delete device '%s': %w", device.Name, err)
 			}
 		}
 		return nil
@@ -447,11 +447,11 @@ func (s *SQLStorage) DeleteForOwner(owner string) ([]*Device, error) {
 func (s *SQLStorage) Ping() error {
 	db, err := s.sqlDB()
 	if err != nil {
-		return errors.Wrap(err, "failed to get db")
+		return fmt.Errorf("failed to get db: %w", err)
 	}
 
 	if err := db.Ping(); err != nil {
-		return errors.Wrap(err, "failed to ping db")
+		return fmt.Errorf("failed to ping db: %w", err)
 	}
 	return nil
 }

@@ -1,10 +1,11 @@
 package migrate
 
 import (
+	"fmt"
+
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,10 +47,10 @@ func (cmd *migratecmd) Run() {
 func open(uri, what string) (storage.Storage, error) {
 	backend, err := storage.NewStorage(uri)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create %s storage backend", what)
+		return nil, fmt.Errorf("failed to create %s storage backend: %w", what, err)
 	}
 	if err := backend.Open(); err != nil {
-		return nil, errors.Wrapf(err, "failed to connect/open %s storage backend", what)
+		return nil, fmt.Errorf("failed to connect/open %s storage backend: %w", what, err)
 	}
 	return backend, nil
 }
@@ -61,23 +62,23 @@ func open(uri, what string) (storage.Storage, error) {
 func copyAll(src, dest storage.Storage) error {
 	devices, err := src.List("")
 	if err != nil {
-		return errors.Wrap(err, "failed to list all devices from source storage backend")
+		return fmt.Errorf("failed to list all devices from source storage backend: %w", err)
 	}
 	tokens, err := src.ListTokens("")
 	if err != nil {
-		return errors.Wrap(err, "failed to list all api tokens from source storage backend")
+		return fmt.Errorf("failed to list all api tokens from source storage backend: %w", err)
 	}
 
 	logrus.Infof("copying %v devices and %v api tokens from source --> destination backend", len(devices), len(tokens))
 
 	for _, device := range devices {
 		if err := dest.Save(device); err != nil {
-			return errors.Wrap(err, "failed to write device to destination storage backend")
+			return fmt.Errorf("failed to write device to destination storage backend: %w", err)
 		}
 	}
 	for _, token := range tokens {
 		if err := dest.SaveToken(token); err != nil {
-			return errors.Wrap(err, "failed to write api token to destination storage backend")
+			return fmt.Errorf("failed to write api token to destination storage backend: %w", err)
 		}
 	}
 	return nil

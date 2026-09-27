@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,14 +26,14 @@ var interfaceName = regexp.MustCompile(`^[A-Za-z0-9_.@:-]{1,15}$`)
 // left behind - in one transaction, with no moment without rules.
 func nftablesRuleset(options ForwardingOptions) (string, error) {
 	if options.GatewayIface != "" && !interfaceName.MatchString(options.GatewayIface) {
-		return "", errors.Errorf("invalid gateway interface name %q", options.GatewayIface)
+		return "", fmt.Errorf("invalid gateway interface name %q", options.GatewayIface)
 	}
 
 	var forward, postrouting []string
 	for _, f := range options.families() {
 		prefix, err := netip.ParsePrefix(f.cidr)
 		if err != nil {
-			return "", errors.Wrapf(err, "invalid VPN network %q", f.cidr)
+			return "", fmt.Errorf("invalid VPN network %q: %w", f.cidr, err)
 		}
 		cidr := prefix.Masked().String()
 		ip := f.keyword
@@ -94,7 +93,7 @@ func runNft(ruleset string) error {
 	cmd.Stdout = &output
 	cmd.Stderr = &output
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "failed to apply the nftables rules: %s", strings.TrimSpace(output.String()))
+		return fmt.Errorf("failed to apply the nftables rules: %s: %w", strings.TrimSpace(output.String()), err)
 	}
 	return nil
 }
@@ -107,6 +106,6 @@ func removeNftables() {
 	}
 	ruleset := fmt.Sprintf("table inet %s\ndelete table inet %s\n", nftTable, nftTable)
 	if err := runNft(ruleset); err != nil {
-		logrus.Warn(errors.Wrap(err, "failed to remove the nftables rules of an earlier start"))
+		logrus.Warn(fmt.Errorf("failed to remove the nftables rules of an earlier start: %w", err))
 	}
 }

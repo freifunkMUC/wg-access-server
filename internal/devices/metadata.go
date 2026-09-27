@@ -2,9 +2,9 @@ package devices
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
@@ -35,13 +35,13 @@ func syncMetrics(d *DeviceManager, tracker *trafficTracker) {
 
 	peers, err := d.wg.ListPeers()
 	if err != nil {
-		logrus.Warn(errors.Wrap(err, "failed to list peers - metrics cannot be recorded"))
+		logrus.Warn(fmt.Errorf("failed to list peers - metrics cannot be recorded: %w", err))
 		return
 	}
 
 	updates := collectMetadata(peers, tracker)
 	if err := d.RecordMetadata(updates); err != nil {
-		logrus.Error(errors.Wrap(err, "failed to record device metadata during metadata sync"))
+		logrus.Error(fmt.Errorf("failed to record device metadata during metadata sync: %w", err))
 	}
 }
 

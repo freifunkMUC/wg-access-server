@@ -2,6 +2,7 @@ package authnz
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
@@ -56,7 +56,7 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 			return nil, err
 		}
 		if len(storeSecret) != 32 {
-			return nil, errors.New("Session store secret must be 32 bytes long")
+			return nil, errors.New("session store secret must be 32 bytes long")
 		}
 	}
 	maxAge, err := sessionMaxAge(config.SessionStore)
@@ -107,7 +107,7 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 			Banner:    banner,
 		})
 		if err != nil {
-			logrus.Error(errors.Wrap(err, "failed to render the login page"))
+			logrus.Error(fmt.Errorf("failed to render the login page: %w", err))
 		}
 	})
 
@@ -128,7 +128,7 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 	router.HandleFunc("/signout", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			if err := authtemplates.RenderSignoutPage(w); err != nil {
-				logrus.Error(errors.Wrap(err, "failed to render the sign-out page"))
+				logrus.Error(fmt.Errorf("failed to render the sign-out page: %w", err))
 			}
 			return
 		}
@@ -158,10 +158,10 @@ func sessionMaxAge(config *authconfig.SessionStoreConfig) (int, error) {
 
 	maxAge, err := time.ParseDuration(config.MaxAge)
 	if err != nil {
-		return 0, errors.Wrapf(err, "auth.sessionStore.maxAge is not a duration such as \"24h\": %q", config.MaxAge)
+		return 0, fmt.Errorf("auth.sessionStore.maxAge is not a duration such as \"24h\": %q: %w", config.MaxAge, err)
 	}
 	if maxAge <= 0 {
-		return 0, errors.Errorf("auth.sessionStore.maxAge must be positive, got %q", config.MaxAge)
+		return 0, fmt.Errorf("auth.sessionStore.maxAge must be positive, got %q", config.MaxAge)
 	}
 
 	logrus.Infof("Web sessions expire after %s", maxAge)
@@ -243,7 +243,7 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 			}
 			if m.claimsMiddleware != nil {
 				if err := m.claimsMiddleware(s.Identity); err != nil {
-					traces.Logger(r.Context()).Error(errors.Wrap(err, "authnz middleware failure"))
+					traces.Logger(r.Context()).Error(fmt.Errorf("authnz middleware failure: %w", err))
 					if lerr, ok := err.(*LoginError); ok {
 						switch lerr.code {
 						case NotAuthorized:

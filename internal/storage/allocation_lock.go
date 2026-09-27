@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
+	"fmt"
 	"hash/fnv"
 	"math"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -117,26 +118,26 @@ func (s *SQLStorage) withDatabaseLock(name string, what string, timeout time.Dur
 	// for the lock's whole lifetime; otherwise the unlock could run elsewhere.
 	db, err := s.sqlDB()
 	if err != nil {
-		return errors.Wrapf(err, "failed to reserve a database connection for the %s", what)
+		return fmt.Errorf("failed to reserve a database connection for the %s: %w", what, err)
 	}
 
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return errors.Wrapf(err, "failed to reserve a database connection for the %s", what)
+		return fmt.Errorf("failed to reserve a database connection for the %s: %w", what, err)
 	}
 
 	if err := lock.acquire(ctx, conn, name); err != nil {
 		// Whether the lock was taken is unknown after an error (e.g. a timeout
 		// racing the grant), so never return this session to the pool.
 		discardConn(conn)
-		return errors.Wrapf(err, "failed to acquire the %s", what)
+		return fmt.Errorf("failed to acquire the %s: %w", what, err)
 	}
 
 	defer func() {
 		releaseCtx, cancelRelease := context.WithTimeout(context.Background(), allocationLockTimeout)
 		defer cancelRelease()
 		if err := lock.release(releaseCtx, conn, name); err != nil {
-			logrus.Warn(errors.Wrapf(err, "failed to release the %s - closing its connection instead", what))
+			logrus.Warn(fmt.Errorf("failed to release the %s - closing its connection instead: %w", what, err))
 			discardConn(conn)
 			return
 		}

@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -136,7 +135,7 @@ type Device struct {
 func NewStorage(uri string) (Storage, error) {
 	u, err := url.Parse(uri)
 	if err != nil {
-		return nil, errors.Wrap(err, "error parsing storage uri")
+		return nil, fmt.Errorf("error parsing storage uri: %w", err)
 	}
 
 	switch u.Scheme {

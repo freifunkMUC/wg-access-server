@@ -1,10 +1,10 @@
 package authconfig
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
@@ -54,7 +54,7 @@ func simpleAuthLogin(runtime *authruntime.ProviderRuntime) http.HandlerFunc {
 			OtherProviders: runtime.HasOtherProviders(),
 		})
 		if err != nil {
-			logrus.Error(errors.Wrap(err, "failed to render simple auth login page"))
+			logrus.Error(fmt.Errorf("failed to render simple auth login page: %w", err))
 			return
 		}
 	}
@@ -110,7 +110,7 @@ func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRu
 			OtherProviders: runtime.HasOtherProviders(),
 		})
 		if err != nil {
-			logrus.Error(errors.Wrap(err, "failed to render simple auth login page"))
+			logrus.Error(fmt.Errorf("failed to render simple auth login page: %w", err))
 			return
 		}
 	}

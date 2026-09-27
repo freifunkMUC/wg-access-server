@@ -3,6 +3,7 @@ package authconfig
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -11,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
@@ -58,11 +58,11 @@ func (c *GithubConfig) Validate() error {
 		return errors.New("clientID, clientSecret and redirectURL are required")
 	}
 	if _, err := url.Parse(c.RedirectURL); err != nil {
-		return errors.Wrapf(err, "redirectURL is not a URL: %s", c.RedirectURL)
+		return fmt.Errorf("redirectURL is not a URL: %s: %w", c.RedirectURL, err)
 	}
 	if c.BaseURL != "" {
 		if u, err := url.Parse(c.BaseURL); err != nil || u.Scheme == "" || u.Host == "" {
-			return errors.Errorf("baseURL is not a URL such as https://github.example.com: %s", c.BaseURL)
+			return fmt.Errorf("baseURL is not a URL such as https://github.example.com: %s", c.BaseURL)
 		}
 	}
 	if len(c.Organizations) == 0 && len(c.Teams) == 0 && len(c.Users) == 0 {
@@ -70,7 +70,7 @@ func (c *GithubConfig) Validate() error {
 	}
 	for _, team := range slices.Concat(c.Teams, c.AdminTeams) {
 		if org, slug, ok := strings.Cut(team, "/"); !ok || org == "" || slug == "" || strings.Contains(slug, "/") {
-			return errors.Errorf("team %q is not of the form organization/team-slug", team)
+			return fmt.Errorf("team %q is not of the form organization/team-slug", team)
 		}
 	}
 	return nil
@@ -129,7 +129,7 @@ func (c *GithubConfig) Provider() *authruntime.Provider {
 	// ReadConfig has already refused to start with an invalid configuration;
 	// this only guards callers that skipped it.
 	if err := c.Validate(); err != nil {
-		panic(errors.Wrap(err, "invalid GitHub configuration"))
+		panic(fmt.Errorf("invalid GitHub configuration: %w", err))
 	}
 
 	endpoint, apiURL := c.endpoints()
@@ -185,7 +185,7 @@ func (c *GithubConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oau
 
 		token, err := oauthConfig.Exchange(r.Context(), r.FormValue("code"))
 		if err != nil {
-			logrus.Error(errors.Wrap(err, "failed to exchange the GitHub authorization code"))
+			logrus.Error(fmt.Errorf("failed to exchange the GitHub authorization code: %w", err))
 			http.Error(w, "The sign-in with GitHub failed", http.StatusBadGateway)
 			return
 		}
@@ -199,7 +199,7 @@ func (c *GithubConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oau
 			return
 		}
 		if err != nil {
-			logrus.Error(errors.Wrap(err, "failed to read the GitHub account"))
+			logrus.Error(fmt.Errorf("failed to read the GitHub account: %w", err))
 			http.Error(w, "The sign-in with GitHub failed", http.StatusBadGateway)
 			return
 		}
@@ -301,7 +301,7 @@ func (a *githubAPI) get(ctx context.Context, path string, into any) error {
 
 	res, err := a.client.Do(req)
 	if err != nil {
-		return errors.Wrapf(err, "GET %s", path)
+		return fmt.Errorf("GET %s: %w", path, err)
 	}
 	defer func() { _ = res.Body.Close() }()
 
@@ -309,9 +309,12 @@ func (a *githubAPI) get(ctx context.Context, path string, into any) error {
 		return errNotFound
 	}
 	if res.StatusCode != http.StatusOK {
-		return errors.Errorf("GET %s: %s", path, res.Status)
+		return fmt.Errorf("GET %s: %s", path, res.Status)
 	}
-	return errors.Wrapf(json.NewDecoder(res.Body).Decode(into), "GET %s", path)
+	if err := json.NewDecoder(res.Body).Decode(into); err != nil {
+		return fmt.Errorf("GET %s: %w", path, err)
+	}
+	return nil
 }
 
 // isMember reports whether the user is an active member of org. GitHub
@@ -366,7 +369,7 @@ func (a *githubAPI) primaryEmail(ctx context.Context) string {
 		Verified bool   `json:"verified"`
 	}
 	if err := a.get(ctx, "/user/emails", &emails); err != nil {
-		logrus.Debug(errors.Wrap(err, "failed to read the GitHub email addresses"))
+		logrus.Debug(fmt.Errorf("failed to read the GitHub email addresses: %w", err))
 		return ""
 	}
 	for _, e := range emails {

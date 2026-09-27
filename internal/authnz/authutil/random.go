@@ -3,8 +3,8 @@ package authutil
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -13,7 +13,7 @@ func RandomString(size int) string {
 	blk := make([]byte, size)
 	_, err := rand.Read(blk)
 	if err != nil {
-		logrus.Fatal(errors.Wrap(err, "failed to make a random string"))
+		logrus.Fatal(fmt.Errorf("failed to make a random string: %w", err))
 	}
 	return base64.URLEncoding.EncodeToString(blk)
 }

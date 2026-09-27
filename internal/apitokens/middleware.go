@@ -1,11 +1,10 @@
 package apitokens
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/traces"

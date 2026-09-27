@@ -14,11 +14,12 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
@@ -90,7 +91,7 @@ func (m *Manager) Create(owner *authsession.Identity, name string, expiresAt *ti
 
 	identity, err := json.Marshal(snapshot(owner))
 	if err != nil {
-		return "", nil, errors.Wrap(err, "failed to encode the identity")
+		return "", nil, fmt.Errorf("failed to encode the identity: %w", err)
 	}
 
 	id, err := randomString(8, hex.EncodeToString)
@@ -156,7 +157,7 @@ func (m *Manager) Authenticate(secret string) (*authsession.Identity, *storage.A
 
 	identity := &authsession.Identity{}
 	if err := json.Unmarshal([]byte(token.Identity), identity); err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to decode the identity of api token %s", token.ID)
+		return nil, nil, fmt.Errorf("failed to decode the identity of api token %s: %w", token.ID, err)
 	}
 	if m.claims != nil {
 		if err := m.claims(identity); err != nil {
@@ -209,7 +210,7 @@ func hash(secret string) string {
 func randomString(bytes int, encode func([]byte) string) (string, error) {
 	buf := make([]byte, bytes)
 	if _, err := rand.Read(buf); err != nil {
-		return "", errors.Wrap(err, "failed to generate a random token")
+		return "", fmt.Errorf("failed to generate a random token: %w", err)
 	}
 	return encode(buf), nil
 }

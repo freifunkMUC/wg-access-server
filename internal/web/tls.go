@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"os"
@@ -14,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,7 +31,7 @@ func CertHosts(externalHost string) []string {
 
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		logrus.Warn(errors.Wrap(err, "failed to list interface addresses for the self-signed certificate"))
+		logrus.Warn(fmt.Errorf("failed to list interface addresses for the self-signed certificate: %w", err))
 	}
 	for _, addr := range addrs {
 		ipnet, ok := addr.(*net.IPNet)
@@ -90,13 +90,13 @@ func GenerateSelfSignedCert(certPath, keyPath string, hosts []string) error {
 	// Create directory if it doesn't exist
 	certDir := filepath.Dir(certPath)
 	if err := os.MkdirAll(certDir, 0755); err != nil {
-		return errors.Wrap(err, "failed to create certificate directory")
+		return fmt.Errorf("failed to create certificate directory: %w", err)
 	}
 
 	// Generate private key
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return errors.Wrap(err, "failed to generate private key")
+		return fmt.Errorf("failed to generate private key: %w", err)
 	}
 
 	// A certificate is identified by issuer and serial number, so a serial
@@ -105,7 +105,7 @@ func GenerateSelfSignedCert(certPath, keyPath string, hosts []string) error {
 	serialLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialLimit)
 	if err != nil {
-		return errors.Wrap(err, "failed to generate a certificate serial number")
+		return fmt.Errorf("failed to generate a certificate serial number: %w", err)
 	}
 
 	// Create certificate template
@@ -134,7 +134,7 @@ func GenerateSelfSignedCert(certPath, keyPath string, hosts []string) error {
 	// Create certificate
 	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
 	if err != nil {
-		return errors.Wrap(err, "failed to create certificate")
+		return fmt.Errorf("failed to create certificate: %w", err)
 	}
 
 	// Encode certificate to PEM
@@ -151,12 +151,12 @@ func GenerateSelfSignedCert(certPath, keyPath string, hosts []string) error {
 
 	// Write certificate to file
 	if err := os.WriteFile(certPath, certPEM, 0644); err != nil {
-		return errors.Wrap(err, "failed to write certificate file")
+		return fmt.Errorf("failed to write certificate file: %w", err)
 	}
 
 	// Write private key to file
 	if err := os.WriteFile(keyPath, keyPEM, 0600); err != nil {
-		return errors.Wrap(err, "failed to write private key file")
+		return fmt.Errorf("failed to write private key file: %w", err)
 	}
 
 	logrus.Infof("Generated self-signed certificate: %s", certPath)
@@ -184,7 +184,7 @@ func LoadTLSCert(certPath, keyPath string, hosts []string) (*tls.Config, error) 
 	// Load certificate
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to load TLS certificate")
+		return nil, fmt.Errorf("failed to load TLS certificate: %w", err)
 	}
 
 	// Create TLS config

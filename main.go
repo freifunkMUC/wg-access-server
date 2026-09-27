@@ -7,7 +7,6 @@ import (
 	"runtime"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/cmd"
@@ -33,7 +32,7 @@ func main() {
 	// Set global log level
 	level, err := logrus.ParseLevel(*logLevel)
 	if err != nil {
-		logrus.Fatal(errors.Wrap(err, "invalid log level - should be one of fatal, error, warn, info, debug, trace"))
+		logrus.Fatal(fmt.Errorf("invalid log level - should be one of fatal, error, warn, info, debug, trace: %w", err))
 	}
 	logrus.SetLevel(level)
 	logrus.SetReportCaller(true)

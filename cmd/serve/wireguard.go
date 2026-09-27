@@ -1,10 +1,10 @@
 package serve
 
 import (
+	"fmt"
 	"net/netip"
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/internal/config"
@@ -66,7 +66,7 @@ func (cmd *servecmd) startWireGuard(conf *config.AppConfig, vpn vpnAddressing) (
 		AllowKernelModule: true,
 	})
 	if err != nil {
-		logrus.Fatal(errors.Wrap(err, "failed to create WireGuard interface"))
+		logrus.Fatal(fmt.Errorf("failed to create WireGuard interface: %w", err))
 	}
 	// PreDown runs while the interface is still there, PostDown once it is gone.
 	stop := func() {
@@ -90,7 +90,7 @@ func (cmd *servecmd) startWireGuard(conf *config.AppConfig, vpn vpnAddressing) (
 		},
 	}
 	if err := wg.LoadConfig(wgconfig); err != nil {
-		return wg, stop, errors.Wrap(err, "failed to load WireGuard config")
+		return wg, stop, fmt.Errorf("failed to load WireGuard config: %w", err)
 	}
 
 	logrus.Infof("WireGuard VPN network is %s", network.StringJoinIPNets(vpn.ipv4, vpn.ipv6))
@@ -128,7 +128,7 @@ func (cmd *servecmd) verifyLifecycleCommands(conf *config.AppConfig) {
 			continue
 		}
 		if err := hooks.VerifyConfigFile(cmd.ConfigFilePath); err != nil {
-			logrus.Fatal(errors.Wrap(err, "refusing to run the configured lifecycle commands"))
+			logrus.Fatal(fmt.Errorf("refusing to run the configured lifecycle commands: %w", err))
 		}
 		return
 	}

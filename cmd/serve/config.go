@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/crypto/bcrypt"
@@ -23,10 +22,10 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	if cmd.ConfigFilePath != "" {
 		b, err := os.ReadFile(cmd.ConfigFilePath)
 		if err != nil {
-			logrus.Fatal(errors.Wrap(err, "failed to read configuration file"))
+			logrus.Fatal(fmt.Errorf("failed to read configuration file: %w", err))
 		}
 		if err := yaml.Unmarshal(b, &cmd.AppConfig); err != nil {
-			logrus.Fatal(errors.Wrap(err, "failed to bind configuration file"))
+			logrus.Fatal(fmt.Errorf("failed to bind configuration file: %w", err))
 		}
 	}
 
@@ -89,7 +88,7 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		// set a basic auth entry for the admin user
 		pw, err := bcrypt.GenerateFromPassword([]byte(cmd.AppConfig.AdminPassword), bcrypt.DefaultCost)
 		if err != nil {
-			logrus.Fatal(errors.Wrap(err, "failed to generate a bcrypt hash for the provided admin password"))
+			logrus.Fatal(fmt.Errorf("failed to generate a bcrypt hash for the provided admin password: %w", err))
 		}
 		if cmd.AppConfig.Auth.Simple == nil && cmd.AppConfig.Auth.Basic == nil {
 			// basic and simple auth are unset, enable simple auth for the admin user
@@ -114,7 +113,7 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		}
 		key, err := wgtypes.GeneratePrivateKey()
 		if err != nil {
-			logrus.Fatal(errors.Wrap(err, "failed to generate a server private key"))
+			logrus.Fatal(fmt.Errorf("failed to generate a server private key: %w", err))
 		}
 		cmd.AppConfig.WireGuard.PrivateKey = key.String()
 	}
@@ -185,7 +184,7 @@ func detectDNSUpstream(ipv4Enabled, ipv6Enabled bool) []string {
 func detectDefaultInterface() string {
 	links, err := netlink.LinkList()
 	if err != nil {
-		logrus.Warn(errors.Wrap(err, "failed to list network interfaces"))
+		logrus.Warn(fmt.Errorf("failed to list network interfaces: %w", err))
 		return ""
 	}
 	return defaultInterfaceName(links, netlink.RouteList)
@@ -203,7 +202,7 @@ func defaultInterfaceName(links []netlink.Link, routeList func(netlink.Link, int
 				// One interface whose routes cannot be read (e.g. it went away
 				// while we were listing) must not hide the default route of
 				// every interface still to come.
-				logrus.Warn(errors.Wrapf(err, "failed to list routes for interface %s", link.Attrs().Name))
+				logrus.Warn(fmt.Errorf("failed to list routes for interface %s: %w", link.Attrs().Name, err))
 				continue
 			}
 			for _, route := range routes {
@@ -213,7 +212,7 @@ func defaultInterfaceName(links []netlink.Link, routeList func(netlink.Link, int
 			}
 		}
 	}
-	logrus.Warn(errors.New("Could not determine the default network interface name"))
+	logrus.Warn("could not determine the default network interface name")
 	return ""
 }
 

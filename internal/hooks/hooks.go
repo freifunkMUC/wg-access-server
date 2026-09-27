@@ -10,12 +10,12 @@
 package hooks
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -42,19 +42,19 @@ func VerifyConfigFile(path string) error {
 
 	info, err := os.Stat(path)
 	if err != nil {
-		return errors.Wrap(err, "failed to read the config file permissions")
+		return fmt.Errorf("failed to read the config file permissions: %w", err)
 	}
 
 	if mode := info.Mode().Perm(); mode&0o022 != 0 {
-		return errors.Errorf("config file %s is writable by group or others (mode %04o)", path, mode)
+		return fmt.Errorf("config file %s is writable by group or others (mode %04o)", path, mode)
 	}
 
 	owner, ok := fileOwner(info)
 	if !ok {
-		return errors.Errorf("failed to determine the owner of the config file %s", path)
+		return fmt.Errorf("failed to determine the owner of the config file %s", path)
 	}
 	if owner != 0 && owner != uint32(os.Geteuid()) {
-		return errors.Errorf("config file %s is owned by uid %d, which is neither root nor the user running the server (uid %d)",
+		return fmt.Errorf("config file %s is owned by uid %d, which is neither root nor the user running the server (uid %d)",
 			path, owner, os.Geteuid())
 	}
 
@@ -77,7 +77,7 @@ func Run(phase string, iface string, commands []string) error {
 			logrus.Infof("%s command output: %s", phase, trimmed)
 		}
 		if err != nil {
-			return errors.Wrapf(err, "%s command failed: %s", phase, command)
+			return fmt.Errorf("%s command failed: %s: %w", phase, command, err)
 		}
 	}
 
