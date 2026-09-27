@@ -364,9 +364,16 @@ func (d *DeviceManager) sync() error {
 		return errors.Wrap(err, "failed to list peers")
 	}
 
-	// Remove any peers for devices that are no longer in storage
+	// Remove any peers for devices that are no longer in storage. The keys go
+	// into a set first: searching the devices for every peer would compare
+	// each device against each peer, which a server with a few thousand of
+	// them feels at every start and every storage reconnect.
+	inStorage := make(map[string]bool, len(devices))
+	for _, device := range devices {
+		inStorage[device.PublicKey] = true
+	}
 	for _, peer := range peers {
-		if !deviceListContains(devices, peer.PublicKey.String()) {
+		if !inStorage[peer.PublicKey.String()] {
 			if err := d.wg.RemovePeer(peer.PublicKey.String()); err != nil {
 				logrus.Error(errors.Wrapf(err, "failed to remove peer during sync: %s", peer.PublicKey.String()))
 			}
@@ -512,15 +519,6 @@ func (d *DeviceManager) nextClientAddressLocked() (string, error) {
 	} else {
 		return "", fmt.Errorf("there are no free IP addresses in the vpn subnets: '%s', '%s'", d.cidr, d.cidrv6)
 	}
-}
-
-func deviceListContains(devices []*storage.Device, publicKey string) bool {
-	for _, device := range devices {
-		if device.PublicKey == publicKey {
-			return true
-		}
-	}
-	return false
 }
 
 func (d *DeviceManager) ListUsers() ([]*User, error) {

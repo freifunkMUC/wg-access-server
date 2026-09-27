@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
@@ -94,6 +95,50 @@ func BenchmarkListAllDevices(b *testing.B) {
 			b.ResetTimer()
 			for range b.N {
 				if _, err := manager.ListAllDevices(); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+// syncInterface answers like a WireGuard interface that already carries a
+// peer for every device, which is the state a sync after a storage reconnect
+// finds.
+type syncInterface struct {
+	wgembed.WireGuardInterface
+	peers []wgtypes.Peer
+}
+
+func (i *syncInterface) ListPeers() ([]wgtypes.Peer, error) { return i.peers, nil }
+func (i *syncInterface) AddPeer(string, string, []string) error {
+	return nil
+}
+func (i *syncInterface) RemovePeer(string) error { return nil }
+
+// BenchmarkSync is the work behind bringing the interface in line with
+// storage: at start-up, and again whenever the storage backend reconnects.
+func BenchmarkSync(b *testing.B) {
+	for _, count := range []int{100, 1000, 5000} {
+		b.Run(fmt.Sprintf("%d-devices", count), func(b *testing.B) {
+			manager := benchManager(b, count)
+			devs, err := manager.ListAllDevices()
+			if err != nil {
+				b.Fatal(err)
+			}
+			peers := make([]wgtypes.Peer, 0, len(devs))
+			for _, device := range devs {
+				key, err := wgtypes.ParseKey(device.PublicKey)
+				if err != nil {
+					b.Fatal(err)
+				}
+				peers = append(peers, wgtypes.Peer{PublicKey: key})
+			}
+			manager.wg = &syncInterface{WireGuardInterface: wgembed.NewNoOpInterface(), peers: peers}
+
+			b.ResetTimer()
+			for range b.N {
+				if err := manager.sync(); err != nil {
 					b.Fatal(err)
 				}
 			}
