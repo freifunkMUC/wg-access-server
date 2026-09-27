@@ -41,7 +41,9 @@ Example connection string:
 
 ### PostgreSQL
 
-This backend requires an external Postgres database to be deployed.
+This backend requires an external Postgres database to be deployed. Every release is tested against
+PostgreSQL 13 and 18, the oldest and the newest version their vendor supports; the versions in
+between are expected to work and are checked before releases.
 
 Postgres experimentally supports highly-available deployments of wg-access-server
 and is the recommended storage backend where possible.
@@ -56,9 +58,9 @@ Example connection string:
 
 ### MySQL
 
-This backend requires an external Mysql database to be deployed. Mysql flavours should be compatible.
-wg-access-server uses [this golang driver](https://github.com/go-sql-driver/mysql) if you want to check the
-compatibility of your favorite flavour.
+This backend requires an external MySQL database to be deployed. Every release is tested against
+MySQL 8.0 and 9, and against MariaDB 11.4 - other flavours are expected to work, as wg-access-server
+talks to all of them through [this golang driver](https://github.com/go-sql-driver/mysql).
 
 Example connection string:
 
