@@ -21,7 +21,6 @@ RUN go mod verify
 COPY ./proto/proto/ ./proto/proto/
 COPY ./main.go ./main.go
 COPY ./cmd/ ./cmd/
-COPY ./pkg/ ./pkg/
 COPY ./internal/ ./internal/
 COPY ./buildinfo/ ./buildinfo/
 RUN echo "Using: Version: ${VERSION}, Commit: ${COMMIT}"
