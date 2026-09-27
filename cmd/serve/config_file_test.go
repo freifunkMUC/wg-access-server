@@ -107,7 +107,7 @@ func TestConfigFileKeepsWhatItDoesNotMention(t *testing.T) {
 			cmd.AppConfig.Port = 8000
 			cmd.AppConfig.HttpEnabled = true
 			cmd.AppConfig.WireGuard.Interface = "wg0"
-			cmd.AppConfig.WireGuard.PrivateKey = "aGVsbG8gd29ybGQgdGhpcyBpcyBhIGtleSEhIQ=="
+			cmd.AppConfig.WireGuard.PrivateKey = "<the output of wg genkey>"
 
 			conf, fataled, logOutput := runReadConfig(t, cmd)
 			if fataled {

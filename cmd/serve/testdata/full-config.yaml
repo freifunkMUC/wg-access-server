@@ -16,7 +16,7 @@ filename: WireGuard-Home
 wireguard:
   enabled: true
   interface: wg0
-  privateKey: "aGVsbG8gd29ybGQgdGhpcyBpcyBhIGtleSEhIQ=="
+  privateKey: "<the output of wg genkey>"
   port: 51820
   mtu: 1420
   preUp: ["echo up"]
@@ -60,7 +60,7 @@ https:
   host: "0.0.0.0"
 auth:
   sessionStore:
-    secret: "0123456789abcdef0123456789abcdef"
+    secret: "<thirty two bytes of secret here>"
     secure: true
   oidc:
     name: Keycloak
