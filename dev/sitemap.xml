@@ -5,39 +5,39 @@
          <lastmod>2026-09-27</lastmod>
     </url>
     <url>
-         <loc>https://www.freie-netze.org/wg-access-server/dev/2-configuration/</loc>
+         <loc>https://www.freie-netze.org/wg-access-server/dev/about/</loc>
          <lastmod>2026-09-27</lastmod>
     </url>
     <url>
-         <loc>https://www.freie-netze.org/wg-access-server/dev/3-storage/</loc>
+         <loc>https://www.freie-netze.org/wg-access-server/dev/audit/</loc>
          <lastmod>2026-09-27</lastmod>
     </url>
     <url>
-         <loc>https://www.freie-netze.org/wg-access-server/dev/4-auth/</loc>
+         <loc>https://www.freie-netze.org/wg-access-server/dev/auth/</loc>
          <lastmod>2026-09-27</lastmod>
     </url>
     <url>
-         <loc>https://www.freie-netze.org/wg-access-server/dev/5-audit/</loc>
+         <loc>https://www.freie-netze.org/wg-access-server/dev/configuration/</loc>
          <lastmod>2026-09-27</lastmod>
     </url>
     <url>
-         <loc>https://www.freie-netze.org/wg-access-server/dev/6-about/</loc>
+         <loc>https://www.freie-netze.org/wg-access-server/dev/storage/</loc>
          <lastmod>2026-09-27</lastmod>
     </url>
     <url>
-         <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/1-docker/</loc>
+         <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/docker-compose/</loc>
          <lastmod>2026-09-27</lastmod>
     </url>
     <url>
-         <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/2-docker-compose/</loc>
+         <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/docker/</loc>
          <lastmod>2026-09-27</lastmod>
     </url>
     <url>
-         <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/3-kubernetes/</loc>
+         <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/kubernetes/</loc>
          <lastmod>2026-09-27</lastmod>
     </url>
     <url>
-         <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/4-raspberry-pi-pi-hole/</loc>
+         <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/raspberry-pi-pi-hole/</loc>
          <lastmod>2026-09-27</lastmod>
     </url>
 </urlset>

@@ -8,25 +8,31 @@
       
       
       
+        <link rel="canonical" href="https://www.freie-netze.org/wg-access-server/dev/deployment/docker/">
       
+      
+        <link rel="prev" href="../../audit/">
+      
+      
+        <link rel="next" href="../docker-compose/">
       
       
         
       
       
-      <link rel="icon" href="/wg-access-server/dev/assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
     
     
       
-        <title>wg-access-server</title>
+        <title>Docker - wg-access-server</title>
       
     
     
-      <link rel="stylesheet" href="/wg-access-server/dev/assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="/wg-access-server/dev/assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -45,7 +51,7 @@
       
     
     
-    <script>__md_scope=new URL("/wg-access-server/dev",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -69,6 +75,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#docker" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -85,7 +96,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="/wg-access-server/dev/." title="wg-access-server" class="md-header__button md-logo" aria-label="wg-access-server" data-md-component="logo">
+    <a href="../.." title="wg-access-server" class="md-header__button md-logo" aria-label="wg-access-server" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6.5 20q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48 1.18-1.53 3.08-1.95.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5 1.14 1.28 1.14 3 0 1.88-1.31 3.19T18.5 20m-12-2h12q1.05 0 1.77-.73.73-.72.73-1.77t-.73-1.77Q19.55 13 18.5 13H17v-2q0-2.07-1.46-3.54Q14.08 6 12 6 9.93 6 8.46 7.46 7 8.93 7 11h-.5q-1.45 0-2.47 1.03Q3 13.05 3 14.5T4.03 17q1.02 1 2.47 1m5.5-6"/></svg>
@@ -105,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              
+              Docker
             
           </span>
         </div>
@@ -231,7 +242,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="/wg-access-server/dev/." title="wg-access-server" class="md-nav__button md-logo" aria-label="wg-access-server" data-md-component="logo">
+    <a href="../.." title="wg-access-server" class="md-nav__button md-logo" aria-label="wg-access-server" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6.5 20q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48 1.18-1.53 3.08-1.95.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5 1.14 1.28 1.14 3 0 1.88-1.31 3.19T18.5 20m-12-2h12q1.05 0 1.77-.73.73-.72.73-1.77t-.73-1.77Q19.55 13 18.5 13H17v-2q0-2.07-1.46-3.54Q14.08 6 12 6 9.93 6 8.46 7.46 7 8.93 7 11h-.5q-1.45 0-2.47 1.03Q3 13.05 3 14.5T4.03 17q1.02 1 2.47 1m5.5-6"/></svg>
@@ -261,7 +272,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -288,7 +299,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/configuration/" class="md-nav__link">
+      <a href="../../configuration/" class="md-nav__link">
         
   
   
@@ -315,7 +326,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/storage/" class="md-nav__link">
+      <a href="../../storage/" class="md-nav__link">
         
   
   
@@ -342,7 +353,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/auth/" class="md-nav__link">
+      <a href="../../auth/" class="md-nav__link">
         
   
   
@@ -369,7 +380,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/audit/" class="md-nav__link">
+      <a href="../../audit/" class="md-nav__link">
         
   
   
@@ -393,18 +404,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
@@ -425,7 +438,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -440,10 +453,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/docker/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -459,6 +499,59 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv6-only-without-ipv4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv6-only (without IPv4)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv4-only-without-ipv6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv4-only (without IPv6)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -471,7 +564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/docker-compose/" class="md-nav__link">
+      <a href="../docker-compose/" class="md-nav__link">
         
   
   
@@ -499,7 +592,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/kubernetes/" class="md-nav__link">
+      <a href="../kubernetes/" class="md-nav__link">
         
   
   
@@ -527,7 +620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/raspberry-pi-pi-hole/" class="md-nav__link">
+      <a href="../raspberry-pi-pi-hole/" class="md-nav__link">
         
   
   
@@ -562,7 +655,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/about/" class="md-nav__link">
+      <a href="../../about/" class="md-nav__link">
         
   
   
@@ -599,6 +692,49 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv6-only-without-ipv4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv6-only (without IPv4)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv4-only-without-ipv6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv4-only (without IPv6)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -611,8 +747,87 @@
               
               <article class="md-content__inner md-typeset">
                 
-  <h1>404 - Not found</h1>
+                  
 
+
+  
+  
+
+
+<h1 id="docker">Docker<a class="headerlink" href="#docker" title="Permanent link"> ¶</a></h1>
+<p>Load the <code>ip_tables</code>, <code>ip6_tables</code> and <code>wireguard</code> kernel modules on the host.</p>
+<div class="highlight"><pre><span></span><code>modprobe<span class="w"> </span>ip_tables<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>modprobe<span class="w"> </span>ip6_tables<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>modprobe<span class="w"> </span>wireguard
+<span class="c1"># Load modules on boot</span>
+<span class="nb">echo</span><span class="w"> </span>ip_tables<span class="w"> </span>&gt;&gt;<span class="w"> </span>/etc/modules
+<span class="nb">echo</span><span class="w"> </span>ip6_tables<span class="w"> </span>&gt;&gt;<span class="w"> </span>/etc/modules
+<span class="nb">echo</span><span class="w"> </span>wireguard<span class="w"> </span>&gt;&gt;<span class="w"> </span>/etc/modules
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-it<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--cap-add<span class="w"> </span>NET_ADMIN<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--device<span class="w"> </span>/dev/net/tun:/dev/net/tun<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sysctl<span class="w"> </span>net.ipv6.conf.all.disable_ipv6<span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sysctl<span class="w"> </span>net.ipv6.conf.all.forwarding<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-v<span class="w"> </span>wg-access-server-data:/data<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_ADMIN_PASSWORD=</span><span class="nv">$WG_ADMIN_PASSWORD</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_WIREGUARD_PRIVATE_KEY=</span><span class="nv">$WG_WIREGUARD_PRIVATE_KEY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-p<span class="w"> </span><span class="m">8443</span>:8443/tcp<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-p<span class="w"> </span><span class="m">51820</span>:51820/udp<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>ghcr.io/freifunkmuc/wg-access-server:latest
+</code></pre></div>
+<h2 id="modules">Modules<a class="headerlink" href="#modules" title="Permanent link"> ¶</a></h2>
+<p>With <code>WG_VPN_FIREWALL=nftables</code>, load <code>nf_tables</code> instead of <code>ip_tables</code> and <code>ip6_tables</code>.</p>
+<p>If you are unable to load the <code>iptables</code> kernel modules, you can add the <code>SYS_MODULE</code> capability instead: <code>--cap-add SYS_MODULE</code>. You must also add the following mount: <code>-v /lib/modules:/lib/modules:ro</code>.</p>
+<p>This is not recommended as it essentially gives the container root privileges over the host system and an attacker could easily break out of the container.</p>
+<p>The WireGuard module should be loaded automatically, even without <code>SYS_MODULE</code> capability or <code>/lib/modules</code> mount.
+If it still fails to load, the server automatically falls back to the userspace implementation.</p>
+<h2 id="ipv6-only-without-ipv4">IPv6-only (without IPv4)<a class="headerlink" href="#ipv6-only-without-ipv4" title="Permanent link"> ¶</a></h2>
+<p>If you don't want IPv4 inside the VPN network, set <code>WG_VPN_CIDR=0</code>.</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-it<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--cap-add<span class="w"> </span>NET_ADMIN<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--device<span class="w"> </span>/dev/net/tun:/dev/net/tun<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sysctl<span class="w"> </span>net.ipv6.conf.all.disable_ipv6<span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sysctl<span class="w"> </span>net.ipv6.conf.all.forwarding<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-v<span class="w"> </span>wg-access-server-data:/data<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_ADMIN_PASSWORD=</span><span class="nv">$WG_ADMIN_PASSWORD</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_WIREGUARD_PRIVATE_KEY=</span><span class="nv">$WG_WIREGUARD_PRIVATE_KEY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_VPN_CIDR=0"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-p<span class="w"> </span><span class="m">8443</span>:8443/tcp<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-p<span class="w"> </span><span class="m">51820</span>:51820/udp<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>ghcr.io/freifunkmuc/wg-access-server:latest
+</code></pre></div>
+<h2 id="ipv4-only-without-ipv6">IPv4-only (without IPv6)<a class="headerlink" href="#ipv4-only-without-ipv6" title="Permanent link"> ¶</a></h2>
+<p>If you don't want IPv6 inside the VPN network, set <code>WG_VPN_CIDRV6=0</code>.
+In this case you can also get rid of the sysctls:</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-it<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--cap-add<span class="w"> </span>NET_ADMIN<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--device<span class="w"> </span>/dev/net/tun:/dev/net/tun<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-v<span class="w"> </span>wg-access-server-data:/data<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_ADMIN_PASSWORD=</span><span class="nv">$WG_ADMIN_PASSWORD</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_WIREGUARD_PRIVATE_KEY=</span><span class="nv">$WG_WIREGUARD_PRIVATE_KEY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-e<span class="w"> </span><span class="s2">"WG_VPN_CIDRV6=0"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-p<span class="w"> </span><span class="m">8443</span>:8443/tcp<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-p<span class="w"> </span><span class="m">51820</span>:51820/udp<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>ghcr.io/freifunkmuc/wg-access-server:latest
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
               </article>
             </div>
           
@@ -649,10 +864,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "/wg-access-server/dev", "features": [], "search": "/wg-access-server/dev/assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="/wg-access-server/dev/assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

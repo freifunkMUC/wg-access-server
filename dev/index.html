@@ -12,14 +12,14 @@
       
       
       
-        <link rel="next" href="2-configuration/">
+        <link rel="next" href="configuration/">
       
       
         
       
       
       <link rel="icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
     
     
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              wg-access-server
+              Home
             
           </span>
         </div>
@@ -286,7 +286,7 @@
   <span class="md-ellipsis">
     
   
-    wg-access-server
+    Home
   
 
     
@@ -304,7 +304,7 @@
   <span class="md-ellipsis">
     
   
-    wg-access-server
+    Home
   
 
     
@@ -504,7 +504,7 @@
   
   
     <li class="md-nav__item">
-      <a href="2-configuration/" class="md-nav__link">
+      <a href="configuration/" class="md-nav__link">
         
   
   
@@ -531,7 +531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="3-storage/" class="md-nav__link">
+      <a href="storage/" class="md-nav__link">
         
   
   
@@ -558,7 +558,7 @@
   
   
     <li class="md-nav__item">
-      <a href="4-auth/" class="md-nav__link">
+      <a href="auth/" class="md-nav__link">
         
   
   
@@ -585,41 +585,14 @@
   
   
     <li class="md-nav__item">
-      <a href="5-audit/" class="md-nav__link">
+      <a href="audit/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Audit Log
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="6-about/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    About
+    Audit log
   
 
     
@@ -647,10 +620,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
@@ -668,8 +641,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -686,7 +659,7 @@
   
   
     <li class="md-nav__item">
-      <a href="deployment/1-docker/" class="md-nav__link">
+      <a href="deployment/docker/" class="md-nav__link">
         
   
   
@@ -714,7 +687,7 @@
   
   
     <li class="md-nav__item">
-      <a href="deployment/2-docker-compose/" class="md-nav__link">
+      <a href="deployment/docker-compose/" class="md-nav__link">
         
   
   
@@ -742,14 +715,14 @@
   
   
     <li class="md-nav__item">
-      <a href="deployment/3-kubernetes/" class="md-nav__link">
+      <a href="deployment/kubernetes/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Helm Chart
+    Kubernetes
   
 
     
@@ -770,7 +743,7 @@
   
   
     <li class="md-nav__item">
-      <a href="deployment/4-raspberry-pi-pi-hole/" class="md-nav__link">
+      <a href="deployment/raspberry-pi-pi-hole/" class="md-nav__link">
         
   
   
@@ -794,6 +767,33 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="about/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1018,17 +1018,17 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 <p><strong>Contributions are always welcome so that we can offer new bug fixes, features and improvements to the users of this project</strong>.</p>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link"> ¶</a></h2>
 <ul>
-<li>Sign-in with OpenID Connect, GitLab, GitHub or a list of users of your own (<a href="https://www.freie-netze.org/wg-access-server/4-auth/">auth</a>)</li>
-<li><a href="https://www.freie-netze.org/wg-access-server/4-auth/#api-tokens">API tokens</a> for scripts, using the same API as the web UI</li>
+<li>Sign-in with OpenID Connect, GitLab, GitHub or a list of users of your own (<a href="https://www.freie-netze.org/wg-access-server/auth/">auth</a>)</li>
+<li><a href="https://www.freie-netze.org/wg-access-server/auth/#api-tokens">API tokens</a> for scripts, using the same API as the web UI</li>
 <li>Devices can be renamed; admins see and manage the devices of all users</li>
 <li>An optional limit on how many devices a user may create</li>
 <li>WireGuard client configurations as a file or a QR code</li>
 <li>IPv6: dual-stack, IPv6-only or IPv4-only, with NAT on or off for each</li>
 <li>Client isolation and a choice of the networks clients may reach</li>
-<li>Firewall rules with iptables or nftables (<a href="https://www.freie-netze.org/wg-access-server/2-configuration/#firewall">firewall</a>)</li>
+<li>Firewall rules with iptables or nftables (<a href="https://www.freie-netze.org/wg-access-server/configuration/#firewall">firewall</a>)</li>
 <li>A caching DNS proxy for the clients, with names for their devices</li>
 <li>PostgreSQL, MySQL or SQLite storage; several replicas can share PostgreSQL or MySQL</li>
-<li>An <a href="https://www.freie-netze.org/wg-access-server/5-audit/">audit log</a> and Prometheus <a href="#metrics">metrics</a></li>
+<li>An <a href="https://www.freie-netze.org/wg-access-server/audit/">audit log</a> and Prometheus <a href="#metrics">metrics</a></li>
 <li>Commands to run when the WireGuard interface comes up or goes down</li>
 <li>The WireGuard kernel module where available, with an embedded userspace implementation as fallback</li>
 <li>Dark and light mode</li>
@@ -1039,11 +1039,11 @@ documentation of the latest release; the version selector at the top has the old
 <code>dev</code>, the state of the master branch.</p>
 <p>Quick Links:</p>
 <ul>
-<li><a href="https://www.freie-netze.org/wg-access-server/2-configuration/">Configuration overview</a></li>
-<li><a href="https://www.freie-netze.org/wg-access-server/deployment/1-docker/">Deploy with Docker</a></li>
-<li><a href="https://www.freie-netze.org/wg-access-server/deployment/2-docker-compose/">Deploy with Docker Compose</a></li>
-<li><a href="https://www.freie-netze.org/wg-access-server/deployment/3-kubernetes/">Deploy with Helm</a></li>
-<li><a href="https://www.freie-netze.org/wg-access-server/deployment/4-raspberry-pi-pi-hole/">Raspberry Pi with Pi-hole</a></li>
+<li><a href="https://www.freie-netze.org/wg-access-server/configuration/">Configuration overview</a></li>
+<li><a href="https://www.freie-netze.org/wg-access-server/deployment/docker/">Deploy with Docker</a></li>
+<li><a href="https://www.freie-netze.org/wg-access-server/deployment/docker-compose/">Deploy with Docker Compose</a></li>
+<li><a href="https://www.freie-netze.org/wg-access-server/deployment/kubernetes/">Deploy with Helm</a></li>
+<li><a href="https://www.freie-netze.org/wg-access-server/deployment/raspberry-pi-pi-hole/">Raspberry Pi with Pi-hole</a></li>
 </ul>
 <h2 id="try-it-out">Try it out<a class="headerlink" href="#try-it-out" title="Permanent link"> ¶</a></h2>
 <p>Load the kernel modules on the host, then start the container:</p>
@@ -1072,9 +1072,9 @@ from others in your network - for example from your phone, to add it with the QR
 certificate is self-signed, so the browser warns once.</p>
 <p>For an installation that stays - Docker Compose, a reverse proxy with a real certificate, a
 database, single sign-on - follow the deployment documentation:
-<a href="https://www.freie-netze.org/wg-access-server/deployment/1-docker/">Docker</a>,
-<a href="https://www.freie-netze.org/wg-access-server/deployment/2-docker-compose/">Docker Compose</a> or
-<a href="https://www.freie-netze.org/wg-access-server/deployment/4-raspberry-pi-pi-hole/">Raspberry Pi with Pi-hole</a>.
+<a href="https://www.freie-netze.org/wg-access-server/deployment/docker/">Docker</a>,
+<a href="https://www.freie-netze.org/wg-access-server/deployment/docker-compose/">Docker Compose</a> or
+<a href="https://www.freie-netze.org/wg-access-server/deployment/raspberry-pi-pi-hole/">Raspberry Pi with Pi-hole</a>.
 It also covers what to do when the kernel modules cannot be loaded, and how to keep the private key
 so that the devices you added keep working.</p>
 <h2 id="running-on-kubernetes-via-helm">Running on Kubernetes via Helm<a class="headerlink" href="#running-on-kubernetes-via-helm" title="Permanent link"> ¶</a></h2>
@@ -1172,7 +1172,7 @@ JSON, so with a session - here from the admin password - a request can be sent w
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-c<span class="w"> </span>cookies<span class="w"> </span>-d<span class="w"> </span><span class="nv">username</span><span class="o">=</span>admin<span class="w"> </span>-d<span class="w"> </span><span class="nv">password</span><span class="o">=</span>&lt;password&gt;<span class="w"> </span>https://localhost:8443/signin/simpleauth
 curl<span class="w"> </span>-b<span class="w"> </span>cookies<span class="w"> </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/json'</span><span class="w"> </span>-d<span class="w"> </span><span class="s1">'{}'</span><span class="w"> </span>https://localhost:8443/api/proto.Server/Info
 </code></pre></div>
-<p>For scripts, <a href="https://www.freie-netze.org/wg-access-server/4-auth/#api-tokens">API tokens</a> replace the session.</p>
+<p>For scripts, <a href="https://www.freie-netze.org/wg-access-server/auth/#api-tokens">API tokens</a> replace the session.</p>
 <h3 id="grpc-code-generation">gRPC code generation:<a class="headerlink" href="#grpc-code-generation" title="Permanent link"> ¶</a></h3>
 <p>The client communicates with the server via gRPC web. You can edit the API specification in <code>./proto/*.proto</code>.</p>
 <p>After changing a service or message definition, you must regenerate the server and client code:</p>

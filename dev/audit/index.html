@@ -8,25 +8,31 @@
       
       
       
+        <link rel="canonical" href="https://www.freie-netze.org/wg-access-server/dev/audit/">
       
+      
+        <link rel="prev" href="../auth/">
+      
+      
+        <link rel="next" href="../deployment/docker/">
       
       
         
       
       
-      <link rel="icon" href="/wg-access-server/dev/assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
     
     
       
-        <title>wg-access-server</title>
+        <title>Audit log - wg-access-server</title>
       
     
     
-      <link rel="stylesheet" href="/wg-access-server/dev/assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="/wg-access-server/dev/assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -45,7 +51,7 @@
       
     
     
-    <script>__md_scope=new URL("/wg-access-server/dev",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -69,6 +75,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#audit-log" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -85,7 +96,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="/wg-access-server/dev/." title="wg-access-server" class="md-header__button md-logo" aria-label="wg-access-server" data-md-component="logo">
+    <a href=".." title="wg-access-server" class="md-header__button md-logo" aria-label="wg-access-server" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6.5 20q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48 1.18-1.53 3.08-1.95.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5 1.14 1.28 1.14 3 0 1.88-1.31 3.19T18.5 20m-12-2h12q1.05 0 1.77-.73.73-.72.73-1.77t-.73-1.77Q19.55 13 18.5 13H17v-2q0-2.07-1.46-3.54Q14.08 6 12 6 9.93 6 8.46 7.46 7 8.93 7 11h-.5q-1.45 0-2.47 1.03Q3 13.05 3 14.5T4.03 17q1.02 1 2.47 1m5.5-6"/></svg>
@@ -105,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              
+              Audit log
             
           </span>
         </div>
@@ -231,7 +242,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="/wg-access-server/dev/." title="wg-access-server" class="md-nav__button md-logo" aria-label="wg-access-server" data-md-component="logo">
+    <a href=".." title="wg-access-server" class="md-nav__button md-logo" aria-label="wg-access-server" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6.5 20q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48 1.18-1.53 3.08-1.95.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5 1.14 1.28 1.14 3 0 1.88-1.31 3.19T18.5 20m-12-2h12q1.05 0 1.77-.73.73-.72.73-1.77t-.73-1.77Q19.55 13 18.5 13H17v-2q0-2.07-1.46-3.54Q14.08 6 12 6 9.93 6 8.46 7.46 7 8.93 7 11h-.5q-1.45 0-2.47 1.03Q3 13.05 3 14.5T4.03 17q1.02 1 2.47 1m5.5-6"/></svg>
@@ -261,7 +272,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/." class="md-nav__link">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -288,7 +299,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/configuration/" class="md-nav__link">
+      <a href="../configuration/" class="md-nav__link">
         
   
   
@@ -315,7 +326,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/storage/" class="md-nav__link">
+      <a href="../storage/" class="md-nav__link">
         
   
   
@@ -342,7 +353,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/auth/" class="md-nav__link">
+      <a href="../auth/" class="md-nav__link">
         
   
   
@@ -366,10 +377,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="/wg-access-server/dev/audit/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit log
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -385,6 +423,48 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#recorded-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recorded actions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#who-did-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who did it
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -443,7 +523,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/docker/" class="md-nav__link">
+      <a href="../deployment/docker/" class="md-nav__link">
         
   
   
@@ -471,7 +551,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/docker-compose/" class="md-nav__link">
+      <a href="../deployment/docker-compose/" class="md-nav__link">
         
   
   
@@ -499,7 +579,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/kubernetes/" class="md-nav__link">
+      <a href="../deployment/kubernetes/" class="md-nav__link">
         
   
   
@@ -527,7 +607,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/raspberry-pi-pi-hole/" class="md-nav__link">
+      <a href="../deployment/raspberry-pi-pi-hole/" class="md-nav__link">
         
   
   
@@ -562,7 +642,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/about/" class="md-nav__link">
+      <a href="../about/" class="md-nav__link">
         
   
   
@@ -599,6 +679,38 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#recorded-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recorded actions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#who-did-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who did it
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -611,8 +723,121 @@
               
               <article class="md-content__inner md-typeset">
                 
-  <h1>404 - Not found</h1>
+                  
 
+
+  
+  
+
+
+<h1 id="audit-log">Audit Log<a class="headerlink" href="#audit-log" title="Permanent link"> ¶</a></h1>
+<p>wg-access-server records the changes that matter for an operator in its normal log output, so they
+end up wherever the rest of the logs go. Every such record carries an <code>audit</code> field with the action,
+which is what you filter on:</p>
+<div class="highlight"><pre><span></span><code>level=info msg=device.delete audit=device.delete actor=admin actor_is_admin=true actor_provider=simple \
+  component=audit device=laptop owner=alice remote_addr=198.51.100.7 trace.id=…
+</code></pre></div>
+<h2 id="recorded-actions">Recorded actions<a class="headerlink" href="#recorded-actions" title="Permanent link"> ¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>When</th>
+<th>Fields beside the actor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>device.create</code></td>
+<td>A device was added</td>
+<td><code>device</code>, <code>owner</code>, <code>address</code></td>
+</tr>
+<tr>
+<td><code>device.delete</code></td>
+<td>A device was deleted</td>
+<td><code>device</code>, <code>owner</code>, <code>reason</code>*</td>
+</tr>
+<tr>
+<td><code>device.rename</code></td>
+<td>A device was renamed</td>
+<td><code>device</code>, <code>previous</code>, <code>owner</code></td>
+</tr>
+<tr>
+<td><code>user.delete</code></td>
+<td>An admin deleted a user, their devices and tokens</td>
+<td><code>target_user</code></td>
+</tr>
+<tr>
+<td><code>api_token.create</code></td>
+<td>An API token was created</td>
+<td><code>token</code>, <code>token_name</code>, <code>expires_at</code></td>
+</tr>
+<tr>
+<td><code>api_token.delete</code></td>
+<td>An API token was revoked</td>
+<td><code>token</code>, <code>token_name</code>, <code>owner</code></td>
+</tr>
+</tbody>
+</table>
+<p>* <code>reason=inactive</code> marks a device the server deleted by itself because it exceeded the inactive
+device grace period.</p>
+<h2 id="who-did-it">Who did it<a class="headerlink" href="#who-did-it" title="Permanent link"> ¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>actor</code></td>
+<td>The user that made the change, or <code>system</code> for changes wg-access-server made on its own</td>
+</tr>
+<tr>
+<td><code>actor_provider</code></td>
+<td>The authentication backend that user logged in with</td>
+</tr>
+<tr>
+<td><code>actor_is_admin</code></td>
+<td>Whether the actor acted with admin rights</td>
+</tr>
+<tr>
+<td><code>actor_api_token</code></td>
+<td>The id of the API token the change was made with; absent for the web UI</td>
+</tr>
+<tr>
+<td><code>owner</code></td>
+<td>The user the affected device belongs to - different from <code>actor</code> means an admin acted on somebody else's device</td>
+</tr>
+<tr>
+<td><code>remote_addr</code></td>
+<td>The address the request came from. Behind a reverse proxy this is the proxy</td>
+</tr>
+<tr>
+<td><code>trace.id</code></td>
+<td>Ties the record to the other log lines of the same request</td>
+</tr>
+</tbody>
+</table>
+<p>Only successful changes are recorded: an action that was refused or failed leaves no record, it is
+logged as an error instead. Reads - listing devices or users - are not recorded, the web UI polls them
+constantly and the records would drown everything else.</p>
+<p>Logins are logged separately: a new session is logged with the provider and the user, and a failed
+login attempt is logged with a warning (see <a href="../auth/">Authentication</a>).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
               </article>
             </div>
           
@@ -649,10 +874,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "/wg-access-server/dev", "features": [], "search": "/wg-access-server/dev/assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="/wg-access-server/dev/assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

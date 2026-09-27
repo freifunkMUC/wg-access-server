@@ -8,25 +8,31 @@
       
       
       
+        <link rel="canonical" href="https://www.freie-netze.org/wg-access-server/dev/deployment/raspberry-pi-pi-hole/">
       
+      
+        <link rel="prev" href="../kubernetes/">
+      
+      
+        <link rel="next" href="../../about/">
       
       
         
       
       
-      <link rel="icon" href="/wg-access-server/dev/assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
     
     
       
-        <title>wg-access-server</title>
+        <title>Raspberry Pi with Pi-hole - wg-access-server</title>
       
     
     
-      <link rel="stylesheet" href="/wg-access-server/dev/assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="/wg-access-server/dev/assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -45,7 +51,7 @@
       
     
     
-    <script>__md_scope=new URL("/wg-access-server/dev",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -69,6 +75,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#raspberry-pi-with-pi-hole" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -85,7 +96,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="/wg-access-server/dev/." title="wg-access-server" class="md-header__button md-logo" aria-label="wg-access-server" data-md-component="logo">
+    <a href="../.." title="wg-access-server" class="md-header__button md-logo" aria-label="wg-access-server" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6.5 20q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48 1.18-1.53 3.08-1.95.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5 1.14 1.28 1.14 3 0 1.88-1.31 3.19T18.5 20m-12-2h12q1.05 0 1.77-.73.73-.72.73-1.77t-.73-1.77Q19.55 13 18.5 13H17v-2q0-2.07-1.46-3.54Q14.08 6 12 6 9.93 6 8.46 7.46 7 8.93 7 11h-.5q-1.45 0-2.47 1.03Q3 13.05 3 14.5T4.03 17q1.02 1 2.47 1m5.5-6"/></svg>
@@ -105,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              
+              Raspberry Pi with Pi-hole
             
           </span>
         </div>
@@ -231,7 +242,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="/wg-access-server/dev/." title="wg-access-server" class="md-nav__button md-logo" aria-label="wg-access-server" data-md-component="logo">
+    <a href="../.." title="wg-access-server" class="md-nav__button md-logo" aria-label="wg-access-server" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6.5 20q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48 1.18-1.53 3.08-1.95.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5 1.14 1.28 1.14 3 0 1.88-1.31 3.19T18.5 20m-12-2h12q1.05 0 1.77-.73.73-.72.73-1.77t-.73-1.77Q19.55 13 18.5 13H17v-2q0-2.07-1.46-3.54Q14.08 6 12 6 9.93 6 8.46 7.46 7 8.93 7 11h-.5q-1.45 0-2.47 1.03Q3 13.05 3 14.5T4.03 17q1.02 1 2.47 1m5.5-6"/></svg>
@@ -261,7 +272,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -288,7 +299,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/configuration/" class="md-nav__link">
+      <a href="../../configuration/" class="md-nav__link">
         
   
   
@@ -315,7 +326,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/storage/" class="md-nav__link">
+      <a href="../../storage/" class="md-nav__link">
         
   
   
@@ -342,7 +353,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/auth/" class="md-nav__link">
+      <a href="../../auth/" class="md-nav__link">
         
   
   
@@ -369,7 +380,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/audit/" class="md-nav__link">
+      <a href="../../audit/" class="md-nav__link">
         
   
   
@@ -393,18 +404,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
@@ -425,7 +438,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -443,7 +456,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/docker/" class="md-nav__link">
+      <a href="../docker/" class="md-nav__link">
         
   
   
@@ -471,7 +484,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/docker-compose/" class="md-nav__link">
+      <a href="../docker-compose/" class="md-nav__link">
         
   
   
@@ -499,7 +512,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/kubernetes/" class="md-nav__link">
+      <a href="../kubernetes/" class="md-nav__link">
         
   
   
@@ -524,10 +537,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="/wg-access-server/dev/deployment/raspberry-pi-pi-hole/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Raspberry Pi with Pi-hole
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -543,6 +583,70 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-composeyml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        docker-compose.yml
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#start-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Start it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-that-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check that it works
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -562,7 +666,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/wg-access-server/dev/about/" class="md-nav__link">
+      <a href="../../about/" class="md-nav__link">
         
   
   
@@ -599,6 +703,60 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-composeyml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        docker-compose.yml
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#start-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Start it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-that-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check that it works
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -611,8 +769,113 @@
               
               <article class="md-content__inner md-typeset">
                 
-  <h1>404 - Not found</h1>
+                  
 
+
+  
+  
+
+
+<h1 id="raspberry-pi-with-pi-hole">Raspberry Pi with Pi-hole<a class="headerlink" href="#raspberry-pi-with-pi-hole" title="Permanent link"> ¶</a></h1>
+<p>This runs wg-access-server next to <a href="https://pi-hole.net/">Pi-hole</a> with Docker Compose, so that
+devices connected to the VPN get Pi-hole's ad and tracker blocking wherever they are. It works the
+same on any other Docker host; both images are published for the Raspberry Pi (<code>arm64</code> and <code>arm/v7</code>).</p>
+<p>The VPN clients use wg-access-server's DNS server (<code>10.44.0.1</code>, the default), which forwards their
+queries to Pi-hole. Pi-hole itself is only reachable from inside Docker - it does not have to answer
+anybody else, and port 53 of the host stays free.</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link"> ¶</a></h2>
+<ul>
+<li>Docker with the Compose plugin</li>
+<li>The WireGuard kernel module. Raspberry Pi OS Bookworm and newer ship it; check with
+  <code>sudo modprobe wireguard</code>. See <a href="../docker/#modules">Docker</a> for loading it on boot.</li>
+<li>UDP port 51820 forwarded to the Raspberry Pi if clients connect from outside your network</li>
+</ul>
+<h2 id="docker-composeyml">docker-compose.yml<a class="headerlink" href="#docker-composeyml" title="Permanent link"> ¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">pihole</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pihole/pihole:latest</span>
+<span class="w">    </span><span class="nt">container_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pihole</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">TZ</span><span class="p">:</span><span class="w"> </span><span class="s">"Europe/Berlin"</span>
+<span class="w">      </span><span class="nt">FTLCONF_webserver_api_password</span><span class="p">:</span><span class="w"> </span><span class="s">"${PIHOLE_PASSWORD:?please</span><span class="nv"> </span><span class="s">set</span><span class="nv"> </span><span class="s">PIHOLE_PASSWORD}"</span>
+<span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"pihole-data:/etc/pihole"</span>
+<span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"8080:80/tcp"</span><span class="w"> </span><span class="c1"># Pi-hole's web interface</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">dns</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">ipv4_address</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">172.30.0.53</span>
+<span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unless-stopped</span>
+
+<span class="w">  </span><span class="nt">wg-access-server</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/freifunkmuc/wg-access-server:latest</span>
+<span class="w">    </span><span class="nt">container_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">wg-access-server</span>
+<span class="w">    </span><span class="nt">cap_add</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NET_ADMIN</span>
+<span class="w">    </span><span class="nt">sysctls</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">net.ipv6.conf.all.disable_ipv6</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class="w">      </span><span class="nt">net.ipv6.conf.all.forwarding</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">WG_ADMIN_PASSWORD</span><span class="p">:</span><span class="w"> </span><span class="s">"${WG_ADMIN_PASSWORD:?please</span><span class="nv"> </span><span class="s">set</span><span class="nv"> </span><span class="s">WG_ADMIN_PASSWORD}"</span>
+<span class="w">      </span><span class="nt">WG_WIREGUARD_PRIVATE_KEY</span><span class="p">:</span><span class="w"> </span><span class="s">"${WG_WIREGUARD_PRIVATE_KEY:?please</span><span class="nv"> </span><span class="s">set</span><span class="nv"> </span><span class="s">WG_WIREGUARD_PRIVATE_KEY}"</span>
+<span class="w">      </span><span class="c1"># the VPN clients' DNS server forwards to Pi-hole</span>
+<span class="w">      </span><span class="nt">WG_DNS_UPSTREAM</span><span class="p">:</span><span class="w"> </span><span class="s">"172.30.0.53"</span>
+<span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"wg-access-server-data:/data"</span>
+<span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"8000:8000/tcp"</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"51820:51820/udp"</span>
+<span class="w">    </span><span class="nt">devices</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"/dev/net/tun:/dev/net/tun"</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dns</span>
+<span class="w">    </span><span class="nt">depends_on</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pihole</span>
+<span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unless-stopped</span>
+
+<span class="nt">networks</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">dns</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">ipam</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">config</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">subnet</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">172.30.0.0/24</span>
+
+<span class="nt">volumes</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">pihole-data</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">wg-access-server-data</span><span class="p">:</span>
+</code></pre></div>
+<p>Pi-hole gets a fixed address in a network of its own, so wg-access-server can name it as its
+upstream. Both containers are in that network, so Pi-hole's default of only answering its local
+network is all that is needed.</p>
+<h2 id="start-it">Start it<a class="headerlink" href="#start-it" title="Permanent link"> ¶</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">PIHOLE_PASSWORD</span><span class="o">=</span><span class="s2">"&lt;a password for Pi-hole's web interface&gt;"</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">WG_ADMIN_PASSWORD</span><span class="o">=</span><span class="s2">"&lt;a password for wg-access-server&gt;"</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">WG_WIREGUARD_PRIVATE_KEY</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>wg<span class="w"> </span>genkey<span class="k">)</span><span class="s2">"</span>
+docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+</code></pre></div>
+<p>Keep the private key: the device configurations handed out so far only work with it. Put the
+variables into an <code>.env</code> file next to <code>docker-compose.yml</code> to have them at the next start.</p>
+<p>Then add a device in wg-access-server at <code>http://&lt;raspberry-pi&gt;:8000</code> and connect. Pi-hole's web
+interface at <code>http://&lt;raspberry-pi&gt;:8080/admin</code> shows the queries of the VPN clients - all coming
+from wg-access-server's address, because it forwards them.</p>
+<h2 id="check-that-it-works">Check that it works<a class="headerlink" href="#check-that-it-works" title="Permanent link"> ¶</a></h2>
+<p>From a connected device, look up a domain that Pi-hole blocks:</p>
+<div class="highlight"><pre><span></span><code>nslookup<span class="w"> </span>doubleclick.net<span class="w"> </span><span class="m">10</span>.44.0.1
+</code></pre></div>
+<p>The answer is <code>0.0.0.0</code> when the query went through Pi-hole. On the first start Pi-hole needs a
+minute or so to download its block lists; until then it answers everything.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
               </article>
             </div>
           
@@ -649,10 +912,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "/wg-access-server/dev", "features": [], "search": "/wg-access-server/dev/assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="/wg-access-server/dev/assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
