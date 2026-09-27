@@ -81,3 +81,49 @@ func TestDuplicateKeyIsRefused(t *testing.T) {
 	}
 	t.Logf("refused with: %v", err)
 }
+
+// TestConfigFileKeepsWhatItDoesNotMention covers how the configuration is
+// layered: the flags and the environment are read into it first, and the file
+// is laid over them. A file that mentions nothing - the empty one the
+// container image ships - has to leave all of that alone.
+func TestConfigFileKeepsWhatItDoesNotMention(t *testing.T) {
+	for name, doc := range map[string]string{
+		"empty":         "",
+		"only comments": "# nothing configured here\n",
+		"explicit null": "~\n",
+		"one setting":   "port: 9000\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.yaml")
+			if err := os.WriteFile(path, []byte(doc), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			cmd := &servecmd{ConfigFilePath: path}
+			// what the flags and the environment left behind
+			cmd.AppConfig.AdminUsername = "admin"
+			cmd.AppConfig.AdminPassword = "from-the-environment"
+			cmd.AppConfig.Storage = "memory://"
+			cmd.AppConfig.Port = 8000
+			cmd.AppConfig.HttpEnabled = true
+			cmd.AppConfig.WireGuard.Interface = "wg0"
+			cmd.AppConfig.WireGuard.PrivateKey = "aGVsbG8gd29ybGQgdGhpcyBpcyBhIGtleSEhIQ=="
+
+			conf, fataled, logOutput := runReadConfig(t, cmd)
+			if fataled {
+				t.Fatalf("reading the configuration failed: %s", logOutput)
+			}
+			if conf.Storage != "memory://" || !conf.HttpEnabled || conf.AdminUsername != "admin" ||
+				conf.WireGuard.Interface != "wg0" {
+				t.Errorf("the file cleared what it does not mention: %+v", conf)
+			}
+			want := 8000
+			if doc == "port: 9000\n" {
+				want = 9000
+			}
+			if conf.Port != want {
+				t.Errorf("port = %d, want %d", conf.Port, want)
+			}
+		})
+	}
+}
