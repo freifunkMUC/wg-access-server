@@ -54,7 +54,8 @@ func (cmd *servecmd) Run() {
 
 	// Device manager
 	deviceManager := devices.New(wg, storageBackend, conf.VPN.CIDR, conf.VPN.CIDRv6,
-		devices.WithMaxDevicesPerUser(conf.MaxDevicesPerUser))
+		devices.WithMaxDevicesPerUser(conf.MaxDevicesPerUser),
+		devices.WithRouteSync(routeSync(conf)))
 
 	stopDNS, err := startDNS(conf, deviceManager, storageBackend, vpn)
 	defer stopDNS()

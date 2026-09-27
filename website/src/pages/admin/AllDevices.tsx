@@ -39,6 +39,8 @@ export const AllDevices = observer(function AllDevices() {
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
   // the device whose expiry date is being changed, if any
   const [expiryDevice, setExpiryDevice] = React.useState<Device.AsObject>();
+  // ... and the one whose networks are being changed
+  const [routesDevice, setRoutesDevice] = React.useState<Device.AsObject>();
 
   const userResource = useLoaded(async () => {
     try {
@@ -115,6 +117,24 @@ export const AllDevices = observer(function AllDevices() {
         ? `${device.name} is blocked and cannot connect any more`
         : `${device.name} may connect again - the configuration the user has keeps working`,
     );
+  };
+
+  const setRoutes = async (device: Device.AsObject, routes: string[]) => {
+    try {
+      await grpc.devices.setDeviceRoutes({ name: device.name, owner: { value: device.owner }, routes });
+      toast({
+        text: routes.length
+          ? `${device.name} now carries the traffic for ${routes.join(', ')}`
+          : `${device.name} no longer carries traffic for other networks`,
+        intent: 'success',
+      });
+      await deviceResource.refresh();
+      return true;
+    } catch (error) {
+      console.error('Failed to change the routes of the device:', error);
+      toast({ text: 'Failed to change the networks: ' + errorMessage(error), intent: 'error' });
+      return false;
+    }
   };
 
   const deleteDevice = async (device: Device.AsObject) => {
@@ -242,6 +262,7 @@ export const AllDevices = observer(function AllDevices() {
                   Last seen
                 </TableSortLabel>
               </TableCell>
+              <TableCell>Networks</TableCell>
               <TableCell>
                 <TableSortLabel
                   active={sortBy === 'access'}
@@ -275,6 +296,7 @@ export const AllDevices = observer(function AllDevices() {
                   {numeral(device.transmitBytes).format('0b')} / {numeral(device.receiveBytes).format('0b')}
                 </TableCell>
                 <TableCell>{lastSeen(device.lastHandshakeTime)}</TableCell>
+                <TableCell>{device.routes?.length ? device.routes.join(', ') : '-'}</TableCell>
                 <TableCell>
                   <AccessCell device={device} />
                 </TableCell>
@@ -289,6 +311,9 @@ export const AllDevices = observer(function AllDevices() {
                     </Button>
                     <Button variant="outlined" color="secondary" onClick={() => setExpiryDevice(device)}>
                       Expiry
+                    </Button>
+                    <Button variant="outlined" color="secondary" onClick={() => setRoutesDevice(device)}>
+                      Networks
                     </Button>
                     <Button variant="outlined" color="secondary" onClick={() => deleteDevice(device)}>
                       Delete
@@ -336,6 +361,19 @@ export const AllDevices = observer(function AllDevices() {
       <code>
         <pre>{JSON.stringify(AppState.info, null, 2)}</pre>
       </code>
+
+      {routesDevice && (
+        <RoutesDialog
+          device={routesDevice}
+          onClose={() => setRoutesDevice(undefined)}
+          onSubmit={async (routes) => {
+            const device = routesDevice;
+            if (await setRoutes(device, routes)) {
+              setRoutesDevice(undefined);
+            }
+          }}
+        />
+      )}
 
       {expiryDevice && (
         <ExpiryDialog
@@ -426,6 +464,64 @@ export function ExpiryDialog({ device, onClose, onSubmit }: ExpiryDialogProps) {
       </form>
     </Dialog>
   );
+}
+
+interface RoutesDialogProps {
+  device: Device.AsObject;
+  onClose: () => void;
+  onSubmit: (routes: string[]) => void;
+}
+
+// RoutesDialog asks which networks live behind a device - what turns it into a
+// site-to-site link or a subnet router. It stays open when the server refuses
+// one of them, so the admin can correct it instead of typing it all again.
+export function RoutesDialog({ device, onClose, onSubmit }: RoutesDialogProps) {
+  const [value, setValue] = React.useState((device.routes ?? []).join(', '));
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    onSubmit(parseRoutes(value));
+  };
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <form onSubmit={submit}>
+        <DialogTitle>Networks behind {device.name}</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            The server sends traffic for these networks to this device, and accepts traffic from them through it. Use it
+            for a router that carries a whole site. Leave it empty for an ordinary device.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            fullWidth
+            multiline
+            label="Networks"
+            placeholder="192.168.5.0/24, 2001:db8:5::/48"
+            helperText="In CIDR notation, separated by commas or new lines"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button type="submit" variant="contained">
+            Save
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
+  );
+}
+
+// parseRoutes splits what was typed into networks. What they are is decided by
+// the server - it knows the VPN's own networks, the server's own, and what
+// another device already carries.
+export function parseRoutes(value: string): string[] {
+  return value
+    .split(/[,\n]/)
+    .map((route) => route.trim())
+    .filter((route) => route !== '');
 }
 
 // isoDay formats a date the way the date input expects it, in local time - not

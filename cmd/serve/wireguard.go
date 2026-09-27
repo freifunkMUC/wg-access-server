@@ -3,6 +3,7 @@ package serve
 import (
 	"fmt"
 	"net/netip"
+	"strings"
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"github.com/sirupsen/logrus"
@@ -64,6 +65,10 @@ func (cmd *servecmd) startWireGuard(conf *config.AppConfig, vpn vpnAddressing) (
 	wg, err := wgembed.NewWithOpts(wgembed.Options{
 		InterfaceName:     conf.WireGuard.Interface,
 		AllowKernelModule: true,
+		// A device may have networks behind it. Their traffic reaches the
+		// interface only if the kernel routes them there, which wg-quick does
+		// with "Table = auto" and wg-embed does with this.
+		ManageRoutes: true,
 	})
 	if err != nil {
 		logrus.Fatal(fmt.Errorf("failed to create WireGuard interface: %w", err))
@@ -95,17 +100,7 @@ func (cmd *servecmd) startWireGuard(conf *config.AppConfig, vpn vpnAddressing) (
 
 	logrus.Infof("WireGuard VPN network is %s", network.StringJoinIPNets(vpn.ipv4, vpn.ipv6))
 
-	options := network.ForwardingOptions{
-		GatewayIface:    conf.VPN.GatewayInterface,
-		CIDR:            conf.VPN.CIDR,
-		CIDRv6:          conf.VPN.CIDRv6,
-		NAT44:           conf.VPN.NAT44,
-		NAT66:           conf.VPN.NAT66,
-		ClientIsolation: conf.VPN.ClientIsolation,
-		AllowedIPs:      conf.VPN.AllowedIPs,
-		Firewall:        conf.VPN.Firewall,
-	}
-	if err := network.ConfigureForwarding(options); err != nil {
+	if err := network.ConfigureForwarding(forwardingOptions(conf, nil)); err != nil {
 		return wg, stop, err
 	}
 
@@ -113,6 +108,47 @@ func (cmd *servecmd) startWireGuard(conf *config.AppConfig, vpn vpnAddressing) (
 		logrus.Fatal(err)
 	}
 	return wg, stop, nil
+}
+
+// forwardingOptions describes the firewall rules for the clients: what the
+// configuration allows them to reach, plus the networks that are routed
+// through devices - those are added by an admin while the server runs, long
+// after these rules were first set up.
+func forwardingOptions(conf *config.AppConfig, routed []string) network.ForwardingOptions {
+	allowed := make([]string, 0, len(conf.VPN.AllowedIPs)+len(routed))
+	allowed = append(allowed, conf.VPN.AllowedIPs...)
+	allowed = append(allowed, routed...)
+
+	return network.ForwardingOptions{
+		GatewayIface:    conf.VPN.GatewayInterface,
+		CIDR:            conf.VPN.CIDR,
+		CIDRv6:          conf.VPN.CIDRv6,
+		NAT44:           conf.VPN.NAT44,
+		NAT66:           conf.VPN.NAT66,
+		ClientIsolation: conf.VPN.ClientIsolation,
+		AllowedIPs:      allowed,
+		Firewall:        conf.VPN.Firewall,
+	}
+}
+
+// routeSync returns what the device manager calls when the routed networks
+// change: the firewall has to let that traffic through as well. The rules are
+// built from scratch every time, which is what happens at startup too - for
+// nftables that is one atomic replacement of the ruleset.
+//
+// Without the WireGuard interface there are no rules of ours to speak of.
+func routeSync(conf *config.AppConfig) func([]string) error {
+	if !conf.WireGuard.Enabled {
+		return nil
+	}
+	return func(routed []string) error {
+		if len(routed) > 0 {
+			logrus.Infof("Updating the firewall rules for the networks routed through devices: %s", strings.Join(routed, ", "))
+		} else {
+			logrus.Info("Updating the firewall rules: no networks are routed through devices any more")
+		}
+		return network.ConfigureForwarding(forwardingOptions(conf, routed))
+	}
 }
 
 // verifyLifecycleCommands checks the config file the operator's commands come

@@ -24,6 +24,10 @@ github.com/freifunkMUC/pg-events v0.5.0 h1:apXtX1WMKwPE+erJ+IhCTYO9gp5wFkymF9/Vc
 github.com/freifunkMUC/pg-events v0.5.0/go.mod h1:61bYUydZagz3ZmJaWcAZ3/BYrXUnZileDz2P9Zm8y08=
 github.com/freifunkMUC/wg-embed v0.11.0 h1:Cyn6ccEezoarMcYfloXV/FikFmlXyNLmKnCKHxG1qDc=
 github.com/freifunkMUC/wg-embed v0.11.0/go.mod h1:KI0dmDt2Q5nLuvVLc35jzQSgCZOHtdkWa78FNNEewsE=
+github.com/freifunkMUC/wg-embed v0.11.1-0.20260927202729-9019eea9d9cf h1:thT11CkmNHjHWeY+XTDlj+H7D4vuN2QbVZM3cdNmmlc=
+github.com/freifunkMUC/wg-embed v0.11.1-0.20260927202729-9019eea9d9cf/go.mod h1:NtH5a9TcGNytX5c6wEvwg35iTD5FjgpAHr7i7hFSMAg=
+github.com/freifunkMUC/wg-embed v0.12.0 h1:F+VxBZX9LKqErHRo6trKAiBgqW8ZqGl7zwnDmN5WiUA=
+github.com/freifunkMUC/wg-embed v0.12.0/go.mod h1:NtH5a9TcGNytX5c6wEvwg35iTD5FjgpAHr7i7hFSMAg=
 github.com/go-jose/go-jose/v4 v4.1.5 h1:RjgjO2LOtWOJKUC5wpwY9LR3B3vwVAz6JS2YHfYU6eA=
 github.com/go-jose/go-jose/v4 v4.1.5/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
 github.com/go-sql-driver/mysql v1.10.1 h1:arlSnNLq6a5yxGxV7qg9lF4j0C+KwD6NbQyKr9QL6ME=

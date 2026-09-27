@@ -387,6 +387,31 @@ func (s *SQLStorage) SetAccess(device *Device, disabled bool, expiresAt *time.Ti
 	return &changed, nil
 }
 
+// SetRoutes writes the routes column of one device, the way SetAccess writes
+// the access ones.
+func (s *SQLStorage) SetRoutes(device *Device, routes string) (*Device, error) {
+	logrus.Debugf("setting routes of device %s: %q", key(device), routes)
+
+	q := s.db.Model(&Device{}).
+		Where("owner = ? AND name = ?", device.Owner, device.Name).
+		UpdateColumn("routes", routes)
+	if q.Error != nil {
+		return nil, fmt.Errorf("failed to change the routes of the device: %w", q.Error)
+	}
+	if q.RowsAffected == 0 {
+		return nil, fmt.Errorf("device '%s' of user '%s' no longer exists", device.Name, device.Owner)
+	}
+
+	changed := *device
+	changed.Routes = routes
+
+	// Postgres hears it from the update trigger; the single-instance backends
+	// are told here.
+	s.EmitUpdate(&changed)
+
+	return &changed, nil
+}
+
 func (s *SQLStorage) Addresses() ([]string, error) {
 	addresses := []string{}
 	if err := s.db.Model(&Device{}).Pluck("address", &addresses).Error; err != nil {

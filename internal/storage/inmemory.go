@@ -194,6 +194,34 @@ func (s *InMemoryStorage) setAccess(device *Device, disabled bool, expiresAt *ti
 	return &changed, nil
 }
 
+// SetRoutes writes the networks behind a device, like SetAccess writes whether
+// it may connect at all.
+func (s *InMemoryStorage) SetRoutes(device *Device, routes string) (*Device, error) {
+	changed, err := s.setRoutes(device, routes)
+	if err != nil {
+		return nil, err
+	}
+
+	// outside the lock, like every other event this storage emits
+	s.EmitUpdate(changed)
+	return changed, nil
+}
+
+func (s *InMemoryStorage) setRoutes(device *Device, routes string) (*Device, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	stored, ok := s.db[key(device)]
+	if !ok {
+		return nil, errors.New("device doesn't exist")
+	}
+
+	changed := *stored
+	changed.Routes = routes
+	s.db[key(&changed)] = &changed
+	return &changed, nil
+}
+
 // DeleteForOwner removes every device of one user. Nothing can fail halfway
 // through a map, so the all-or-nothing promise costs nothing here.
 func (s *InMemoryStorage) DeleteForOwner(owner string) ([]*Device, error) {

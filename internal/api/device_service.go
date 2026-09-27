@@ -166,6 +166,39 @@ func (d *DeviceService) SetDeviceAccess(ctx context.Context, request *connect.Re
 	return connect.NewResponse(mapDevice(device)), nil
 }
 
+// SetDeviceRoutes sets the networks that live behind a device. Admins only,
+// like SetDeviceAccess: the routes decide where everybody's traffic for those
+// networks goes, so they are not the device owner's to choose.
+func (d *DeviceService) SetDeviceRoutes(ctx context.Context, request *connect.Request[proto.SetDeviceRoutesReq]) (*connect.Response[proto.Device], error) {
+	req := request.Msg
+	user, err := authsession.CurrentUser(ctx)
+	if err != nil {
+		return nil, errNotAuthenticated()
+	}
+
+	if !user.Claims.IsAdmin() {
+		return nil, errNotAdmin()
+	}
+
+	deviceOwner := user.Subject
+	if req.Owner != nil {
+		deviceOwner = req.Owner.Value
+	}
+
+	device, err := d.DeviceManager.SetDeviceRoutes(deviceOwner, req.GetName(), req.GetRoutes())
+	if err != nil {
+		return nil, deviceError(ctx, err, "failed to change the routes of the device")
+	}
+
+	audit.Log(ctx, audit.DeviceRoutes, logrus.Fields{
+		"device": device.Name,
+		"owner":  device.Owner,
+		"routes": device.Routes,
+	})
+
+	return connect.NewResponse(mapDevice(device)), nil
+}
+
 func (d *DeviceService) ListAllDevices(ctx context.Context, _ *connect.Request[proto.ListAllDevicesReq]) (*connect.Response[proto.ListAllDevicesRes], error) {
 	user, err := authsession.CurrentUser(ctx)
 	if err != nil {
@@ -215,6 +248,7 @@ func mapDevice(d *storage.Device) *proto.Device {
 		Endpoint:          d.Endpoint,
 		Disabled:          d.Disabled,
 		ExpiresAt:         timeToTimestamp(d.ExpiresAt),
+		Routes:            d.RouteList(),
 		/**
 		 * WireGuard is a connectionless UDP protocol - data is only
 		 * sent over the wire when the client is sending real traffic.

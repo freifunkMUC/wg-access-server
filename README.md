@@ -21,6 +21,7 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 - [API tokens](https://www.freie-netze.org/wg-access-server/auth/#api-tokens) for scripts, using the same API as the web UI
 - Devices can be renamed; admins see and manage the devices of all users
 - Admins can block a device or give it an expiry date, for temporary access ([device access](#device-access))
+- Networks behind a device, for site-to-site links and subnet routers ([routed networks](#networks-behind-a-device))
 - An optional limit on how many devices a user may create
 - WireGuard client configurations as a file or a QR code
 - IPv6: dual-stack, IPv6-only or IPv4-only, with NAT on or off for each
@@ -130,6 +131,37 @@ waiting for the next restart. Blocking takes effect right away, on every replica
 Both are recorded in the [audit log](https://www.freie-netze.org/wg-access-server/audit/), and
 `wg_access_server_devices_blocked` counts the devices in that state wherever the device
 [metrics](#metrics) are enabled.
+
+## Networks behind a device
+
+A device is usually one computer or one phone. It can also be the router of a whole site: an admin
+assigns the networks that live behind it under _admin_ → _Networks_, and the server then sends
+traffic for them through that device and accepts traffic from them through it. That is what makes a
+site-to-site link, or a subnet router for a network the clients could not otherwise reach.
+
+Three things follow from a route, and wg-access-server sets up all of them:
+
+- The networks become part of the device's WireGuard peer, so the tunnel carries them.
+- The kernel gets a route for each of them to the WireGuard interface, the way `wg-quick`'s
+  `Table = auto` does it. Without that nothing would ever be sent there.
+- The firewall rules are extended by them, on top of `vpn.allowedIPs`.
+
+The device on the other end has to be set up for it as well: it needs to forward between its LAN and
+the tunnel, and its own `AllowedIPs` must cover the VPN network. Client configurations downloaded
+after the change carry the routed networks in their `AllowedIPs`; ones downloaded earlier do not, so
+those clients either fetch the configuration again or add the network themselves. With the default
+`vpn.allowedIPs` of `0.0.0.0/0, ::/0` there is nothing to do - it covers everything already.
+
+Routes are admin-only, and some networks are refused:
+
+- a default route - name the networks instead,
+- anything overlapping the VPN networks, which the server hands out itself,
+- anything overlapping a network this server is in: routing it would cut the server off from its own
+  gateway, its database or the clients,
+- and anything another device already carries, since two devices cannot both be the way to a network.
+
+Changes are recorded in the [audit log](https://www.freie-netze.org/wg-access-server/audit/) as
+`device.routes`.
 
 ## Metrics
 

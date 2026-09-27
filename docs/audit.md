@@ -18,6 +18,7 @@ level=info msg=device.delete audit=device.delete actor=admin actor_is_admin=true
 | `device.rename` | A device was renamed                               | `device`, `previous`, `owner`  |
 | `device.access` | An admin blocked a device or changed its expiry     | `device`, `owner`, `disabled`, `expires_at`\*\* |
 | `device.expire` | A device lost its access because its expiry passed | `device`, `owner`              |
+| `device.routes` | An admin changed the networks behind a device       | `device`, `owner`, `routes`    |
 | `user.delete`   | An admin deleted a user, their devices and tokens  | `target_user`                  |
 | `api_token.create` | An API token was created                        | `token`, `token_name`, `expires_at` |
 | `api_token.delete` | An API token was revoked                        | `token`, `token_name`, `owner` |

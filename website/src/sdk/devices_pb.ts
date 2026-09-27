@@ -76,6 +76,15 @@ export class Devices {
 		Device.deserializeBinary
 	);
 
+	private methodInfoSetDeviceRoutes = new grpcWeb.MethodDescriptor<SetDeviceRoutesReq, Device>(
+		"SetDeviceRoutes",
+		'unary',
+		SetDeviceRoutesReq as unknown as MessageCtor<SetDeviceRoutesReq>,
+		Device as unknown as MessageCtor<Device>,
+		(req: SetDeviceRoutesReq) => req.serializeBinary(),
+		Device.deserializeBinary
+	);
+
 	constructor(
 		private hostname: string,
 		private defaultMetadata?: () => grpcWeb.Metadata,
@@ -195,6 +204,25 @@ export class Devices {
 		});
 	}
 
+	setDeviceRoutes(req: SetDeviceRoutesReq.AsObject, metadata?: grpcWeb.Metadata): Promise<Device.AsObject> {
+		return new Promise((resolve, reject) => {
+			const message = SetDeviceRoutesReqFromObject(req);
+			this.client_.rpcCall(
+				this.hostname + '/proto.Devices/SetDeviceRoutes',
+				message,
+				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
+				this.methodInfoSetDeviceRoutes,
+				(err: grpcWeb.Error, res: Device) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(res.toObject());
+					}
+				},
+			);
+		});
+	}
+
 }
 
 
@@ -218,13 +246,14 @@ export declare namespace Device {
 		presharedKey: string,
 		disabled: boolean,
 		expiresAt?: googleProtobufTimestamp.Timestamp.AsObject,
+		routes: Array<string>,
 	}
 }
 
 export class Device extends jspb.Message {
 
 	private static repeatedFields_ = [
-		
+		17,
 	];
 
 	constructor(data?: jspb.Message.MessageArray) {
@@ -348,6 +377,17 @@ export class Device extends jspb.Message {
 		(jspb.Message as any).setWrapperField(this, 16, value);
 	}
 
+	getRoutes(): Array<string> {return jspb.Message.getFieldWithDefault(this, 17, [""]);
+	}
+
+	setRoutes(value: Array<string>): void {
+		(jspb.Message as any).setProto3StringField(this, 17, value);
+	}
+
+	addRoutes(value: string, index?: number): void {
+		return jspb.Message.addToRepeatedField(this, 17, value, index);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		Device.serializeBinaryToWriter(this, writer);
@@ -373,6 +413,7 @@ export class Device extends jspb.Message {
 			presharedKey: this.getPresharedKey(),
 			disabled: this.getDisabled(),
 			expiresAt: (f = this.getExpiresAt()) && f.toObject(),
+			routes: this.getRoutes(),
 		};
 	}
 
@@ -440,6 +481,10 @@ export class Device extends jspb.Message {
 		const field16 = message.getExpiresAt();
 		if (field16 != null) {
 			writer.writeMessage(16, field16, googleProtobufTimestamp.Timestamp.serializeBinaryToWriter);
+		}
+		const field17 = message.getRoutes();
+		if (field17.length > 0) {
+			writer.writeRepeatedString(17, field17);
 		}
 	}
 
@@ -522,6 +567,10 @@ export class Device extends jspb.Message {
 				const field16 = new googleProtobufTimestamp.Timestamp();
 				reader.readMessage(field16, googleProtobufTimestamp.Timestamp.deserializeBinaryFromReader);
 				message.setExpiresAt(field16);
+				break;
+			case 17:
+				const field17 = reader.readString()
+				message.addRoutes(field17);
 				break;
 			default:
 				reader.skipField();
@@ -1147,6 +1196,117 @@ export class ListAllDevicesRes extends jspb.Message {
 	}
 
 }
+export declare namespace SetDeviceRoutesReq {
+	export type AsObject = {
+		name: string,
+		owner?: googleProtobufWrappers.StringValue.AsObject,
+		routes: Array<string>,
+	}
+}
+
+export class SetDeviceRoutesReq extends jspb.Message {
+
+	private static repeatedFields_ = [
+		3,
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, SetDeviceRoutesReq.repeatedFields_, null);
+	}
+
+
+	getName(): string {return jspb.Message.getFieldWithDefault(this, 1, "");
+	}
+
+	setName(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 1, value);
+	}
+
+	getOwner(): googleProtobufWrappers.StringValue {
+		return jspb.Message.getWrapperField(this, googleProtobufWrappers.StringValue, 2);
+	}
+
+	setOwner(value?: googleProtobufWrappers.StringValue): void {
+		(jspb.Message as any).setWrapperField(this, 2, value);
+	}
+
+	getRoutes(): Array<string> {return jspb.Message.getFieldWithDefault(this, 3, [""]);
+	}
+
+	setRoutes(value: Array<string>): void {
+		(jspb.Message as any).setProto3StringField(this, 3, value);
+	}
+
+	addRoutes(value: string, index?: number): void {
+		return jspb.Message.addToRepeatedField(this, 3, value, index);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		SetDeviceRoutesReq.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): SetDeviceRoutesReq.AsObject {
+		let f: any;
+		return {
+			name: this.getName(),
+			owner: (f = this.getOwner()) && f.toObject(),
+			routes: this.getRoutes(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: SetDeviceRoutesReq, writer: jspb.BinaryWriter): void {
+		const field1 = message.getName();
+		if (field1.length > 0) {
+			writer.writeString(1, field1);
+		}
+		const field2 = message.getOwner();
+		if (field2 != null) {
+			writer.writeMessage(2, field2, googleProtobufWrappers.StringValue.serializeBinaryToWriter);
+		}
+		const field3 = message.getRoutes();
+		if (field3.length > 0) {
+			writer.writeRepeatedString(3, field3);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): SetDeviceRoutesReq {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new SetDeviceRoutesReq();
+		return SetDeviceRoutesReq.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: SetDeviceRoutesReq, reader: jspb.BinaryReader): SetDeviceRoutesReq {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readString()
+				message.setName(field1);
+				break;
+			case 2:
+				const field2 = new googleProtobufWrappers.StringValue();
+				reader.readMessage(field2, googleProtobufWrappers.StringValue.deserializeBinaryFromReader);
+				message.setOwner(field2);
+				break;
+			case 3:
+				const field3 = reader.readString()
+				message.addRoutes(field3);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
 export declare namespace SetDeviceAccessReq {
 	export type AsObject = {
 		name: string,
@@ -1315,6 +1475,8 @@ function DeviceFromObject(obj: Device.AsObject | undefined): Device | undefined 
 	message.setPresharedKey(obj.presharedKey);
 	message.setDisabled(obj.disabled);
 	message.setExpiresAt(TimestampFromObject(obj.expiresAt));
+	(obj.routes || [])
+		.forEach((item) => message.addRoutes(item));
 	return message;
 }
 
@@ -1407,6 +1569,18 @@ function ListAllDevicesResFromObject(obj: ListAllDevicesRes.AsObject | undefined
 	(obj.items || [])
 		.map((item) => DeviceFromObject(item))
 		.forEach((item) => message.addItems(item));
+	return message;
+}
+
+function SetDeviceRoutesReqFromObject(obj: SetDeviceRoutesReq.AsObject | undefined): SetDeviceRoutesReq | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new SetDeviceRoutesReq();
+	message.setName(obj.name);
+	message.setOwner(StringValueFromObject(obj.owner));
+	(obj.routes || [])
+		.forEach((item) => message.addRoutes(item));
 	return message;
 }
 

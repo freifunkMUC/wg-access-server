@@ -29,6 +29,8 @@ const (
 	// DeviceExpire is the server taking the access of a device away because
 	// its expiry date has passed.
 	DeviceExpire = "device.expire"
+	// DeviceRoutes is an admin changing the networks behind a device.
+	DeviceRoutes = "device.routes"
 	UserDelete   = "user.delete"
 	TokenCreate  = "api_token.create"
 	TokenDelete  = "api_token.delete"

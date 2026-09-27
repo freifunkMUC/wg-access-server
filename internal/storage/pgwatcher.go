@@ -50,7 +50,7 @@ func NewPgWatcher(db *sql.DB, connectionString string, table string) (*PgWatcher
 }
 
 // attachUpdateTrigger reports the updates that matter: a device that was
-// renamed, and one whose access changed. "AFTER UPDATE OF ..." fires only when
+// renamed, one whose access changed, and one whose routes changed. "AFTER UPDATE OF ..." fires only when
 // a statement assigns one of those columns, so the metadata sync - which
 // writes the traffic counters and the handshake time - stays silent. The
 // trigger reuses the function and the channel pg-events set up, so the events
@@ -64,7 +64,7 @@ func attachUpdateTrigger(db *sql.DB, table string) error {
 		}
 	}
 	statement := fmt.Sprintf(
-		"CREATE TRIGGER %s AFTER UPDATE OF name, disabled, expires_at ON %s FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event()",
+		"CREATE TRIGGER %s AFTER UPDATE OF name, disabled, expires_at, routes ON %s FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event()",
 		trigger, table)
 	if _, err := db.Exec(statement); err != nil {
 		return fmt.Errorf("failed to create the update trigger on %s: %w", table, err)
