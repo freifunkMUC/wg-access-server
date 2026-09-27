@@ -359,6 +359,34 @@ func (s *SQLStorage) Rename(device *Device, newName string) (*Device, error) {
 	return &renamed, nil
 }
 
+// SetAccess writes the access columns of one device. Like Rename it goes
+// through UpdateColumns, so the gorm watcher - which cannot map a bulk update
+// back to a device - stays out of it and the event is emitted here.
+func (s *SQLStorage) SetAccess(device *Device, disabled bool, expiresAt *time.Time) (*Device, error) {
+	logrus.Debugf("setting access of device %s: disabled=%t expiresAt=%v", key(device), disabled, expiresAt)
+
+	q := s.db.Model(&Device{}).
+		Where("owner = ? AND name = ?", device.Owner, device.Name).
+		UpdateColumns(map[string]interface{}{"disabled": disabled, "expires_at": expiresAt})
+	if q.Error != nil {
+		return nil, fmt.Errorf("failed to change the access of the device: %w", q.Error)
+	}
+	if q.RowsAffected == 0 {
+		return nil, fmt.Errorf("device '%s' of user '%s' no longer exists", device.Name, device.Owner)
+	}
+
+	changed := *device
+	changed.Disabled = disabled
+	changed.ExpiresAt = expiresAt
+
+	// Postgres learns about this from the update trigger, so that every
+	// replica adds or removes the peer; the other backends are
+	// single-instance and are told here.
+	s.EmitUpdate(&changed)
+
+	return &changed, nil
+}
+
 func (s *SQLStorage) Addresses() ([]string, error) {
 	addresses := []string{}
 	if err := s.db.Model(&Device{}).Pluck("address", &addresses).Error; err != nil {

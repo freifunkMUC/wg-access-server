@@ -157,8 +157,14 @@ func TestUpgradeFromBeforeMigrations(t *testing.T) {
 			if device.Address != "10.44.0.2/32" || !device.CreatedAt.Equal(created) {
 				t.Errorf("device = %+v, want it unchanged", device)
 			}
-			if ids := appliedMigrations(t, s.db); strings.Join(ids, ",") != "0001_devices,0002_api_tokens" {
-				t.Errorf("applied = %v, want every migration", ids)
+			// Every migration, taken from the list itself so that adding one
+			// does not need this test changed.
+			var want []string
+			for _, m := range migrations {
+				want = append(want, m.id)
+			}
+			if ids := appliedMigrations(t, s.db); strings.Join(ids, ",") != strings.Join(want, ",") {
+				t.Errorf("applied = %v, want %v", ids, want)
 			}
 		})
 	}

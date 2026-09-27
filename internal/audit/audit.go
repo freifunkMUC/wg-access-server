@@ -24,6 +24,11 @@ const (
 	DeviceCreate = "device.create"
 	DeviceDelete = "device.delete"
 	DeviceRename = "device.rename"
+	// DeviceAccess is an admin blocking a device or changing its expiry date.
+	DeviceAccess = "device.access"
+	// DeviceExpire is the server taking the access of a device away because
+	// its expiry date has passed.
+	DeviceExpire = "device.expire"
 	UserDelete   = "user.delete"
 	TokenCreate  = "api_token.create"
 	TokenDelete  = "api_token.delete"

@@ -29,6 +29,47 @@ export function lastSeen(timestamp: timestamp_pb.Timestamp.AsObject | undefined)
   });
 }
 
+// A device the server has no peer for, or one that is about to lose it. What
+// the UI needs is the same in both places it shows a device, so it is decided
+// here rather than in each of them.
+export interface DeviceAccess {
+  // blocked: the device cannot connect at all - an admin disabled it, or its
+  // expiry date has passed.
+  blocked: boolean;
+  label: string;
+}
+
+// deviceAccess describes what stands between a device and the VPN. It returns
+// undefined for a device that may connect and keeps it that way, which is the
+// normal case and needs no explaining.
+export function deviceAccess(
+  device: { disabled?: boolean; expiresAt?: timestamp_pb.Timestamp.AsObject },
+  now: Date = new Date(),
+): DeviceAccess | undefined {
+  if (device.disabled) {
+    return { blocked: true, label: 'Blocked' };
+  }
+  if (!device.expiresAt) {
+    return undefined;
+  }
+  const at = toDate(device.expiresAt);
+  if (at <= now) {
+    return { blocked: true, label: 'Expired' };
+  }
+  return { blocked: false, label: 'Expires ' + formatDistance(at, now, { addSuffix: true }) };
+}
+
+// accessRank orders devices by how much attention their access needs: the ones
+// that cannot connect last, so that sorting the column descending brings them
+// to the top.
+export function accessRank(device: { disabled?: boolean; expiresAt?: timestamp_pb.Timestamp.AsObject }): number {
+  const access = deviceAccess(device);
+  if (!access) {
+    return 0;
+  }
+  return access.blocked ? 2 : 1;
+}
+
 export function setClipboard(text: string) {
   const textarea = document.createElement('textarea');
   textarea.value = text;

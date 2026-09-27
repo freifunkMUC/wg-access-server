@@ -16,12 +16,20 @@ level=info msg=device.delete audit=device.delete actor=admin actor_is_admin=true
 | `device.create` | A device was added                                 | `device`, `owner`, `address`   |
 | `device.delete` | A device was deleted                               | `device`, `owner`, `reason`\*  |
 | `device.rename` | A device was renamed                               | `device`, `previous`, `owner`  |
+| `device.access` | An admin blocked a device or changed its expiry     | `device`, `owner`, `disabled`, `expires_at`\*\* |
+| `device.expire` | A device lost its access because its expiry passed | `device`, `owner`              |
 | `user.delete`   | An admin deleted a user, their devices and tokens  | `target_user`                  |
 | `api_token.create` | An API token was created                        | `token`, `token_name`, `expires_at` |
 | `api_token.delete` | An API token was revoked                        | `token`, `token_name`, `owner` |
 
 \* `reason=inactive` marks a device the server deleted by itself because it exceeded the inactive
 device grace period.
+
+\*\* The record says what the device's access looks like after the change, not what was changed.
+`expires_at` is absent when the device's access does not expire.
+
+`device.expire` is recorded by the server itself, so its actor is `system`: nobody asked for it, the
+date an admin set earlier simply passed. It is recorded once per device, when the peer is removed.
 
 ## Who did it
 

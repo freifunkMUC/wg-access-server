@@ -114,6 +114,58 @@ func (d *DeviceService) RenameDevice(ctx context.Context, request *connect.Reque
 	return connect.NewResponse(mapDevice(device)), nil
 }
 
+// SetDeviceAccess blocks a device from connecting, or gives it an expiry date.
+// Admins only, and deliberately so: a user who could lift the block or push
+// the expiry date of their own device out would have no block at all. They can
+// still delete the device, which takes its access away rather than granting
+// any.
+func (d *DeviceService) SetDeviceAccess(ctx context.Context, request *connect.Request[proto.SetDeviceAccessReq]) (*connect.Response[proto.Device], error) {
+	req := request.Msg
+	user, err := authsession.CurrentUser(ctx)
+	if err != nil {
+		return nil, errNotAuthenticated()
+	}
+
+	if !user.Claims.IsAdmin() {
+		return nil, errNotAdmin()
+	}
+
+	deviceOwner := user.Subject
+	if req.Owner != nil {
+		deviceOwner = req.Owner.Value
+	}
+
+	change := devices.AccessChange{ClearExpiresAt: req.GetClearExpiresAt()}
+	if req.Disabled != nil {
+		disabled := req.Disabled.Value
+		change.Disabled = &disabled
+	}
+	if req.ExpiresAt != nil {
+		expiresAt := req.GetExpiresAt().AsTime()
+		change.ExpiresAt = &expiresAt
+	}
+
+	device, err := d.DeviceManager.SetDeviceAccess(deviceOwner, req.GetName(), change)
+	if err != nil {
+		return nil, deviceError(ctx, err, "failed to change the access of the device")
+	}
+
+	// The state the device is in now, not the change that was asked for: that
+	// is what an operator reading the log wants to know. No expiry means no
+	// field, as it does for an API token.
+	fields := logrus.Fields{
+		"device":   device.Name,
+		"owner":    device.Owner,
+		"disabled": device.Disabled,
+	}
+	if device.ExpiresAt != nil {
+		fields["expires_at"] = device.ExpiresAt
+	}
+	audit.Log(ctx, audit.DeviceAccess, fields)
+
+	return connect.NewResponse(mapDevice(device)), nil
+}
+
 func (d *DeviceService) ListAllDevices(ctx context.Context, _ *connect.Request[proto.ListAllDevicesReq]) (*connect.Response[proto.ListAllDevicesRes], error) {
 	user, err := authsession.CurrentUser(ctx)
 	if err != nil {
@@ -161,6 +213,8 @@ func mapDevice(d *storage.Device) *proto.Device {
 		ReceiveBytes:      d.ReceiveBytes,
 		TransmitBytes:     d.TransmitBytes,
 		Endpoint:          d.Endpoint,
+		Disabled:          d.Disabled,
+		ExpiresAt:         timeToTimestamp(d.ExpiresAt),
 		/**
 		 * WireGuard is a connectionless UDP protocol - data is only
 		 * sent over the wire when the client is sending real traffic.

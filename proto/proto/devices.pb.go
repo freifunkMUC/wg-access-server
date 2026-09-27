@@ -40,8 +40,14 @@ type Device struct {
 	OwnerEmail        string                 `protobuf:"bytes,12,opt,name=owner_email,json=ownerEmail,proto3" json:"owner_email,omitempty"`
 	OwnerProvider     string                 `protobuf:"bytes,13,opt,name=owner_provider,json=ownerProvider,proto3" json:"owner_provider,omitempty"`
 	PresharedKey      string                 `protobuf:"bytes,14,opt,name=preshared_key,json=presharedKey,proto3" json:"preshared_key,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// disabled: an admin blocked the device, so it has no WireGuard peer and
+	// cannot connect until the block is lifted.
+	Disabled bool `protobuf:"varint,15,opt,name=disabled,proto3" json:"disabled,omitempty"`
+	// unset: the device's access does not expire. Once the time has passed the
+	// device loses its peer, like a disabled one.
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Device) Reset() {
@@ -170,6 +176,20 @@ func (x *Device) GetPresharedKey() string {
 		return x.PresharedKey
 	}
 	return ""
+}
+
+func (x *Device) GetDisabled() bool {
+	if x != nil {
+		return x.Disabled
+	}
+	return false
+}
+
+func (x *Device) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
 }
 
 type AddDeviceReq struct {
@@ -532,11 +552,96 @@ func (x *ListAllDevicesRes) GetItems() []*Device {
 	return nil
 }
 
+// SetDeviceAccessReq changes whether a device may connect. Both changes are
+// optional, so one of them can be made without reading and sending back the
+// other - two admins working at once then cannot undo each other's change.
+type SetDeviceAccessReq struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// if empty, defaults to the current user
+	Owner *wrapperspb.StringValue `protobuf:"bytes,2,opt,name=owner,proto3" json:"owner,omitempty"`
+	// unset: leave the block as it is
+	Disabled *wrapperspb.BoolValue `protobuf:"bytes,3,opt,name=disabled,proto3" json:"disabled,omitempty"`
+	// unset: leave the expiry as it is. Must be in the future - to end access
+	// now, disable the device.
+	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// true: the device's access no longer expires. Takes precedence over
+	// expires_at.
+	ClearExpiresAt bool `protobuf:"varint,5,opt,name=clear_expires_at,json=clearExpiresAt,proto3" json:"clear_expires_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SetDeviceAccessReq) Reset() {
+	*x = SetDeviceAccessReq{}
+	mi := &file_devices_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetDeviceAccessReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetDeviceAccessReq) ProtoMessage() {}
+
+func (x *SetDeviceAccessReq) ProtoReflect() protoreflect.Message {
+	mi := &file_devices_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetDeviceAccessReq.ProtoReflect.Descriptor instead.
+func (*SetDeviceAccessReq) Descriptor() ([]byte, []int) {
+	return file_devices_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SetDeviceAccessReq) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *SetDeviceAccessReq) GetOwner() *wrapperspb.StringValue {
+	if x != nil {
+		return x.Owner
+	}
+	return nil
+}
+
+func (x *SetDeviceAccessReq) GetDisabled() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Disabled
+	}
+	return nil
+}
+
+func (x *SetDeviceAccessReq) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+func (x *SetDeviceAccessReq) GetClearExpiresAt() bool {
+	if x != nil {
+		return x.ClearExpiresAt
+	}
+	return false
+}
+
 var File_devices_proto protoreflect.FileDescriptor
 
 const file_devices_proto_rawDesc = "" +
 	"\n" +
-	"\rdevices.proto\x12\x05proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\x84\x04\n" +
+	"\rdevices.proto\x12\x05proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xdb\x04\n" +
 	"\x06Device\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05owner\x18\x02 \x01(\tR\x05owner\x12\x1d\n" +
@@ -556,7 +661,10 @@ const file_devices_proto_rawDesc = "" +
 	"\vowner_email\x18\f \x01(\tR\n" +
 	"ownerEmail\x12%\n" +
 	"\x0eowner_provider\x18\r \x01(\tR\rownerProvider\x12#\n" +
-	"\rpreshared_key\x18\x0e \x01(\tR\fpresharedKey\"\xf8\x01\n" +
+	"\rpreshared_key\x18\x0e \x01(\tR\fpresharedKey\x12\x1a\n" +
+	"\bdisabled\x18\x0f \x01(\bR\bdisabled\x129\n" +
+	"\n" +
+	"expires_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\xf8\x01\n" +
 	"\fAddDeviceReq\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1d\n" +
 	"\n" +
@@ -577,13 +685,21 @@ const file_devices_proto_rawDesc = "" +
 	"\x05owner\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\x05owner\"\x13\n" +
 	"\x11ListAllDevicesReq\"8\n" +
 	"\x11ListAllDevicesRes\x12#\n" +
-	"\x05items\x18\x01 \x03(\v2\r.proto.DeviceR\x05items2\xbe\x02\n" +
+	"\x05items\x18\x01 \x03(\v2\r.proto.DeviceR\x05items\"\xf9\x01\n" +
+	"\x12SetDeviceAccessReq\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x122\n" +
+	"\x05owner\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\x05owner\x126\n" +
+	"\bdisabled\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x129\n" +
+	"\n" +
+	"expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12(\n" +
+	"\x10clear_expires_at\x18\x05 \x01(\bR\x0eclearExpiresAt2\xfd\x02\n" +
 	"\aDevices\x121\n" +
 	"\tAddDevice\x12\x13.proto.AddDeviceReq\x1a\r.proto.Device\"\x00\x12=\n" +
 	"\vListDevices\x12\x15.proto.ListDevicesReq\x1a\x15.proto.ListDevicesRes\"\x00\x12@\n" +
 	"\fDeleteDevice\x12\x16.proto.DeleteDeviceReq\x1a\x16.google.protobuf.Empty\"\x00\x127\n" +
 	"\fRenameDevice\x12\x16.proto.RenameDeviceReq\x1a\r.proto.Device\"\x00\x12F\n" +
-	"\x0eListAllDevices\x12\x18.proto.ListAllDevicesReq\x1a\x18.proto.ListAllDevicesRes\"\x00B5Z3github.com/freifunkMUC/wg-access-server/proto/protob\x06proto3"
+	"\x0eListAllDevices\x12\x18.proto.ListAllDevicesReq\x1a\x18.proto.ListAllDevicesRes\"\x00\x12=\n" +
+	"\x0fSetDeviceAccess\x12\x19.proto.SetDeviceAccessReq\x1a\r.proto.Device\"\x00B5Z3github.com/freifunkMUC/wg-access-server/proto/protob\x06proto3"
 
 var (
 	file_devices_proto_rawDescOnce sync.Once
@@ -597,7 +713,7 @@ func file_devices_proto_rawDescGZIP() []byte {
 	return file_devices_proto_rawDescData
 }
 
-var file_devices_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_devices_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_devices_proto_goTypes = []any{
 	(*Device)(nil),                 // 0: proto.Device
 	(*AddDeviceReq)(nil),           // 1: proto.AddDeviceReq
@@ -607,32 +723,40 @@ var file_devices_proto_goTypes = []any{
 	(*DeleteDeviceReq)(nil),        // 5: proto.DeleteDeviceReq
 	(*ListAllDevicesReq)(nil),      // 6: proto.ListAllDevicesReq
 	(*ListAllDevicesRes)(nil),      // 7: proto.ListAllDevicesRes
-	(*timestamppb.Timestamp)(nil),  // 8: google.protobuf.Timestamp
-	(*wrapperspb.StringValue)(nil), // 9: google.protobuf.StringValue
-	(*emptypb.Empty)(nil),          // 10: google.protobuf.Empty
+	(*SetDeviceAccessReq)(nil),     // 8: proto.SetDeviceAccessReq
+	(*timestamppb.Timestamp)(nil),  // 9: google.protobuf.Timestamp
+	(*wrapperspb.StringValue)(nil), // 10: google.protobuf.StringValue
+	(*wrapperspb.BoolValue)(nil),   // 11: google.protobuf.BoolValue
+	(*emptypb.Empty)(nil),          // 12: google.protobuf.Empty
 }
 var file_devices_proto_depIdxs = []int32{
-	8,  // 0: proto.Device.created_at:type_name -> google.protobuf.Timestamp
-	8,  // 1: proto.Device.last_handshake_time:type_name -> google.protobuf.Timestamp
-	9,  // 2: proto.RenameDeviceReq.owner:type_name -> google.protobuf.StringValue
-	0,  // 3: proto.ListDevicesRes.items:type_name -> proto.Device
-	9,  // 4: proto.DeleteDeviceReq.owner:type_name -> google.protobuf.StringValue
-	0,  // 5: proto.ListAllDevicesRes.items:type_name -> proto.Device
-	1,  // 6: proto.Devices.AddDevice:input_type -> proto.AddDeviceReq
-	3,  // 7: proto.Devices.ListDevices:input_type -> proto.ListDevicesReq
-	5,  // 8: proto.Devices.DeleteDevice:input_type -> proto.DeleteDeviceReq
-	2,  // 9: proto.Devices.RenameDevice:input_type -> proto.RenameDeviceReq
-	6,  // 10: proto.Devices.ListAllDevices:input_type -> proto.ListAllDevicesReq
-	0,  // 11: proto.Devices.AddDevice:output_type -> proto.Device
-	4,  // 12: proto.Devices.ListDevices:output_type -> proto.ListDevicesRes
-	10, // 13: proto.Devices.DeleteDevice:output_type -> google.protobuf.Empty
-	0,  // 14: proto.Devices.RenameDevice:output_type -> proto.Device
-	7,  // 15: proto.Devices.ListAllDevices:output_type -> proto.ListAllDevicesRes
-	11, // [11:16] is the sub-list for method output_type
-	6,  // [6:11] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	9,  // 0: proto.Device.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 1: proto.Device.last_handshake_time:type_name -> google.protobuf.Timestamp
+	9,  // 2: proto.Device.expires_at:type_name -> google.protobuf.Timestamp
+	10, // 3: proto.RenameDeviceReq.owner:type_name -> google.protobuf.StringValue
+	0,  // 4: proto.ListDevicesRes.items:type_name -> proto.Device
+	10, // 5: proto.DeleteDeviceReq.owner:type_name -> google.protobuf.StringValue
+	0,  // 6: proto.ListAllDevicesRes.items:type_name -> proto.Device
+	10, // 7: proto.SetDeviceAccessReq.owner:type_name -> google.protobuf.StringValue
+	11, // 8: proto.SetDeviceAccessReq.disabled:type_name -> google.protobuf.BoolValue
+	9,  // 9: proto.SetDeviceAccessReq.expires_at:type_name -> google.protobuf.Timestamp
+	1,  // 10: proto.Devices.AddDevice:input_type -> proto.AddDeviceReq
+	3,  // 11: proto.Devices.ListDevices:input_type -> proto.ListDevicesReq
+	5,  // 12: proto.Devices.DeleteDevice:input_type -> proto.DeleteDeviceReq
+	2,  // 13: proto.Devices.RenameDevice:input_type -> proto.RenameDeviceReq
+	6,  // 14: proto.Devices.ListAllDevices:input_type -> proto.ListAllDevicesReq
+	8,  // 15: proto.Devices.SetDeviceAccess:input_type -> proto.SetDeviceAccessReq
+	0,  // 16: proto.Devices.AddDevice:output_type -> proto.Device
+	4,  // 17: proto.Devices.ListDevices:output_type -> proto.ListDevicesRes
+	12, // 18: proto.Devices.DeleteDevice:output_type -> google.protobuf.Empty
+	0,  // 19: proto.Devices.RenameDevice:output_type -> proto.Device
+	7,  // 20: proto.Devices.ListAllDevices:output_type -> proto.ListAllDevicesRes
+	0,  // 21: proto.Devices.SetDeviceAccess:output_type -> proto.Device
+	16, // [16:22] is the sub-list for method output_type
+	10, // [10:16] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_devices_proto_init() }
@@ -646,7 +770,7 @@ func file_devices_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_devices_proto_rawDesc), len(file_devices_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -44,6 +44,8 @@ const (
 	DevicesRenameDeviceProcedure = "/proto.Devices/RenameDevice"
 	// DevicesListAllDevicesProcedure is the fully-qualified name of the Devices's ListAllDevices RPC.
 	DevicesListAllDevicesProcedure = "/proto.Devices/ListAllDevices"
+	// DevicesSetDeviceAccessProcedure is the fully-qualified name of the Devices's SetDeviceAccess RPC.
+	DevicesSetDeviceAccessProcedure = "/proto.Devices/SetDeviceAccess"
 )
 
 // DevicesClient is a client for the proto.Devices service.
@@ -54,6 +56,10 @@ type DevicesClient interface {
 	RenameDevice(context.Context, *connect.Request[proto.RenameDeviceReq]) (*connect.Response[proto.Device], error)
 	// admin only
 	ListAllDevices(context.Context, *connect.Request[proto.ListAllDevicesReq]) (*connect.Response[proto.ListAllDevicesRes], error)
+	// SetDeviceAccess blocks a device from connecting, or gives it an expiry
+	// date. It is admin only: a user must not be able to lift a block or
+	// extend the expiry an admin set on their device.
+	SetDeviceAccess(context.Context, *connect.Request[proto.SetDeviceAccessReq]) (*connect.Response[proto.Device], error)
 }
 
 // NewDevicesClient constructs a client for the proto.Devices service. By default, it uses the
@@ -97,16 +103,23 @@ func NewDevicesClient(httpClient connect.HTTPClient, baseURL string, opts ...con
 			connect.WithSchema(devicesMethods.ByName("ListAllDevices")),
 			connect.WithClientOptions(opts...),
 		),
+		setDeviceAccess: connect.NewClient[proto.SetDeviceAccessReq, proto.Device](
+			httpClient,
+			baseURL+DevicesSetDeviceAccessProcedure,
+			connect.WithSchema(devicesMethods.ByName("SetDeviceAccess")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // devicesClient implements DevicesClient.
 type devicesClient struct {
-	addDevice      *connect.Client[proto.AddDeviceReq, proto.Device]
-	listDevices    *connect.Client[proto.ListDevicesReq, proto.ListDevicesRes]
-	deleteDevice   *connect.Client[proto.DeleteDeviceReq, emptypb.Empty]
-	renameDevice   *connect.Client[proto.RenameDeviceReq, proto.Device]
-	listAllDevices *connect.Client[proto.ListAllDevicesReq, proto.ListAllDevicesRes]
+	addDevice       *connect.Client[proto.AddDeviceReq, proto.Device]
+	listDevices     *connect.Client[proto.ListDevicesReq, proto.ListDevicesRes]
+	deleteDevice    *connect.Client[proto.DeleteDeviceReq, emptypb.Empty]
+	renameDevice    *connect.Client[proto.RenameDeviceReq, proto.Device]
+	listAllDevices  *connect.Client[proto.ListAllDevicesReq, proto.ListAllDevicesRes]
+	setDeviceAccess *connect.Client[proto.SetDeviceAccessReq, proto.Device]
 }
 
 // AddDevice calls proto.Devices.AddDevice.
@@ -134,6 +147,11 @@ func (c *devicesClient) ListAllDevices(ctx context.Context, req *connect.Request
 	return c.listAllDevices.CallUnary(ctx, req)
 }
 
+// SetDeviceAccess calls proto.Devices.SetDeviceAccess.
+func (c *devicesClient) SetDeviceAccess(ctx context.Context, req *connect.Request[proto.SetDeviceAccessReq]) (*connect.Response[proto.Device], error) {
+	return c.setDeviceAccess.CallUnary(ctx, req)
+}
+
 // DevicesHandler is an implementation of the proto.Devices service.
 type DevicesHandler interface {
 	AddDevice(context.Context, *connect.Request[proto.AddDeviceReq]) (*connect.Response[proto.Device], error)
@@ -142,6 +160,10 @@ type DevicesHandler interface {
 	RenameDevice(context.Context, *connect.Request[proto.RenameDeviceReq]) (*connect.Response[proto.Device], error)
 	// admin only
 	ListAllDevices(context.Context, *connect.Request[proto.ListAllDevicesReq]) (*connect.Response[proto.ListAllDevicesRes], error)
+	// SetDeviceAccess blocks a device from connecting, or gives it an expiry
+	// date. It is admin only: a user must not be able to lift a block or
+	// extend the expiry an admin set on their device.
+	SetDeviceAccess(context.Context, *connect.Request[proto.SetDeviceAccessReq]) (*connect.Response[proto.Device], error)
 }
 
 // NewDevicesHandler builds an HTTP handler from the service implementation. It returns the path on
@@ -181,6 +203,12 @@ func NewDevicesHandler(svc DevicesHandler, opts ...connect.HandlerOption) (strin
 		connect.WithSchema(devicesMethods.ByName("ListAllDevices")),
 		connect.WithHandlerOptions(opts...),
 	)
+	devicesSetDeviceAccessHandler := connect.NewUnaryHandler(
+		DevicesSetDeviceAccessProcedure,
+		svc.SetDeviceAccess,
+		connect.WithSchema(devicesMethods.ByName("SetDeviceAccess")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/proto.Devices/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DevicesAddDeviceProcedure:
@@ -193,6 +221,8 @@ func NewDevicesHandler(svc DevicesHandler, opts ...connect.HandlerOption) (strin
 			devicesRenameDeviceHandler.ServeHTTP(w, r)
 		case DevicesListAllDevicesProcedure:
 			devicesListAllDevicesHandler.ServeHTTP(w, r)
+		case DevicesSetDeviceAccessProcedure:
+			devicesSetDeviceAccessHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -220,4 +250,8 @@ func (UnimplementedDevicesHandler) RenameDevice(context.Context, *connect.Reques
 
 func (UnimplementedDevicesHandler) ListAllDevices(context.Context, *connect.Request[proto.ListAllDevicesReq]) (*connect.Response[proto.ListAllDevicesRes], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Devices.ListAllDevices is not implemented"))
+}
+
+func (UnimplementedDevicesHandler) SetDeviceAccess(context.Context, *connect.Request[proto.SetDeviceAccessReq]) (*connect.Response[proto.Device], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Devices.SetDeviceAccess is not implemented"))
 }

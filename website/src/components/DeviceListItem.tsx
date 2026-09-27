@@ -8,16 +8,16 @@ import WifiOffIcon from '@mui/icons-material/WifiOff';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import numeral from 'numeral';
-import { lastSeen } from '../Util';
+import { deviceAccess, lastSeen } from '../Util';
 import { AppState } from '../AppState';
 import { PopoverDisplay } from './PopoverDisplay';
 import { Device } from '../sdk/devices_pb';
-import { grpc } from '../Api';
+import { grpc, toDate } from '../Api';
 import { observer } from 'mobx-react';
 import { confirm, prompt } from './Present';
 import { toast } from './Toast';
 import { errorMessage } from '../Util';
-import { IconButton, Skeleton, Typography } from '@mui/material';
+import { Chip, IconButton, Skeleton, Stack, Typography } from '@mui/material';
 
 interface Props {
   device: Device.AsObject;
@@ -55,9 +55,18 @@ export const DeviceListItem = observer(function DeviceListItem({ device, onChang
   };
 
   const metadata = AppState.info?.metadataEnabled;
+  // Why the tunnel is dead, if it is: without this the user would only see a
+  // device that never connects, and nothing saying that an admin blocked it or
+  // that its access ran out.
+  const access = deviceAccess(device);
   return (
     <DeviceCard
-      title={<Typography style={{ wordBreak: 'break-word' }}>{device.name}</Typography>}
+      title={
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+          <Typography style={{ wordBreak: 'break-word' }}>{device.name}</Typography>
+          {access && <Chip size="small" color={access.blocked ? 'error' : 'warning'} label={access.label} />}
+        </Stack>
+      }
       subheader={'Last seen: ' + lastSeen(device.lastHandshakeTime)}
       avatar={
         <Avatar style={{ backgroundColor: device.connected ? '#76de8a' : '#bdbdbd' }}>
@@ -83,6 +92,7 @@ export const DeviceListItem = observer(function DeviceListItem({ device, onChang
             ]
           : []),
         ...(metadata && !device.connected ? [['Disconnected'] as Row] : []),
+        ...(device.expiresAt ? [['Access ends', toDate(device.expiresAt).toLocaleString()] as Row] : []),
         ['Public key', <PopoverDisplay label="Show">{device.publicKey}</PopoverDisplay>] as Row,
         [
           'Pre-shared key',

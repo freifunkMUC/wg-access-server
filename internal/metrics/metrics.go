@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -60,6 +61,11 @@ var (
 	devicesConnectedDesc = prometheus.NewDesc(
 		"wg_access_server_devices_connected",
 		"Number of devices considered connected (recent handshake).",
+		nil, nil,
+	)
+	devicesBlockedDesc = prometheus.NewDesc(
+		"wg_access_server_devices_blocked",
+		"Number of devices that may not connect (disabled by an admin, or past their expiry date).",
 		nil, nil,
 	)
 	devicesBytesReceivedDesc = prometheus.NewDesc(
@@ -120,6 +126,7 @@ type deviceCollector struct {
 func (c *deviceCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- devicesTotalDesc
 	ch <- devicesConnectedDesc
+	ch <- devicesBlockedDesc
 	ch <- devicesBytesReceivedDesc
 	ch <- devicesBytesTransmittedDesc
 	ch <- deviceScrapeErrorDesc
@@ -145,11 +152,15 @@ func (c *deviceCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 	emitMetric(ch, deviceScrapeErrorDesc, 0)
 
-	var connected int
+	var connected, blocked int
 	var receiveBytes, transmitBytes int64
+	now := time.Now()
 	for _, d := range devs {
 		if d.LastHandshakeTime != nil && devices.IsConnected(*d.LastHandshakeTime) {
 			connected++
+		}
+		if !d.AccessAllowed(now) {
+			blocked++
 		}
 		receiveBytes += d.ReceiveBytes
 		transmitBytes += d.TransmitBytes
@@ -157,6 +168,7 @@ func (c *deviceCollector) Collect(ch chan<- prometheus.Metric) {
 
 	emitMetric(ch, devicesTotalDesc, float64(len(devs)))
 	emitMetric(ch, devicesConnectedDesc, float64(connected))
+	emitMetric(ch, devicesBlockedDesc, float64(blocked))
 	emitMetric(ch, devicesBytesReceivedDesc, float64(receiveBytes))
 	emitMetric(ch, devicesBytesTransmittedDesc, float64(transmitBytes))
 
