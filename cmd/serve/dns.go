@@ -43,18 +43,71 @@ func startDNS(conf *config.AppConfig, deviceManager *devices.DeviceManager, stor
 	stop := func() { _ = dns.Close() }
 
 	if conf.DNS.Domain != "" {
-		push := func(_ *storage.Device) {
-			dns.PushAuthZone(generateZone(deviceManager, vpn.addrs))
+		rebuild := func() { dns.PushAuthZone(generateZone(deviceManager, vpn.addrs)) }
+		rebuild()
+
+		// Rebuild the zone whenever a device changes. A renamed device keeps
+		// its addresses but answers to a new name, so an update matters as
+		// much as an addition or a deletion.
+		updater := newZoneUpdater(rebuild)
+		storageBackend.OnAdd(updater.notify)
+		storageBackend.OnUpdate(updater.notify)
+		storageBackend.OnDelete(updater.notify)
+		stop = func() {
+			updater.stop()
+			_ = dns.Close()
 		}
-		push(nil)
-		// Rebuild the zone in the background whenever a device changes. A
-		// renamed device keeps its addresses but answers to a new name, so an
-		// update matters as much as an addition or a deletion.
-		storageBackend.OnAdd(push)
-		storageBackend.OnUpdate(push)
-		storageBackend.OnDelete(push)
 	}
 	return stop, nil
+}
+
+// zoneUpdater rebuilds the authoritative zone after a device changed. It does
+// so in the background and only once for however many changes arrive while it
+// is working: the zone is built from every device there is, and the change
+// that triggers it reaches us while the device creation holds the allocation
+// lock that every other creation waits for. Importing a hundred devices would
+// otherwise rebuild the zone a hundred times, each time reading them all.
+type zoneUpdater struct {
+	changed chan struct{}
+	quit    chan struct{}
+	done    chan struct{}
+}
+
+func newZoneUpdater(rebuild func()) *zoneUpdater {
+	updater := &zoneUpdater{
+		// one slot: a change that arrives while a rebuild is running leaves a
+		// note that one more is needed, and further ones need nothing
+		changed: make(chan struct{}, 1),
+		quit:    make(chan struct{}),
+		done:    make(chan struct{}),
+	}
+	go func() {
+		defer close(updater.done)
+		for {
+			select {
+			case <-updater.changed:
+				rebuild()
+			case <-updater.quit:
+				return
+			}
+		}
+	}()
+	return updater
+}
+
+// notify says that a device changed. It never blocks, so a storage event is
+// not held up by a rebuild, and never fails after stop.
+func (u *zoneUpdater) notify(_ *storage.Device) {
+	select {
+	case u.changed <- struct{}{}:
+	default:
+	}
+}
+
+// stop ends the rebuilding and waits for one in flight to finish.
+func (u *zoneUpdater) stop() {
+	close(u.quit)
+	<-u.done
 }
 
 func generateZone(deviceManager *devices.DeviceManager, vpnips []netip.Addr) dnsproxy.Zone {
