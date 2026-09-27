@@ -396,6 +396,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#networks-behind-a-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Networks behind a device
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -902,6 +913,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#networks-behind-a-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Networks behind a device
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1044,6 +1066,7 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 <li><a href="https://www.freie-netze.org/wg-access-server/auth/#api-tokens">API tokens</a> for scripts, using the same API as the web UI</li>
 <li>Devices can be renamed; admins see and manage the devices of all users</li>
 <li>Admins can block a device or give it an expiry date, for temporary access (<a href="#device-access">device access</a>)</li>
+<li>Networks behind a device, for site-to-site links and subnet routers (<a href="#networks-behind-a-device">routed networks</a>)</li>
 <li>An optional limit on how many devices a user may create</li>
 <li>WireGuard client configurations as a file or a QR code</li>
 <li>IPv6: dual-stack, IPv6-only or IPv4-only, with NAT on or off for each</li>
@@ -1132,6 +1155,33 @@ waiting for the next restart. Blocking takes effect right away, on every replica
 Both are recorded in the <a href="https://www.freie-netze.org/wg-access-server/audit/">audit log</a>, and
 <code>wg_access_server_devices_blocked</code> counts the devices in that state wherever the device
 <a href="#metrics">metrics</a> are enabled.</p>
+<h2 id="networks-behind-a-device">Networks behind a device<a class="headerlink" href="#networks-behind-a-device" title="Permanent link"> ¶</a></h2>
+<p>A device is usually one computer or one phone. It can also be the router of a whole site: an admin
+assigns the networks that live behind it under <em>admin</em> → <em>Networks</em>, and the server then sends
+traffic for them through that device and accepts traffic from them through it. That is what makes a
+site-to-site link, or a subnet router for a network the clients could not otherwise reach.</p>
+<p>Three things follow from a route, and wg-access-server sets up all of them:</p>
+<ul>
+<li>The networks become part of the device's WireGuard peer, so the tunnel carries them.</li>
+<li>The kernel gets a route for each of them to the WireGuard interface, the way <code>wg-quick</code>'s
+  <code>Table = auto</code> does it. Without that nothing would ever be sent there.</li>
+<li>The firewall rules are extended by them, on top of <code>vpn.allowedIPs</code>.</li>
+</ul>
+<p>The device on the other end has to be set up for it as well: it needs to forward between its LAN and
+the tunnel, and its own <code>AllowedIPs</code> must cover the VPN network. Client configurations downloaded
+after the change carry the routed networks in their <code>AllowedIPs</code>; ones downloaded earlier do not, so
+those clients either fetch the configuration again or add the network themselves. With the default
+<code>vpn.allowedIPs</code> of <code>0.0.0.0/0, ::/0</code> there is nothing to do - it covers everything already.</p>
+<p>Routes are admin-only, and some networks are refused:</p>
+<ul>
+<li>a default route - name the networks instead,</li>
+<li>anything overlapping the VPN networks, which the server hands out itself,</li>
+<li>anything overlapping a network this server is in: routing it would cut the server off from its own
+  gateway, its database or the clients,</li>
+<li>and anything another device already carries, since two devices cannot both be the way to a network.</li>
+</ul>
+<p>Changes are recorded in the <a href="https://www.freie-netze.org/wg-access-server/audit/">audit log</a> as
+<code>device.routes</code>.</p>
 <h2 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link"> ¶</a></h2>
 <p>Prometheus metrics are served at <code>/metrics</code>, on the same ports as the web UI. <strong>The endpoint needs no
 sign-in unless you set up basic auth for it</strong>, and it shows the exact version of wg-access-server and
