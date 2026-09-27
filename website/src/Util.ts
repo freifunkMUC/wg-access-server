@@ -1,7 +1,7 @@
 import { formatDistance } from 'date-fns';
 import timestamp_pb from 'google-protobuf/google/protobuf/timestamp_pb';
 import { toDate } from './Api';
-import { createAtom, observable, runInAction } from 'mobx';
+import { observable, runInAction } from 'mobx';
 import { toast } from './components/Toast';
 
 // Errors reaching the UI are either gRPC-web errors, plain Errors or - in
@@ -56,52 +56,6 @@ export function lazy<T>(cb: () => Promise<T>) {
       if (started) {
         fetch();
       }
-    },
-  };
-}
-
-// autorefresh polls cb every `seconds` for as long as something observes
-// `current`, and stops once nothing does - so the device list stops polling
-// when it leaves the screen. Replaces mobx-utils' fromResource.
-export function autorefresh<T>(seconds: number, cb: () => Promise<T>) {
-  let value: T | undefined;
-  let running = false;
-
-  const atom = createAtom(
-    'autorefresh',
-    () => {
-      // something started observing `current`
-      running = true;
-      void poll();
-    },
-    () => {
-      // nothing observes `current` any more
-      running = false;
-    },
-  );
-
-  const publish = (next: T) => {
-    value = next;
-    runInAction(() => atom.reportChanged());
-  };
-
-  const poll = async () => {
-    while (running) {
-      publish(await cb());
-      await sleep(seconds);
-    }
-  };
-
-  return {
-    get current(): T | undefined {
-      atom.reportObserved();
-      return value;
-    },
-    refresh: async () => {
-      publish(await cb());
-    },
-    dispose: () => {
-      running = false;
     },
   };
 }
