@@ -3,6 +3,7 @@ package devices
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/netip"
 	"regexp"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"github.com/sirupsen/logrus"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/network"
@@ -379,14 +381,65 @@ func (d *DeviceManager) sync() error {
 		}
 	}
 
-	// Add peers for all devices in storage
+	// Add peers for the devices the interface does not already carry as they
+	// are stored. Configuring one is a round trip to the kernel, and a sync
+	// after a storage reconnect finds almost everything in place already.
+	configured := make(map[string]wgtypes.Peer, len(peers))
+	for _, peer := range peers {
+		configured[peer.PublicKey.String()] = peer
+	}
 	for _, device := range devices {
+		if peer, ok := configured[device.PublicKey]; ok && peerMatches(peer, device) {
+			continue
+		}
 		if err := d.wg.AddPeer(device.PublicKey, device.PresharedKey, network.SplitAddresses(device.Address)); err != nil {
 			logrus.Warn(fmt.Errorf("failed to add device during sync: %s: %w", device.Name, err))
 		}
 	}
 
 	return nil
+}
+
+// peerMatches reports whether the interface carries the device as it is
+// stored: the same addresses and the same pre-shared key. Anything else - a
+// renamed key, an address that moved, a device that is not there at all -
+// means the peer has to be configured again.
+func peerMatches(peer wgtypes.Peer, device *storage.Device) bool {
+	if peer.PresharedKey.String() != presharedKeyOf(device) {
+		return false
+	}
+
+	stored := network.SplitAddresses(device.Address)
+	if len(peer.AllowedIPs) != len(stored) {
+		return false
+	}
+	// the interface reports the network of each address, so compare in that
+	// form rather than as it was written
+	allowed := make(map[string]bool, len(peer.AllowedIPs))
+	for _, ipnet := range peer.AllowedIPs {
+		allowed[ipnet.String()] = true
+	}
+	for _, address := range stored {
+		_, ipnet, err := net.ParseCIDR(address)
+		if err != nil || ipnet == nil || !allowed[ipnet.String()] {
+			return false
+		}
+	}
+	return true
+}
+
+// presharedKeyOf is the device's pre-shared key in the form the interface
+// reports it: a device without one matches the key of all zeroes.
+func presharedKeyOf(device *storage.Device) string {
+	if device.PresharedKey == "" {
+		return (wgtypes.Key{}).String()
+	}
+	key, err := wgtypes.ParseKey(device.PresharedKey)
+	if err != nil {
+		// unusable as stored, so the peer cannot match it either
+		return ""
+	}
+	return key.String()
 }
 
 func (d *DeviceManager) ListAllDevices() ([]*storage.Device, error) {
