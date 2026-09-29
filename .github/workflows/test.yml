@@ -52,6 +52,25 @@ jobs:
           WG_BINARY: /tmp/wg-access-server
           WG_TEST_NFTABLES: "1"
 
+  # Known vulnerabilities in the dependencies and in the standard library this
+  # is built with. It reports only what the code actually reaches, which is why
+  # it can fail the build instead of filling a report nobody reads.
+  govulncheck:
+    runs-on: ubuntu-latest
+    name: Vulnerabilities (Go)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
   test-website:
     runs-on: ubuntu-latest
     name: Website tests
