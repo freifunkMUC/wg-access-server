@@ -1,9 +1,11 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/freifunkMUC/pg-events/pkg/pgevents"
 	"github.com/sirupsen/logrus"
@@ -19,13 +21,24 @@ const updateTriggerSuffix = "_update_events"
 // notifying twice per rename.
 const legacyRenameTriggerSuffix = "_rename_events"
 
+// setupTimeout bounds connecting to Postgres and installing the trigger. The
+// storage backend is opened without a context of its own, and a database that
+// does not answer should fail the start rather than hold it open forever.
+const setupTimeout = 30 * time.Second
+
 type PgWatcher struct {
 	*pgevents.Listener
 }
 
 func NewPgWatcher(db *sql.DB, connectionString string, table string) (*PgWatcher, error) {
 	logrus.Debug("creating postgres watcher")
-	listener, err := pgevents.OpenListener(connectionString)
+
+	// The context is for getting started only: once the listener is open it
+	// runs until it is closed, whatever becomes of this one.
+	ctx, cancel := context.WithTimeout(context.Background(), setupTimeout)
+	defer cancel()
+
+	listener, err := pgevents.OpenListener(ctx, connectionString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open pg listener: %w", err)
 	}
@@ -34,7 +47,7 @@ func NewPgWatcher(db *sql.DB, connectionString string, table string) (*PgWatcher
 	// Without UPDATE in its trigger, the metadata sync - one UPDATE per
 	// active device every 30s on every replica - no longer broadcasts each
 	// row to all replicas.
-	if err := listener.AttachActions(table, pgevents.Insert, pgevents.Delete); err != nil {
+	if err := listener.AttachActions(ctx, table, pgevents.Insert, pgevents.Delete); err != nil {
 		_ = listener.Close()
 		return nil, fmt.Errorf("failed to attach listener to table: %s: %w", table, err)
 	}
