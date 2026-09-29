@@ -11,9 +11,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/goccy/go-yaml"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/stretchr/testify/assert"
@@ -244,4 +246,69 @@ func TestOIDCCallbackRejectsMismatchedState(t *testing.T) {
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Contains(t, rec.Body.String(), "Bad state value")
+}
+
+// The whole way through: the identity provider says which groups somebody is
+// in, the rules turn that into policies, and they end up in the session - which
+// is what the server then remembers for the firewall.
+func TestOIDCLoginCarriesThePoliciesIntoTheSession(t *testing.T) {
+	idp, provider, runtime, router := newOIDCFlowWith(t, func(config *OIDCConfig) {
+		config.ClaimMapping = map[string]ruleExpression{
+			"admin": mustRule(t, "'WireguardAdmins' in group_membership"),
+		}
+		config.PolicyMapping = map[string]ruleExpression{
+			"contractors": mustRule(t, "'Contractors' in group_membership"),
+			"staff":       mustRule(t, "'Staff' in group_membership"),
+			"guests":      mustRule(t, "'Guests' in group_membership"),
+		}
+	})
+
+	state, nonce, cookies := doLogin(t, provider, runtime)
+	idp.tokenNonce = nonce
+	idp.extraClaims = map[string]interface{}{
+		"group_membership": []interface{}{"Staff", "Contractors", "WireguardAdmins"},
+	}
+
+	rec := doCallback(t, router, state, cookies)
+	require.Equal(t, http.StatusSeeOther, rec.Code, "body: %s", rec.Body.String())
+
+	req := httptest.NewRequest("GET", "http://wg-access-server.test/", nil)
+	for _, cookie := range rec.Result().Cookies() {
+		req.AddCookie(cookie)
+	}
+	session, err := runtime.GetSession(req)
+	require.NoError(t, err)
+	require.NotNil(t, session.Identity)
+
+	assert.Equal(t, []string{"contractors", "staff"}, session.Identity.Claims.Values(authsession.PolicyClaim),
+		"the policies of the groups the provider reported, and only those")
+	assert.True(t, session.Identity.Claims.IsAdmin(), "the claim mapping still works next to the policies")
+}
+
+// Without rules nobody is in a policy, which is what every installation looks
+// like until somebody writes them: their devices keep vpn.allowedIPs.
+func TestOIDCLoginWithoutPolicyRules(t *testing.T) {
+	idp, provider, runtime, router := newOIDCFlow(t)
+
+	state, nonce, cookies := doLogin(t, provider, runtime)
+	idp.tokenNonce = nonce
+
+	rec := doCallback(t, router, state, cookies)
+	require.Equal(t, http.StatusSeeOther, rec.Code, "body: %s", rec.Body.String())
+
+	req := httptest.NewRequest("GET", "http://wg-access-server.test/", nil)
+	for _, cookie := range rec.Result().Cookies() {
+		req.AddCookie(cookie)
+	}
+	session, err := runtime.GetSession(req)
+	require.NoError(t, err)
+	require.NotNil(t, session.Identity)
+	assert.Empty(t, session.Identity.Claims.Values(authsession.PolicyClaim))
+}
+
+func mustRule(t *testing.T, rule string) ruleExpression {
+	t.Helper()
+	var expression ruleExpression
+	require.NoError(t, yaml.Unmarshal([]byte(strconv.Quote(rule)), &expression))
+	return expression
 }

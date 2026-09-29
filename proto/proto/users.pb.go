@@ -28,7 +28,10 @@ type User struct {
 	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	DisplayName string                 `protobuf:"bytes,2,opt,name=displayName,proto3" json:"displayName,omitempty"`
 	// unset: the server has not seen them sign in
-	LastLogin     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=last_login,json=lastLogin,proto3" json:"last_login,omitempty"`
+	LastLogin *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=last_login,json=lastLogin,proto3" json:"last_login,omitempty"`
+	// the access policies their identity provider put them in at that login.
+	// Empty: their devices may reach what vpn.allowedIPs says.
+	Policies      []string `protobuf:"bytes,4,rep,name=policies,proto3" json:"policies,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -80,6 +83,13 @@ func (x *User) GetDisplayName() string {
 func (x *User) GetLastLogin() *timestamppb.Timestamp {
 	if x != nil {
 		return x.LastLogin
+	}
+	return nil
+}
+
+func (x *User) GetPolicies() []string {
+	if x != nil {
+		return x.Policies
 	}
 	return nil
 }
@@ -212,12 +222,13 @@ var File_users_proto protoreflect.FileDescriptor
 
 const file_users_proto_rawDesc = "" +
 	"\n" +
-	"\vusers.proto\x12\x05proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"w\n" +
+	"\vusers.proto\x12\x05proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x93\x01\n" +
 	"\x04User\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdisplayName\x18\x02 \x01(\tR\vdisplayName\x129\n" +
 	"\n" +
-	"last_login\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tlastLogin\"\x0e\n" +
+	"last_login\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tlastLogin\x12\x1a\n" +
+	"\bpolicies\x18\x04 \x03(\tR\bpolicies\"\x0e\n" +
 	"\fListUsersReq\"1\n" +
 	"\fListUsersRes\x12!\n" +
 	"\x05items\x18\x01 \x03(\v2\v.proto.UserR\x05items\"#\n" +

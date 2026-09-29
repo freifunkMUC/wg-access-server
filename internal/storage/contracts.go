@@ -90,9 +90,18 @@ type User struct {
 	Provider string `json:"provider"`
 	Name     string `json:"name"`
 	Email    string `json:"email"`
+	// Policies are the names of the access policies their identity provider
+	// put them in at the last login, comma-separated. Empty means the devices
+	// of this user may reach what vpn.allowedIPs says.
+	Policies string `json:"policies"`
 	// LastLogin is when they last signed in, which is also how old everything
 	// else here is.
 	LastLogin time.Time `json:"last_login"`
+}
+
+// PolicyList returns the policies one by one, empty for a user without any.
+func (u *User) PolicyList() []string {
+	return splitList(u.Policies)
 }
 
 type Watcher interface {

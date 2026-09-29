@@ -2,6 +2,7 @@ package serve
 
 import (
 	"fmt"
+	"net/netip"
 	"os"
 	"strings"
 
@@ -76,6 +77,10 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		// Info, not a warning: serving plain HTTP behind a TLS terminating
 		// proxy is a perfectly normal setup.
 		logrus.Infof("The web UI is also served over plain HTTP on port %d. Unless something in front of it terminates TLS, client configurations and their private keys travel unencrypted - disable it with --no-http-enabled", cmd.AppConfig.Port)
+	}
+
+	if err := validatePolicies(cmd.AppConfig.VPN.Policies, &cmd.AppConfig.Auth); err != nil {
+		logrus.Fatal(err)
 	}
 
 	if err := cmd.AppConfig.Auth.Validate(); err != nil {
@@ -246,3 +251,45 @@ var missingPrivateKey = `Missing WireGuard private key:
         privateKey: "<private-key>"
 
 `
+
+// validatePolicies checks the access policies before the server starts: a
+// network that cannot be parsed, or a policy nobody can end up in, is an
+// operator's mistake and it should not take until somebody signs in to show.
+func validatePolicies(policies map[string]config.PolicyConfig, auth *authconfig.AuthConfig) error {
+	for name, policy := range policies {
+		if len(policy.AllowedIPs) == 0 {
+			return fmt.Errorf("the policy '%s' names no networks - leave people out of every policy to give them vpn.allowedIPs instead", name)
+		}
+		for _, allowed := range policy.AllowedIPs {
+			if _, err := netip.ParsePrefix(allowed); err != nil {
+				return fmt.Errorf("the policy '%s' has an invalid network '%s': %w", name, allowed, err)
+			}
+		}
+	}
+
+	// The rules name the policies, so the two have to agree. A rule for a
+	// policy that does not exist would silently put nobody anywhere.
+	for provider, mapped := range auth.PolicyNames() {
+		for _, name := range mapped {
+			if _, ok := policies[name]; !ok {
+				return fmt.Errorf("%s has a rule for the policy '%s', which is not configured under vpn.policies", provider, name)
+			}
+		}
+	}
+
+	// ... and a policy nothing selects is dead weight, but not a reason to
+	// refuse to start: it may be waiting for a rule that is added next.
+	selected := map[string]bool{}
+	for _, mapped := range auth.PolicyNames() {
+		for _, name := range mapped {
+			selected[name] = true
+		}
+	}
+	for name := range policies {
+		if !selected[name] {
+			logrus.Warnf("The policy '%s' is configured but no policyMapping rule puts anybody in it", name)
+		}
+	}
+
+	return nil
+}

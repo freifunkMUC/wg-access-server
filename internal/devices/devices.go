@@ -67,6 +67,8 @@ type User struct {
 	// LastLogin is when they last signed in, if the server has seen them
 	// since it started remembering that.
 	LastLogin *time.Time
+	// Policies are the access policies they were in at that login.
+	Policies []string
 }
 
 // https://lists.zx2c4.com/pipermail/wireguard/2020-December/006222.html
@@ -721,7 +723,10 @@ func (d *DeviceManager) ListUsers() ([]*User, error) {
 	byName := map[string]*User{}
 	for _, user := range stored {
 		lastLogin := user.LastLogin
-		listed := &User{Name: user.Subject, DisplayName: user.Name, LastLogin: &lastLogin}
+		listed := &User{
+			Name: user.Subject, DisplayName: user.Name,
+			LastLogin: &lastLogin, Policies: user.PolicyList(),
+		}
 		users = append(users, listed)
 		byName[user.Subject] = listed
 	}

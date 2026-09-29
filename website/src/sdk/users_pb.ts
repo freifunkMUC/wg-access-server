@@ -92,13 +92,14 @@ export declare namespace User {
 		name: string,
 		displayName: string,
 		lastLogin?: googleProtobufTimestamp.Timestamp.AsObject,
+		policies: Array<string>,
 	}
 }
 
 export class User extends jspb.Message {
 
 	private static repeatedFields_ = [
-		
+		4,
 	];
 
 	constructor(data?: jspb.Message.MessageArray) {
@@ -129,6 +130,17 @@ export class User extends jspb.Message {
 		(jspb.Message as any).setWrapperField(this, 3, value);
 	}
 
+	getPolicies(): Array<string> {return jspb.Message.getFieldWithDefault(this, 4, [""]);
+	}
+
+	setPolicies(value: Array<string>): void {
+		(jspb.Message as any).setProto3StringField(this, 4, value);
+	}
+
+	addPolicies(value: string, index?: number): void {
+		return jspb.Message.addToRepeatedField(this, 4, value, index);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		User.serializeBinaryToWriter(this, writer);
@@ -141,6 +153,7 @@ export class User extends jspb.Message {
 			name: this.getName(),
 			displayName: this.getDisplayName(),
 			lastLogin: (f = this.getLastLogin()) && f.toObject(),
+			policies: this.getPolicies(),
 		};
 	}
 
@@ -156,6 +169,10 @@ export class User extends jspb.Message {
 		const field3 = message.getLastLogin();
 		if (field3 != null) {
 			writer.writeMessage(3, field3, googleProtobufTimestamp.Timestamp.serializeBinaryToWriter);
+		}
+		const field4 = message.getPolicies();
+		if (field4.length > 0) {
+			writer.writeRepeatedString(4, field4);
 		}
 	}
 
@@ -184,6 +201,10 @@ export class User extends jspb.Message {
 				const field3 = new googleProtobufTimestamp.Timestamp();
 				reader.readMessage(field3, googleProtobufTimestamp.Timestamp.deserializeBinaryFromReader);
 				message.setLastLogin(field3);
+				break;
+			case 4:
+				const field4 = reader.readString()
+				message.addPolicies(field4);
 				break;
 			default:
 				reader.skipField();
@@ -406,6 +427,8 @@ function UserFromObject(obj: User.AsObject | undefined): User | undefined {
 	message.setName(obj.name);
 	message.setDisplayName(obj.displayName);
 	message.setLastLogin(TimestampFromObject(obj.lastLogin));
+	(obj.policies || [])
+		.forEach((item) => message.addPolicies(item));
 	return message;
 }
 

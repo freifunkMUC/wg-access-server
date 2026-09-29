@@ -336,6 +336,7 @@ export const AllDevices = observer(function AllDevices() {
             <TableRow>
               <TableCell>Name</TableCell>
               <TableCell>Last login</TableCell>
+              <TableCell>Policies</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -346,6 +347,7 @@ export const AllDevices = observer(function AllDevices() {
                   {user.displayName || user.name}
                 </TableCell>
                 <TableCell>{lastSeen(user.lastLogin)}</TableCell>
+                <TableCell>{user.policies?.length ? user.policies.join(', ') : '-'}</TableCell>
                 <TableCell>
                   <Button variant="outlined" color="secondary" onClick={() => deleteUser(user)}>
                     Delete

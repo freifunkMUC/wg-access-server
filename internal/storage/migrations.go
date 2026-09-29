@@ -65,6 +65,16 @@ var migrations = []migration{
 			return db.AutoMigrate(&userV1{})
 		},
 	},
+	{
+		// The access policies a user is in, as their identity provider said
+		// at their last login. Empty for everybody until they sign in again,
+		// which is a user whose devices reach what vpn.allowedIPs says - what
+		// every device did before.
+		id: "0006_user_policies",
+		apply: func(db *gorm.DB) error {
+			return db.AutoMigrate(&userV2{})
+		},
+	},
 }
 
 type migration struct {
@@ -242,5 +252,19 @@ type userV1 struct {
 }
 
 func (userV1) TableName() string {
+	return "users"
+}
+
+// userV2 is the users table as 0006_user_policies left it.
+type userV2 struct {
+	Subject   string `gorm:"type:varchar(100);primaryKey"`
+	Provider  string
+	Name      string
+	Email     string
+	Policies  string
+	LastLogin time.Time
+}
+
+func (userV2) TableName() string {
 	return "users"
 }

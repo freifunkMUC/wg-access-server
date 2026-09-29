@@ -44,7 +44,8 @@ func TestUserStorage(t *testing.T) {
 			login := time.Now().UTC().Truncate(time.Second)
 			user := &User{
 				Subject: subject, Provider: "oidc",
-				Name: "Alice Example", Email: "alice@example.com", LastLogin: login,
+				Name: "Alice Example", Email: "alice@example.com",
+				Policies: "contractors, staff", LastLogin: login,
 			}
 			if err := s.SaveUser(user); err != nil {
 				t.Fatal(err)
@@ -57,12 +58,17 @@ func TestUserStorage(t *testing.T) {
 			if stored.Name != user.Name || stored.Email != user.Email || stored.Provider != user.Provider {
 				t.Errorf("stored user = %+v, want %+v", stored, user)
 			}
+			if policies := stored.PolicyList(); len(policies) != 2 || policies[0] != "contractors" || policies[1] != "staff" {
+				t.Errorf("policies = %v, want contractors and staff", policies)
+			}
 			if !stored.LastLogin.UTC().Equal(login) {
 				t.Errorf("last login = %v, want %v", stored.LastLogin.UTC(), login)
 			}
 
 			// signing in again replaces what was there, it does not fail on
 			// the key and it does not add a second row
+			// ... and a sign-in that puts somebody in no policy any more has
+			// to clear the column, not leave the old one standing
 			second := login.Add(time.Hour)
 			if err := s.SaveUser(&User{
 				Subject: subject, Provider: "oidc",
@@ -76,6 +82,9 @@ func TestUserStorage(t *testing.T) {
 			}
 			if stored.Name != "Alice Elsewhere" || !stored.LastLogin.UTC().Equal(second) {
 				t.Errorf("the second sign-in did not replace the first: %+v", stored)
+			}
+			if policies := stored.PolicyList(); len(policies) != 0 {
+				t.Errorf("policies = %v, want them gone after a sign-in without any", policies)
 			}
 
 			var found int

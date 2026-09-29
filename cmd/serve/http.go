@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
+	"strings"
 	"syscall"
 	"time"
 
@@ -39,6 +41,23 @@ const (
 
 // newRouter builds the web server: the endpoints anyone may reach, and
 // behind the authentication middleware the API and the web UI.
+// policiesOf returns the access policies the identity provider put somebody
+// in, each of them once and in a fixed order: the value is compared against
+// what is stored, and two logins that mean the same must look the same.
+func policiesOf(identity *authsession.Identity) []string {
+	seen := map[string]bool{}
+	policies := []string{}
+	for _, policy := range identity.Claims.Values(authsession.PolicyClaim) {
+		if policy == "" || seen[policy] {
+			continue
+		}
+		seen[policy] = true
+		policies = append(policies, policy)
+	}
+	sort.Strings(policies)
+	return policies
+}
+
 // recordLogin remembers somebody who signed in. A failure is logged and no
 // more: the sign-in itself worked, and refusing it because of a write that is
 // only needed later would be the worse outcome.
@@ -49,6 +68,7 @@ func recordLogin(storageBackend storage.Storage) func(*authsession.Identity) {
 			Provider:  identity.Provider,
 			Name:      identity.Name,
 			Email:     identity.Email,
+			Policies:  strings.Join(policiesOf(identity), ", "),
 			LastLogin: time.Now(),
 		}
 		if err := storageBackend.SaveUser(user); err != nil {

@@ -3,6 +3,10 @@ package authsession
 // AdminClaim is the claim that makes a user an admin.
 const AdminClaim = "admin"
 
+// PolicyClaim names an access policy the user is in. There is one per policy,
+// so somebody can be in several.
+const PolicyClaim = "policy"
+
 type claim struct {
 	Name  string
 	Value string
@@ -35,6 +39,18 @@ func (c *Claims) Has(claim string, value string) bool {
 		}
 	}
 	return false
+}
+
+// Values returns the values of every claim with that name, in the order they
+// were added.
+func (c *Claims) Values(name string) []string {
+	values := []string{}
+	for _, curr := range *c {
+		if curr.Name == name {
+			values = append(values, curr.Value)
+		}
+	}
+	return values
 }
 
 func (c *Claims) IsAdmin() bool {
