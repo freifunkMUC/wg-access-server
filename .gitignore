@@ -1,6 +1,8 @@
 ### Default ignore for this project ###
 /config.yaml
 /db.sqlite3
+# a database a local run leaves behind, whatever it was called
+*.db
 /wg-access-server
 
 /data/

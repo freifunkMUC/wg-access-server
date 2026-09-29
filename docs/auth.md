@@ -146,6 +146,27 @@ auth:
     adminUsers: []
 ```
 
+## What the server remembers about a sign-in
+
+A sign-in writes a row: the identifier the provider uses for the person, which provider it was, their
+display name and email address as the provider reports them, and the time. It is replaced at every
+sign-in, so it always describes the last one.
+
+The server needs this because almost everything it does happens while nobody is signed in. The
+device list, the DNS zone and the firewall rules are built by a background job or after a restart,
+and until now the only thing it knew about a person outside their session was the owner of a device.
+It is also what the access policies will be built on: which groups somebody is in is something only
+their identity provider knows, and only at the moment they sign in.
+
+Two things follow from it:
+
+- The admin page shows when somebody last signed in, and it lists people who have signed in but have
+  not added a device yet.
+- Deleting a user removes that row along with their devices and their API tokens.
+
+Name and email address were already stored with every device, so nothing is kept that was not kept
+before - except for a person who has no device at all.
+
 ## API tokens
 
 With `enableApiTokens: true`, users can create tokens on the *API tokens* page of the web UI (the key

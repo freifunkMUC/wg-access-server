@@ -335,6 +335,7 @@ export const AllDevices = observer(function AllDevices() {
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
+              <TableCell>Last login</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -344,6 +345,7 @@ export const AllDevices = observer(function AllDevices() {
                 <TableCell component="th" scope="row">
                   {user.displayName || user.name}
                 </TableCell>
+                <TableCell>{lastSeen(user.lastLogin)}</TableCell>
                 <TableCell>
                   <Button variant="outlined" color="secondary" onClick={() => deleteUser(user)}>
                     Delete

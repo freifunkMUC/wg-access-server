@@ -15,6 +15,7 @@ type InMemoryStorage struct {
 	allocationMu sync.Mutex
 	db           map[string]*Device
 	tokens       map[string]*APIToken
+	users        map[string]*User
 }
 
 func NewMemoryStorage() *InMemoryStorage {
@@ -23,6 +24,7 @@ func NewMemoryStorage() *InMemoryStorage {
 		InProcessWatcher: NewInProcessWatcher(),
 		db:               db,
 		tokens:           make(map[string]*APIToken),
+		users:            make(map[string]*User),
 	}
 }
 
@@ -244,6 +246,41 @@ func (s *InMemoryStorage) deleteForOwner(owner string) []*Device {
 		}
 	}
 	return deleted
+}
+
+func (s *InMemoryStorage) SaveUser(user *User) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	stored := *user
+	s.users[user.Subject] = &stored
+	return nil
+}
+
+func (s *InMemoryStorage) GetUser(subject string) (*User, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	user, ok := s.users[subject]
+	if !ok {
+		return nil, errors.New("user doesn't exist")
+	}
+	return user, nil
+}
+
+func (s *InMemoryStorage) Users() ([]*User, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	users := make([]*User, 0, len(s.users))
+	for _, user := range s.users {
+		users = append(users, user)
+	}
+	return users, nil
+}
+
+func (s *InMemoryStorage) DeleteUser(subject string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.users, subject)
+	return nil
 }
 
 func (s *InMemoryStorage) Ping() error {

@@ -57,6 +57,14 @@ var migrations = []migration{
 			return db.AutoMigrate(&deviceV3{})
 		},
 	},
+	{
+		// The people who signed in. Nothing reads this table before they do
+		// so again, which is why it can start out empty.
+		id: "0005_users",
+		apply: func(db *gorm.DB) error {
+			return db.AutoMigrate(&userV1{})
+		},
+	},
 }
 
 type migration struct {
@@ -222,4 +230,17 @@ type apiTokenV1 struct {
 
 func (apiTokenV1) TableName() string {
 	return "api_tokens"
+}
+
+// userV1 is the users table as 0005_users created it.
+type userV1 struct {
+	Subject   string `gorm:"type:varchar(100);primaryKey"`
+	Provider  string
+	Name      string
+	Email     string
+	LastLogin time.Time
+}
+
+func (userV1) TableName() string {
+	return "users"
 }

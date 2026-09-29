@@ -64,6 +64,12 @@ func (d *UserService) DeleteUser(ctx context.Context, request *connect.Request[p
 		return nil, internalError(ctx, err, "failed to delete user")
 	}
 
+	// Last, so that a failure here leaves a user without access rather than
+	// access without a user.
+	if err := d.DeviceManager.ForgetUser(req.Name); err != nil {
+		return nil, internalError(ctx, err, "failed to delete user")
+	}
+
 	audit.Log(ctx, audit.UserDelete, logrus.Fields{"target_user": req.Name})
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
@@ -73,6 +79,7 @@ func mapUser(u *devices.User) *proto.User {
 	return &proto.User{
 		Name:        u.Name,
 		DisplayName: u.DisplayName,
+		LastLogin:   timeToTimestamp(u.LastLogin),
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/netip"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -63,6 +64,9 @@ func WithRouteSync(sync func(routes []string) error) Option {
 type User struct {
 	Name        string
 	DisplayName string
+	// LastLogin is when they last signed in, if the server has seen them
+	// since it started remembering that.
+	LastLogin *time.Time
 }
 
 // https://lists.zx2c4.com/pipermail/wireguard/2020-December/006222.html
@@ -702,22 +706,56 @@ func (d *DeviceManager) nextClientAddressLocked() (string, error) {
 	}
 }
 
+// ListUsers returns everybody this server knows: whoever signed in since it
+// started remembering that, and whoever owns a device. The two overlap almost
+// always - the exceptions are somebody who signed in and has not added a
+// device yet, and a device of somebody who has not signed in since the server
+// learned to remember it.
 func (d *DeviceManager) ListUsers() ([]*User, error) {
+	stored, err := d.storage.Users()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve users: %w", err)
+	}
+
+	users := []*User{}
+	byName := map[string]*User{}
+	for _, user := range stored {
+		lastLogin := user.LastLogin
+		listed := &User{Name: user.Subject, DisplayName: user.Name, LastLogin: &lastLogin}
+		users = append(users, listed)
+		byName[user.Subject] = listed
+	}
+
 	devices, err := d.storage.List("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve devices: %w", err)
 	}
-
-	seen := map[string]bool{}
-	users := []*User{}
 	for _, dev := range devices {
-		if _, ok := seen[dev.Owner]; !ok {
-			users = append(users, &User{Name: dev.Owner, DisplayName: dev.OwnerName})
-			seen[dev.Owner] = true
+		if listed, ok := byName[dev.Owner]; ok {
+			// a device knows the display name too, and it is the newer one
+			// only when the user has not signed in since
+			if listed.DisplayName == "" {
+				listed.DisplayName = dev.OwnerName
+			}
+			continue
 		}
+		listed := &User{Name: dev.Owner, DisplayName: dev.OwnerName}
+		users = append(users, listed)
+		byName[dev.Owner] = listed
 	}
 
+	sort.Slice(users, func(i, j int) bool { return users[i].Name < users[j].Name })
+
 	return users, nil
+}
+
+// ForgetUser removes what the server remembers about somebody. Their devices
+// and tokens are not touched: whoever deletes a user deletes those first.
+func (d *DeviceManager) ForgetUser(subject string) error {
+	if err := d.storage.DeleteUser(subject); err != nil {
+		return fmt.Errorf("failed to forget the user '%s': %w", subject, err)
+	}
+	return nil
 }
 
 // DeleteDevicesForUser removes every device of a user, all of them or none.

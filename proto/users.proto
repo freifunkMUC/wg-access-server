@@ -5,6 +5,7 @@ package proto;
 option go_package = "github.com/freifunkMUC/wg-access-server/proto/proto";
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 service Users {
   // admin only
@@ -15,6 +16,8 @@ service Users {
 message User {
   string name = 1;
   string displayName = 2;
+  // unset: the server has not seen them sign in
+  google.protobuf.Timestamp last_login = 3;
 }
 
 message ListUsersReq {
