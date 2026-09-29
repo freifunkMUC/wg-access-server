@@ -424,6 +424,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#access-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access policies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-the-server-remembers-about-a-sign-in" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -761,6 +772,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#access-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access policies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-the-server-remembers-about-a-sign-in" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1017,6 +1039,32 @@ config file (config.yaml).</p>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-org/vpn-admins</span>
 <span class="w">    </span><span class="nt">adminUsers</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
 </code></pre></div>
+<h2 id="access-policies">Access policies<a class="headerlink" href="#access-policies" title="Permanent link"> ¶</a></h2>
+<p>Which networks somebody's devices may reach can depend on who they are. The networks are configured
+under <code>vpn.policies</code> (see <a href="../configuration/">Configuration</a>), and a rule per policy decides who is
+in it:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">auth</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">oidc</span><span class="p">:</span>
+<span class="w">    </span><span class="c1"># ... issuer, clientID and the rest as above</span>
+<span class="w">    </span><span class="nt">policyMapping</span><span class="p">:</span>
+<span class="w">      </span><span class="c1"># the same claims and the same syntax as claimMapping, one rule per policy</span>
+<span class="w">      </span><span class="nt">contractors</span><span class="p">:</span><span class="w"> </span><span class="s">"'Contractors'</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">group_membership"</span>
+<span class="w">      </span><span class="nt">staff</span><span class="p">:</span><span class="w"> </span><span class="s">"'Staff'</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">group_membership"</span>
+</code></pre></div>
+<p>Every rule that comes out <code>true</code> puts the person in that policy, so they can be in several - a rule
+per policy is why, where <code>claimMapping</code> can only give one value to a name. Only <code>true</code> counts: a
+rule that returns a string does not name a policy, or a claim of the provider could decide which
+networks somebody reaches.</p>
+<p>Which policies somebody is in is worked out at their sign-in and remembered until the next one - the
+server has no way to ask the provider in between. A group that is taken away therefore takes effect
+when they sign in again, as an admin right does today.</p>
+<p>Somebody in no policy, and everybody signing in through basic or simple auth, keeps <code>vpn.allowedIPs</code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>The policies are not enforced yet.</strong> This release works out who is in which policy, remembers
+it and shows it on the admin page, so that the rules can be checked against what the identity
+provider actually sends. Building the firewall rules from it comes next.</p>
+</div>
 <h2 id="what-the-server-remembers-about-a-sign-in">What the server remembers about a sign-in<a class="headerlink" href="#what-the-server-remembers-about-a-sign-in" title="Permanent link"> ¶</a></h2>
 <p>A sign-in writes a row: the identifier the provider uses for the person, which provider it was, their
 display name and email address as the provider reports them, and the time. It is replaced at every
