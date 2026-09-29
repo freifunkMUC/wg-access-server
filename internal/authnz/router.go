@@ -44,7 +44,20 @@ type AuthMiddleware struct {
 	runtime          *authruntime.ProviderRuntime
 }
 
-func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware) (*AuthMiddleware, error) {
+// Option configures the authentication middleware.
+type Option func(*authruntime.ProviderRuntime)
+
+// WithLoginRecorder registers what to do when somebody signed in. The server
+// remembers them, so that what their identity provider said is known while
+// they are not signed in - which is when the device list and the firewall
+// rules are built.
+func WithLoginRecorder(record func(*authsession.Identity)) Option {
+	return func(runtime *authruntime.ProviderRuntime) {
+		runtime.OnLogin(record)
+	}
+}
+
+func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware, opts ...Option) (*AuthMiddleware, error) {
 	router := mux.NewRouter()
 	var storeSecret []byte
 	if config.SessionStore == nil || config.SessionStore.Secret == "" {
@@ -81,6 +94,9 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 		SameSite: http.SameSiteLaxMode,
 	}
 	runtime := authruntime.NewProviderRuntime(store)
+	for _, opt := range opts {
+		opt(runtime)
+	}
 	providers := config.Providers()
 	runtime.SetProviderCount(len(providers))
 
@@ -168,8 +184,8 @@ func sessionMaxAge(config *authconfig.SessionStoreConfig) (int, error) {
 	return int(maxAge.Seconds()), nil
 }
 
-func NewMiddleware(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware) (mux.MiddlewareFunc, error) {
-	authMiddleware, err := New(config, claimsMiddleware)
+func NewMiddleware(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware, opts ...Option) (mux.MiddlewareFunc, error) {
+	authMiddleware, err := New(config, claimsMiddleware, opts...)
 	if err != nil {
 		return nil, err
 	}

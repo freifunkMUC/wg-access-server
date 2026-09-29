@@ -30,10 +30,18 @@ type ProviderRuntime struct {
 	store sessions.Store
 	// otherProviders is whether a user can sign in some other way, too.
 	otherProviders bool
+	// recordLogin is told who signed in, once a provider has established it.
+	recordLogin func(*authsession.Identity)
 }
 
 func NewProviderRuntime(store sessions.Store) *ProviderRuntime {
 	return &ProviderRuntime{store: store}
+}
+
+// OnLogin registers what to do when somebody signed in. Every provider ends
+// up here, so it is the one place that sees all of them.
+func (p *ProviderRuntime) OnLogin(record func(*authsession.Identity)) {
+	p.recordLogin = record
 }
 
 // SetProviderCount tells the providers how many there are, so a provider's
@@ -48,7 +56,16 @@ func (p *ProviderRuntime) HasOtherProviders() bool {
 }
 
 func (p *ProviderRuntime) SetSession(w http.ResponseWriter, r *http.Request, s *authsession.AuthSession) error {
-	return authsession.SetSession(p.store, r, w, s)
+	if err := authsession.SetSession(p.store, r, w, s); err != nil {
+		return err
+	}
+
+	// A session without an identity is a provider keeping state in the middle
+	// of its flow - the OIDC nonce, for instance. Nobody signed in yet.
+	if s.Identity != nil && p.recordLogin != nil {
+		p.recordLogin(s.Identity)
+	}
+	return nil
 }
 
 func (p *ProviderRuntime) GetSession(r *http.Request) (*authsession.AuthSession, error) {

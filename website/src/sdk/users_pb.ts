@@ -13,6 +13,7 @@ import * as grpcWeb from 'grpc-web';
 type MessageCtor<T> = new (...args: unknown[]) => T;
 
 import * as googleProtobufEmpty from 'google-protobuf/google/protobuf/empty_pb';
+import * as googleProtobufTimestamp from 'google-protobuf/google/protobuf/timestamp_pb';
 
 export class Users {
 
@@ -90,6 +91,7 @@ export declare namespace User {
 	export type AsObject = {
 		name: string,
 		displayName: string,
+		lastLogin?: googleProtobufTimestamp.Timestamp.AsObject,
 	}
 }
 
@@ -119,6 +121,14 @@ export class User extends jspb.Message {
 		(jspb.Message as any).setProto3StringField(this, 2, value);
 	}
 
+	getLastLogin(): googleProtobufTimestamp.Timestamp {
+		return jspb.Message.getWrapperField(this, googleProtobufTimestamp.Timestamp, 3);
+	}
+
+	setLastLogin(value?: googleProtobufTimestamp.Timestamp): void {
+		(jspb.Message as any).setWrapperField(this, 3, value);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		User.serializeBinaryToWriter(this, writer);
@@ -130,6 +140,7 @@ export class User extends jspb.Message {
 		return {
 			name: this.getName(),
 			displayName: this.getDisplayName(),
+			lastLogin: (f = this.getLastLogin()) && f.toObject(),
 		};
 	}
 
@@ -141,6 +152,10 @@ export class User extends jspb.Message {
 		const field2 = message.getDisplayName();
 		if (field2.length > 0) {
 			writer.writeString(2, field2);
+		}
+		const field3 = message.getLastLogin();
+		if (field3 != null) {
+			writer.writeMessage(3, field3, googleProtobufTimestamp.Timestamp.serializeBinaryToWriter);
 		}
 	}
 
@@ -164,6 +179,11 @@ export class User extends jspb.Message {
 			case 2:
 				const field2 = reader.readString()
 				message.setDisplayName(field2);
+				break;
+			case 3:
+				const field3 = new googleProtobufTimestamp.Timestamp();
+				reader.readMessage(field3, googleProtobufTimestamp.Timestamp.deserializeBinaryFromReader);
+				message.setLastLogin(field3);
 				break;
 			default:
 				reader.skipField();
@@ -385,6 +405,17 @@ function UserFromObject(obj: User.AsObject | undefined): User | undefined {
 	const message = new User();
 	message.setName(obj.name);
 	message.setDisplayName(obj.displayName);
+	message.setLastLogin(TimestampFromObject(obj.lastLogin));
+	return message;
+}
+
+function TimestampFromObject(obj: googleProtobufTimestamp.Timestamp.AsObject | undefined): googleProtobufTimestamp.Timestamp | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new googleProtobufTimestamp.Timestamp();
+	message.setSeconds(obj.seconds);
+	message.setNanos(obj.nanos);
 	return message;
 }
 

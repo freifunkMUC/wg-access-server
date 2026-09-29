@@ -13,6 +13,7 @@ type Storage interface {
 	Watcher
 	Pingable
 	TokenStorage
+	UserStorage
 	Save(device *Device) error
 	// RecordMetadata applies what one metadata sync observed. Traffic is
 	// added to the stored totals, so several server replicas and restarts
@@ -60,6 +61,38 @@ type Storage interface {
 	DeleteForOwner(owner string) ([]*Device, error)
 	Close() error
 	Open() error
+}
+
+// UserStorage remembers the people who signed in. A device names its owner,
+// but everything else about them - their display name, and what their identity
+// provider said about which groups they are in - exists only while they have a
+// session. The firewall rules and the device list are built when nobody is
+// signed in, so what the provider said at the last login is kept here.
+type UserStorage interface {
+	// SaveUser records somebody who signed in, replacing what was recorded
+	// before. It is the only way a user is created.
+	SaveUser(user *User) error
+	// GetUser returns what is known about somebody, or an error when they
+	// have never signed in.
+	GetUser(subject string) (*User, error)
+	// Users returns everybody who has signed in.
+	Users() ([]*User, error)
+	// DeleteUser forgets somebody. Their devices and tokens are not touched -
+	// whoever deletes a user deletes those first.
+	DeleteUser(subject string) error
+}
+
+// User is somebody who has signed in at least once.
+type User struct {
+	// Subject is what the identity provider calls them, and what a device
+	// names as its owner.
+	Subject  string `json:"subject" gorm:"type:varchar(100);primaryKey"`
+	Provider string `json:"provider"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	// LastLogin is when they last signed in, which is also how old everything
+	// else here is.
+	LastLogin time.Time `json:"last_login"`
 }
 
 type Watcher interface {

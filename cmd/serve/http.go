@@ -18,6 +18,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/apitokens"
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/metrics"
@@ -38,6 +39,24 @@ const (
 
 // newRouter builds the web server: the endpoints anyone may reach, and
 // behind the authentication middleware the API and the web UI.
+// recordLogin remembers somebody who signed in. A failure is logged and no
+// more: the sign-in itself worked, and refusing it because of a write that is
+// only needed later would be the worse outcome.
+func recordLogin(storageBackend storage.Storage) func(*authsession.Identity) {
+	return func(identity *authsession.Identity) {
+		user := &storage.User{
+			Subject:   identity.Subject,
+			Provider:  identity.Provider,
+			Name:      identity.Name,
+			Email:     identity.Email,
+			LastLogin: time.Now(),
+		}
+		if err := storageBackend.SaveUser(user); err != nil {
+			logrus.Error(fmt.Errorf("failed to remember the user that signed in: %w", err))
+		}
+	}
+}
+
 func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, storageBackend storage.Storage, wg wgembed.WireGuardInterface) (http.Handler, error) {
 	router := mux.NewRouter()
 	router.Use(web.TracesMiddleware)
@@ -62,7 +81,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 
 	// Authentication middleware
 	claims := authnz.ClaimsMiddleware(conf)
-	middleware, err := authnz.NewMiddleware(conf.Auth, claims)
+	middleware, err := authnz.NewMiddleware(conf.Auth, claims, authnz.WithLoginRecorder(recordLogin(storageBackend)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up authnz middleware: %w", err)
 	}

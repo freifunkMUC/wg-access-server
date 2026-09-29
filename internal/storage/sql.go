@@ -15,6 +15,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	gormlogger "gorm.io/gorm/logger"
 )
 
@@ -495,6 +496,44 @@ func (s *SQLStorage) DeleteForOwner(owner string) ([]*Device, error) {
 	}
 
 	return deleted, nil
+}
+
+// SaveUser writes what is known about somebody, inserting or replacing in one
+// statement: the subject is the primary key and the only unique thing about
+// the row, so an upsert has no ambiguity to get wrong.
+func (s *SQLStorage) SaveUser(user *User) error {
+	logrus.Debugf("saving user %s", user.Subject)
+
+	if err := s.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "subject"}},
+		UpdateAll: true,
+	}).Create(user).Error; err != nil {
+		return fmt.Errorf("failed to write user: %w", err)
+	}
+	return nil
+}
+
+func (s *SQLStorage) GetUser(subject string) (*User, error) {
+	user := &User{}
+	if err := s.db.Where("subject = ?", subject).First(&user).Error; err != nil {
+		return nil, fmt.Errorf("failed to read user: %w", err)
+	}
+	return user, nil
+}
+
+func (s *SQLStorage) Users() ([]*User, error) {
+	users := []*User{}
+	if err := s.db.Find(&users).Error; err != nil {
+		return nil, fmt.Errorf("failed to read users from sql: %w", err)
+	}
+	return users, nil
+}
+
+func (s *SQLStorage) DeleteUser(subject string) error {
+	if err := s.db.Where("subject = ?", subject).Delete(&User{}).Error; err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+	return nil
 }
 
 func (s *SQLStorage) Ping() error {

@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -23,9 +24,11 @@ const (
 )
 
 type User struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,2,opt,name=displayName,proto3" json:"displayName,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	DisplayName string                 `protobuf:"bytes,2,opt,name=displayName,proto3" json:"displayName,omitempty"`
+	// unset: the server has not seen them sign in
+	LastLogin     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=last_login,json=lastLogin,proto3" json:"last_login,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -72,6 +75,13 @@ func (x *User) GetDisplayName() string {
 		return x.DisplayName
 	}
 	return ""
+}
+
+func (x *User) GetLastLogin() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastLogin
+	}
+	return nil
 }
 
 type ListUsersReq struct {
@@ -202,10 +212,12 @@ var File_users_proto protoreflect.FileDescriptor
 
 const file_users_proto_rawDesc = "" +
 	"\n" +
-	"\vusers.proto\x12\x05proto\x1a\x1bgoogle/protobuf/empty.proto\"<\n" +
+	"\vusers.proto\x12\x05proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"w\n" +
 	"\x04User\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\vdisplayName\x18\x02 \x01(\tR\vdisplayName\"\x0e\n" +
+	"\vdisplayName\x18\x02 \x01(\tR\vdisplayName\x129\n" +
+	"\n" +
+	"last_login\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tlastLogin\"\x0e\n" +
 	"\fListUsersReq\"1\n" +
 	"\fListUsersRes\x12!\n" +
 	"\x05items\x18\x01 \x03(\v2\v.proto.UserR\x05items\"#\n" +
@@ -230,23 +242,25 @@ func file_users_proto_rawDescGZIP() []byte {
 
 var file_users_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_users_proto_goTypes = []any{
-	(*User)(nil),          // 0: proto.User
-	(*ListUsersReq)(nil),  // 1: proto.ListUsersReq
-	(*ListUsersRes)(nil),  // 2: proto.ListUsersRes
-	(*DeleteUserReq)(nil), // 3: proto.DeleteUserReq
-	(*emptypb.Empty)(nil), // 4: google.protobuf.Empty
+	(*User)(nil),                  // 0: proto.User
+	(*ListUsersReq)(nil),          // 1: proto.ListUsersReq
+	(*ListUsersRes)(nil),          // 2: proto.ListUsersRes
+	(*DeleteUserReq)(nil),         // 3: proto.DeleteUserReq
+	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 5: google.protobuf.Empty
 }
 var file_users_proto_depIdxs = []int32{
-	0, // 0: proto.ListUsersRes.items:type_name -> proto.User
-	1, // 1: proto.Users.ListUsers:input_type -> proto.ListUsersReq
-	3, // 2: proto.Users.DeleteUser:input_type -> proto.DeleteUserReq
-	2, // 3: proto.Users.ListUsers:output_type -> proto.ListUsersRes
-	4, // 4: proto.Users.DeleteUser:output_type -> google.protobuf.Empty
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	4, // 0: proto.User.last_login:type_name -> google.protobuf.Timestamp
+	0, // 1: proto.ListUsersRes.items:type_name -> proto.User
+	1, // 2: proto.Users.ListUsers:input_type -> proto.ListUsersReq
+	3, // 3: proto.Users.DeleteUser:input_type -> proto.DeleteUserReq
+	2, // 4: proto.Users.ListUsers:output_type -> proto.ListUsersRes
+	5, // 5: proto.Users.DeleteUser:output_type -> google.protobuf.Empty
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_users_proto_init() }
