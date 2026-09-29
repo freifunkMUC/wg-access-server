@@ -3,6 +3,7 @@ package dnsproxy
 import (
 	"context"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,10 +22,96 @@ func testCache(t *testing.T) *lru.Cache[string, cachedResponse] {
 	return c
 }
 
-var ffmucUpstreams, _ = net.LookupHost("dns.ffmuc.net")
+// txtChunks is one TXT record of about size bytes, in the 255 byte pieces a
+// TXT record is made of. A resolver joins them again.
+func txtChunks(size int) []string {
+	const piece = 255
+	var chunks []string
+	for written := 0; written < size; written += piece {
+		chunks = append(chunks, strings.Repeat("x", piece))
+	}
+	return chunks
+}
 
+// newTXTUpstream is a resolver for the test: it answers the TXT queries it has
+// a record for, over UDP and over TCP, and cuts a UDP answer down to what the
+// client said it could take - which is what makes an answer arrive truncated,
+// and the proxy ask again over TCP.
+func newTXTUpstream(t *testing.T, records map[string][]string) string {
+	t.Helper()
+
+	// the same port on both transports, as a resolver has it
+	var conn net.PacketConn
+	var listener net.Listener
+	for attempt := 0; attempt < 5; attempt++ {
+		var err error
+		conn, err = net.ListenPacket("udp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		listener, err = net.Listen("tcp", conn.LocalAddr().String())
+		if err == nil {
+			break
+		}
+		_ = conn.Close()
+		conn, listener = nil, nil
+	}
+	if conn == nil || listener == nil {
+		t.Fatal("could not listen on the same port over UDP and TCP")
+	}
+
+	handler := dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
+		response := new(dns.Msg)
+		response.SetReply(r)
+		response.Authoritative = true
+
+		if len(r.Question) == 1 && r.Question[0].Qtype == dns.TypeTXT {
+			if chunks, ok := records[r.Question[0].Name]; ok {
+				response.Answer = append(response.Answer, &dns.TXT{
+					Hdr: dns.RR_Header{Name: r.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 300},
+					Txt: chunks,
+				})
+			}
+		}
+
+		// what a resolver does: fit the answer to the transport, and say so
+		// when it does not fit
+		size := dns.MaxMsgSize
+		if _, udp := w.RemoteAddr().(*net.UDPAddr); udp {
+			size = dns.MinMsgSize
+			if opt := r.IsEdns0(); opt != nil {
+				size = int(opt.UDPSize())
+			}
+		}
+		response.Truncate(size)
+
+		_ = w.WriteMsg(response)
+	})
+
+	for _, server := range []*dns.Server{
+		{PacketConn: conn, Handler: handler},
+		{Listener: listener, Handler: handler},
+	} {
+		started := make(chan struct{})
+		server.NotifyStartedFunc = func() { close(started) }
+		go func() { _ = server.ActivateAndServe() }()
+		<-started
+		t.Cleanup(func() { _ = server.Shutdown() })
+	}
+
+	return conn.LocalAddr().String()
+}
+
+// A query goes to the proxy, the proxy asks the resolver, and the answer finds
+// its way back even when it does not fit into a UDP packet - over TCP, twice:
+// between the proxy and the resolver, and between the client and the proxy.
 func TestDNSProxy_ServeDNS(t *testing.T) {
 	const listen = "[::1]:8053"
+
+	upstream := newTXTUpstream(t, map[string][]string{
+		"medium.example.": txtChunks(1300),
+		"large.example.":  txtChunks(1800),
+	})
 
 	resolver := net.Resolver{
 		PreferGo: true,
@@ -37,24 +124,27 @@ func TestDNSProxy_ServeDNS(t *testing.T) {
 	server, err := New(DNSServerOpts{
 		Domain:     "",
 		ListenAddr: []string{listen},
-		Upstream:   ffmucUpstreams,
+		Upstream:   []string{upstream},
 	})
-	server.ListenAndServe()
-	defer func() { _ = server.Close() }()
-
 	if err != nil {
 		t.Fatal(err)
 	}
+	server.ListenAndServe()
+	defer func() { _ = server.Close() }()
 
 	t.Run("Reply over 1300 bytes", func(t *testing.T) {
-		_, err := resolver.LookupTXT(context.Background(), "cloudflare.com.")
+		records, err := resolver.LookupTXT(context.Background(), "medium.example.")
 		if err != nil {
 			t.Error(err)
 			return
 		}
+		if len(records) != 1 || len(records[0]) < 1300 {
+			t.Errorf("got %d records of %d bytes, want one of at least 1300", len(records), recordLength(records))
+		}
 	})
+
 	t.Run("Reply over 1500 bytes", func(t *testing.T) {
-		records, err := resolver.LookupTXT(context.Background(), "txtfill1500.test.dnscheck.tools.")
+		records, err := resolver.LookupTXT(context.Background(), "large.example.")
 		if err != nil {
 			t.Error(err)
 			return
@@ -66,9 +156,17 @@ func TestDNSProxy_ServeDNS(t *testing.T) {
 			}
 		}
 		if !containsBigRecord {
-			t.Error("missing big TXT record, packet probably truncated")
+			t.Errorf("missing big TXT record (%d bytes), packet probably truncated", recordLength(records))
 		}
 	})
+}
+
+func recordLength(records []string) int {
+	length := 0
+	for _, record := range records {
+		length += len(record)
+	}
+	return length
 }
 
 func TestDNSProxy_Lookup(t *testing.T) {
@@ -76,7 +174,8 @@ func TestDNSProxy_Lookup(t *testing.T) {
 		udpClient: &dns.Client{Net: "udp"},
 		tcpClient: &dns.Client{Net: "tcp"},
 		cache:     testCache(t),
-		upstream:  ffmucUpstreams,
+		// never reached: the answer this test asks for is in the cache
+		upstream: []string{"127.0.0.1:1"},
 	}
 
 	t.Run("Cache hit", func(t *testing.T) {
