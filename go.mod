@@ -8,15 +8,15 @@ require (
 	github.com/casbin/govaluate v1.10.0
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-oidc/v3 v3.21.0
-	github.com/freifunkMUC/pg-events v0.5.0
-	github.com/freifunkMUC/wg-embed v0.12.0
+	github.com/freifunkMUC/pg-events v0.6.0
+	github.com/freifunkMUC/wg-embed v0.12.1
 	github.com/go-sql-driver/mysql v1.10.1
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/sessions v1.4.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	github.com/miekg/dns v1.1.73
 	github.com/prometheus/client_golang v1.24.1
 	github.com/sirupsen/logrus v1.10.2
@@ -47,13 +47,11 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/lib/pq v1.12.3 // indirect
 	github.com/mattn/go-sqlite3 v1.14.52 // indirect
 	github.com/mdlayher/genetlink v1.4.0 // indirect
 	github.com/mdlayher/netlink v1.11.2 // indirect
 	github.com/mdlayher/socket v0.7.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
 	github.com/prometheus/common v0.71.0 // indirect
 	github.com/prometheus/procfs v0.22.0 // indirect
