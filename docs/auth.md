@@ -200,6 +200,21 @@ hash, so whoever reads the database learns which sessions exist, not how to use 
     longer reads - it wants a session id, and there is none. They sign in again and are on the new
     scheme.
 
+### Where you are signed in
+
+The shield in the navigation lists every browser that is signed in as you: what it said it was,
+the address it came from, when it signed in and when it was last used. The one asking is marked
+**This browser**.
+
+- **Sign out** on a row ends that one session, at once and everywhere. Do that for a session you do
+  not recognise, or for a computer you left signed in somewhere.
+- **Sign out everywhere else** ends all of them but the one you are looking at, which is the thing
+  to reach for after a password went through the wrong hands.
+
+Everybody manages their own sessions; there is no admin view of somebody else's. Taking another
+person's access away is a different job, and it has to take their devices and their API tokens with
+it - until then, deleting the user does all three.
+
 What this does *not* do: end a tunnel. A device keeps connecting whether or not anybody is signed
 in - that is what [blocking a device](../#device-access) is for. A session is the web UI and the
 API: adding devices, downloading their configuration, and whatever else the person may do.

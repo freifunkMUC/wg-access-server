@@ -32,8 +32,10 @@ const (
 	// DeviceRoutes is an admin changing the networks behind a device.
 	DeviceRoutes = "device.routes"
 	UserDelete   = "user.delete"
-	TokenCreate  = "api_token.create"
-	TokenDelete  = "api_token.delete"
+	// SessionDelete is somebody ending a browser session of their own.
+	SessionDelete = "session.delete"
+	TokenCreate   = "api_token.create"
+	TokenDelete   = "api_token.delete"
 )
 
 // SystemActor stands in for wg-access-server itself, for changes that no user

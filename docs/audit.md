@@ -20,6 +20,7 @@ level=info msg=device.delete audit=device.delete actor=admin actor_is_admin=true
 | `device.expire` | A device lost its access because its expiry passed | `device`, `owner`              |
 | `device.routes` | An admin changed the networks behind a device       | `device`, `owner`, `routes`    |
 | `user.delete`   | An admin deleted a user, their devices and tokens  | `target_user`                  |
+| `session.delete` | Somebody ended a browser session of theirs        | `session`, or `sessions` and `reason`\*\*\* |
 | `api_token.create` | An API token was created                        | `token`, `token_name`, `expires_at` |
 | `api_token.delete` | An API token was revoked                        | `token`, `token_name`, `owner` |
 
@@ -28,6 +29,10 @@ device grace period.
 
 \*\* The record says what the device's access looks like after the change, not what was changed.
 `expires_at` is absent when the device's access does not expire.
+
+\*\*\* `session` names the one session that was ended. "Sign out everywhere else" ends several at
+once and records `sessions` as how many that was, with `reason=all others`; the ids are not worth a
+record each, they are gone.
 
 `device.expire` is recorded by the server itself, so its actor is `system`: nobody asked for it, the
 date an admin set earlier simply passed. It is recorded once per device, when the peer is removed.
