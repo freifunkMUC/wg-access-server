@@ -435,6 +435,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-the-server-remembers-about-a-sign-in" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -783,6 +794,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-the-server-remembers-about-a-sign-in" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1061,6 +1083,30 @@ when they sign in again, as an admin right does today.</p>
 <p>Somebody in no policy, and everybody signing in through basic or simple auth, keeps <code>vpn.allowedIPs</code>.</p>
 <p>The admin page shows which policies somebody ended up in, which is how a rule is checked against
 what the provider actually sends.</p>
+<h2 id="sessions">Sessions<a class="headerlink" href="#sessions" title="Permanent link"> ¶</a></h2>
+<p>Signing in creates a session, and the cookie the browser gets carries <strong>nothing but its id</strong>. Who
+signed in, and what their identity provider said about them, is kept by the server.</p>
+<p>That is what makes a session something the server can end:</p>
+<ul>
+<li><strong>Signing out</strong> ends it, rather than only dropping the cookie. A cookie that was copied elsewhere
+  stops working with it.</li>
+<li><strong>Deleting a user</strong> ends every session they have, along with their devices and their API tokens.</li>
+<li>It takes effect <strong>everywhere at once</strong>: a session is read from the storage on every request, so
+  there is nothing to tell the other replicas.</li>
+</ul>
+<p>A session lasts as long as <code>auth.sessionStore.maxAge</code> (30 days by default) and is removed once it
+has expired. Along with it the server keeps what the browser said about itself and the address it
+came from, so that somebody can tell their own sessions apart; the id itself is stored only as a
+hash, so whoever reads the database learns which sessions exist, not how to use them.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Upgrading signs everybody out once.</strong> Their cookies carry an identity, which this version no
+longer reads - it wants a session id, and there is none. They sign in again and are on the new
+scheme.</p>
+</div>
+<p>What this does <em>not</em> do: end a tunnel. A device keeps connecting whether or not anybody is signed
+in - that is what <a href="../#device-access">blocking a device</a> is for. A session is the web UI and the
+API: adding devices, downloading their configuration, and whatever else the person may do.</p>
 <h2 id="what-the-server-remembers-about-a-sign-in">What the server remembers about a sign-in<a class="headerlink" href="#what-the-server-remembers-about-a-sign-in" title="Permanent link"> ¶</a></h2>
 <p>A sign-in writes a row: the identifier the provider uses for the person, which provider it was, their
 display name and email address as the provider reports them, and the time. It is replaced at every
