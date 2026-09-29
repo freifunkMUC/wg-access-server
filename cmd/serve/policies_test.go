@@ -104,3 +104,29 @@ func TestPoliciesOf(t *testing.T) {
 		t.Errorf("policies = %v, want none for a user without claims", policies)
 	}
 }
+
+// A policy name ends up in the name of an nftables set, so only what an
+// identifier may hold is allowed - and the message has to say so rather than
+// let nft fail later.
+func TestValidatePoliciesChecksTheName(t *testing.T) {
+	for _, name := range []string{"has space", "semi;colon", "with-dash", strings.Repeat("a", 33)} {
+		err := validatePolicies(
+			map[string]config.PolicyConfig{name: {AllowedIPs: []string{"10.0.0.0/8"}}},
+			authWithPolicyRules(t),
+		)
+		if err == nil {
+			t.Errorf("the policy name %q was accepted", name)
+			continue
+		}
+		if !strings.Contains(err.Error(), "not usable") {
+			t.Errorf("the message for %q does not say what is wrong: %v", name, err)
+		}
+	}
+
+	if err := validatePolicies(
+		map[string]config.PolicyConfig{"contractors_2": {AllowedIPs: []string{"10.0.0.0/8"}}},
+		authWithPolicyRules(t),
+	); err != nil {
+		t.Errorf("a name of letters, digits and underscores was refused: %v", err)
+	}
+}

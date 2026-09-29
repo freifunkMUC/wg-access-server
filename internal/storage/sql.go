@@ -203,7 +203,11 @@ func (s *SQLStorage) Open() error {
 func (s *SQLStorage) attachWatcher(db *gorm.DB, sqlDB *sql.DB, table string) error {
 	switch s.sqlType {
 	case "postgres":
-		watcher, err := NewPgWatcher(sqlDB, s.connectionString, table)
+		users, err := userTable(db)
+		if err != nil {
+			return err
+		}
+		watcher, err := NewPgWatcher(sqlDB, s.connectionString, table, users)
 		if err != nil {
 			return fmt.Errorf("failed to create pg watcher: %w", err)
 		}
@@ -224,6 +228,15 @@ func deviceTable(db *gorm.DB) (string, error) {
 	stmt := &gorm.Statement{DB: db}
 	if err := stmt.Parse(&Device{}); err != nil {
 		return "", fmt.Errorf("failed to determine the devices table name: %w", err)
+	}
+	return stmt.Schema.Table, nil
+}
+
+// userTable returns the table name gorm uses for a User.
+func userTable(db *gorm.DB) (string, error) {
+	stmt := &gorm.Statement{DB: db}
+	if err := stmt.Parse(&User{}); err != nil {
+		return "", fmt.Errorf("failed to determine the users table name: %w", err)
 	}
 	return stmt.Schema.Table, nil
 }

@@ -30,7 +30,7 @@ type PgWatcher struct {
 	*pgevents.Listener
 }
 
-func NewPgWatcher(db *sql.DB, connectionString string, table string) (*PgWatcher, error) {
+func NewPgWatcher(db *sql.DB, connectionString string, table string, usersTable string) (*PgWatcher, error) {
 	logrus.Debug("creating postgres watcher")
 
 	// The context is for getting started only: once the listener is open it
@@ -57,6 +57,16 @@ func NewPgWatcher(db *sql.DB, connectionString string, table string) (*PgWatcher
 	if err := listener.AttachWithoutRow(ctx, table, pgevents.Insert, pgevents.Delete); err != nil {
 		_ = listener.Close()
 		return nil, fmt.Errorf("failed to attach listener to table: %s: %w", table, err)
+	}
+
+	// Who is in which access policy is written when somebody signs in, and it
+	// decides what their devices may reach. A replica that took no part in
+	// that sign-in has to hear about it, or it would keep building the
+	// firewall rules from what it knew before. Without the row, like the
+	// devices: the reader looks the users up itself.
+	if err := listener.AttachWithoutRow(ctx, usersTable, pgevents.Insert, pgevents.Update, pgevents.Delete); err != nil {
+		_ = listener.Close()
+		return nil, fmt.Errorf("failed to attach listener to table: %s: %w", usersTable, err)
 	}
 
 	if err := attachUpdateTrigger(db, table); err != nil {

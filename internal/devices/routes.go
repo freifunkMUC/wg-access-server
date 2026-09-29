@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
-	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/freifunkMUC/wg-access-server/internal/network"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
 )
 
@@ -185,60 +186,112 @@ func routeStrings(routes []netip.Prefix) []string {
 	return values
 }
 
-// routedNetworksMayHaveChanged recomputes the routed networks after a change
-// to one device. An installation that routes nothing - which is most of them -
-// pays a comparison for this and nothing else.
-func (d *DeviceManager) routedNetworksMayHaveChanged(device *storage.Device) {
-	if d.routeSync == nil {
-		return
-	}
-
-	d.routedMu.Lock()
-	known := len(d.routed)
-	d.routedMu.Unlock()
-	if known == 0 && len(device.RouteList()) == 0 {
-		return
-	}
-
-	devices, err := d.ListAllDevices()
-	if err != nil {
-		logrus.Warn(fmt.Errorf("failed to list devices - the firewall rules for the routed networks are unchanged: %w", err))
-		return
-	}
-	d.syncRoutedNetworks(devices)
+// FirewallState is what the firewall has to be built from besides the
+// configuration: it changes while the server runs, as devices come and go and
+// as people sign in.
+type FirewallState struct {
+	// Routed are the networks that live behind devices.
+	Routed []string
+	// Policies maps the name of an access policy to the addresses of the
+	// devices of the people in it.
+	Policies map[string][]string
 }
 
-// syncRoutedNetworks hands the networks routed through the devices to the
-// route sync, unless they are the ones it already knows. A failure is not
-// remembered, so the next change tries again.
-func (d *DeviceManager) syncRoutedNetworks(devices []*storage.Device) {
-	if d.routeSync == nil {
+// key is a form of the state that can be compared, so that a change can be
+// told from a recomputation that found the same thing.
+func (s FirewallState) key() string {
+	names := make([]string, 0, len(s.Policies))
+	for name := range s.Policies {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var b strings.Builder
+	b.WriteString(strings.Join(s.Routed, ","))
+	for _, name := range names {
+		b.WriteString("|" + name + "=" + strings.Join(s.Policies[name], ","))
+	}
+	return b.String()
+}
+
+// Resync asks for everything to be brought in line with what is stored: the
+// WireGuard peers, the routes and the firewall rules. Several asks while one
+// is running collapse into one more.
+func (d *DeviceManager) Resync() {
+	select {
+	case d.resync <- struct{}{}:
+	default:
+	}
+}
+
+// syncFirewallState works out what the firewall has to be built from and hands
+// it over, unless it is what the firewall was built from last. A failure is
+// not remembered, so the next change tries again.
+func (d *DeviceManager) syncFirewallState(devices []*storage.Device) {
+	if d.firewallSync == nil {
 		return
 	}
 
-	routed := []string{}
+	state, err := d.firewallState(devices)
+	if err != nil {
+		logrus.Warn(fmt.Errorf("failed to work out the firewall rules: %w", err))
+		return
+	}
+
+	d.firewallMu.Lock()
+	defer d.firewallMu.Unlock()
+	if state.key() == d.firewall.key() {
+		return
+	}
+
+	if err := d.firewallSync(state); err != nil {
+		logrus.Error(fmt.Errorf("failed to update the firewall rules: %w", err))
+		return
+	}
+	d.firewall = state
+}
+
+// firewallState collects what the rules are made of: the networks behind the
+// devices, and the devices of the people in each access policy.
+//
+// A device that may not connect is left out of the policies: it has no peer,
+// so nothing can come from its address, and listing it would say otherwise.
+func (d *DeviceManager) firewallState(devices []*storage.Device) (FirewallState, error) {
+	users, err := d.storage.Users()
+	if err != nil {
+		return FirewallState{}, fmt.Errorf("failed to list users: %w", err)
+	}
+	policiesOf := make(map[string][]string, len(users))
+	for _, user := range users {
+		if policies := user.PolicyList(); len(policies) > 0 {
+			policiesOf[user.Subject] = policies
+		}
+	}
+
+	state := FirewallState{Routed: []string{}, Policies: map[string][]string{}}
+	now := time.Now()
 	for _, device := range devices {
-		routed = append(routed, device.RouteList()...)
-	}
-	sort.Strings(routed)
+		state.Routed = append(state.Routed, device.RouteList()...)
 
-	d.routedMu.Lock()
-	defer d.routedMu.Unlock()
-	if slices.Equal(routed, d.routed) {
-		return
+		if !device.AccessAllowed(now) {
+			continue
+		}
+		for _, policy := range policiesOf[device.Owner] {
+			state.Policies[policy] = append(state.Policies[policy], network.SplitAddresses(device.Address)...)
+		}
 	}
 
-	if err := d.routeSync(routed); err != nil {
-		logrus.Error(fmt.Errorf("failed to update the firewall rules for the routed networks: %w", err))
-		return
+	sort.Strings(state.Routed)
+	for name := range state.Policies {
+		sort.Strings(state.Policies[name])
 	}
-	d.routed = routed
+	return state, nil
 }
 
 // RoutedNetworks returns the networks routed through the devices as the
 // firewall was last told about them.
 func (d *DeviceManager) RoutedNetworks() []string {
-	d.routedMu.Lock()
-	defer d.routedMu.Unlock()
-	return append([]string{}, d.routed...)
+	d.firewallMu.Lock()
+	defer d.firewallMu.Unlock()
+	return append([]string{}, d.firewall.Routed...)
 }

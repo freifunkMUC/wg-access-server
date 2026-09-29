@@ -162,9 +162,26 @@ func TestNftablesRulesetApplies(t *testing.T) {
 		GatewayIface: "eth1", CIDR: "10.55.0.0/24",
 		AllowedIPs: []string{"192.168.1.0/24"},
 	})
+	// the policies have to load as well: sets, the rules naming them, and an
+	// empty set for a policy nobody is in
+	third := ruleset(t, ForwardingOptions{
+		GatewayIface: "eth1", CIDR: "10.66.0.0/24", CIDRv6: "fd48:4c4:7aa9::/64",
+		NAT44: true, NAT66: true,
+		AllowedIPs:      []string{"0.0.0.0/0", "::/0"},
+		ServerAddresses: []string{"10.66.0.1", "fd48:4c4:7aa9::1"},
+		Policies: []Policy{
+			{
+				Name:       "contractors",
+				AllowedIPs: []string{"10.0.5.0/24", "2001:db8:5::/48"},
+				Members:    []string{"10.66.0.2/32", "fd48:4c4:7aa9::2/128"},
+			},
+			{Name: "guests", AllowedIPs: []string{"192.168.9.0/24"}},
+		},
+	})
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "first.nft"), []byte(first), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "second.nft"), []byte(second), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "third.nft"), []byte(third), 0o600))
 
 	out, err := exec.Command("unshare", "--net", "--map-root-user", "sh", "-c",
 		`nft -f "$1/first.nft" && nft -f "$1/first.nft" && nft -f "$1/second.nft" && nft list ruleset`,
@@ -178,4 +195,121 @@ func TestNftablesRulesetApplies(t *testing.T) {
 	assert.Contains(t, listed, "reject with icmp port-unreachable")
 	assert.NotContains(t, listed, "10.44.0.0", "the first start's rules are still there")
 	assert.NotContains(t, listed, "xt ", "native rules only, no iptables compatibility")
+
+	out, err = exec.Command("unshare", "--net", "--map-root-user", "sh", "-c",
+		`nft -f "$1/third.nft" && nft list ruleset`, "sh", dir).CombinedOutput()
+	require.NoError(t, err, string(out))
+
+	listed = string(out)
+	assert.Contains(t, listed, "elements = { 10.66.0.2 }")
+	assert.Contains(t, listed, "ip saddr @policy_contractors_ip ip daddr 10.0.5.0/24 accept")
+	assert.Contains(t, listed, "ip6 saddr @policy_contractors_ip6 ip6 daddr 2001:db8:5::/48 accept")
+	assert.Contains(t, listed, "ip saddr @policy_members_ip reject")
+	assert.Contains(t, listed, "set policy_guests_ip", "a policy nobody is in still has its set")
+}
+
+// A policy restricts its members to its own networks: their devices are in a
+// set, the set gets the policy's networks, and it is rejected before the rules
+// that say what everybody else may reach.
+func TestNftablesRulesetPolicies(t *testing.T) {
+	rules := ruleset(t, ForwardingOptions{
+		GatewayIface:    "eth0",
+		CIDR:            "10.44.0.0/24",
+		NAT44:           true,
+		AllowedIPs:      []string{"0.0.0.0/0"},
+		ServerAddresses: []string{"10.44.0.1"},
+		Policies: []Policy{
+			{Name: "contractors", AllowedIPs: []string{"10.0.5.0/24"}, Members: []string{"10.44.0.2/32", "10.44.0.3/32"}},
+			// nobody is in this one, and it still has to load
+			{Name: "guests", AllowedIPs: []string{"192.168.9.0/24"}},
+		},
+	})
+
+	assert.Equal(t, `table inet wg_access_server
+delete table inet wg_access_server
+table inet wg_access_server {
+	set policy_contractors_ip {
+		type ipv4_addr
+		elements = { 10.44.0.2, 10.44.0.3 }
+	}
+
+	set policy_guests_ip {
+		type ipv4_addr
+	}
+
+	set policy_members_ip {
+		type ipv4_addr
+		elements = { 10.44.0.2, 10.44.0.3 }
+	}
+
+	chain forward {
+		type filter hook forward priority filter; policy accept;
+		ip saddr 10.44.0.0/24 ip daddr 10.44.0.1 accept
+		ip saddr @policy_contractors_ip ip daddr 10.0.5.0/24 accept
+		ip saddr @policy_guests_ip ip daddr 192.168.9.0/24 accept
+		ip saddr @policy_members_ip reject
+		ip saddr 10.44.0.0/24 ip daddr 0.0.0.0/0 accept
+		ip saddr 10.44.0.0/24 reject
+	}
+
+	chain postrouting {
+		type nat hook postrouting priority srcnat; policy accept;
+		ip saddr 10.44.0.0/24 oifname "eth0" masquerade
+	}
+}
+`, rules)
+}
+
+// Without NAT the answers come back to the clients' own addresses, so a
+// policy's networks have to reach its members as well.
+func TestNftablesRulesetPoliciesWithoutNAT(t *testing.T) {
+	rules := ruleset(t, ForwardingOptions{
+		CIDR:       "10.44.0.0/24",
+		AllowedIPs: []string{"10.1.0.0/16"},
+		Policies: []Policy{
+			{Name: "staff", AllowedIPs: []string{"10.0.5.0/24"}, Members: []string{"10.44.0.2/32"}},
+		},
+	})
+
+	assert.Contains(t, rules, "ip saddr @policy_staff_ip ip daddr 10.0.5.0/24 accept")
+	assert.Contains(t, rules, "ip saddr 10.0.5.0/24 ip daddr @policy_staff_ip accept")
+}
+
+// Each family sees only what belongs to it, and a policy that says nothing
+// about one is not mentioned there at all.
+func TestNftablesRulesetPoliciesPerFamily(t *testing.T) {
+	rules := ruleset(t, ForwardingOptions{
+		CIDR:       "10.44.0.0/24",
+		CIDRv6:     "fd48:4c4:7aa9::/64",
+		NAT44:      true,
+		NAT66:      true,
+		AllowedIPs: []string{"0.0.0.0/0", "::/0"},
+		Policies: []Policy{{
+			Name:       "staff",
+			AllowedIPs: []string{"10.0.5.0/24", "2001:db8:5::/48"},
+			Members:    []string{"10.44.0.2/32", "fd48:4c4:7aa9::2/128"},
+		}, {
+			Name:       "v4only",
+			AllowedIPs: []string{"192.168.9.0/24"},
+			Members:    []string{"10.44.0.3/32"},
+		}},
+	})
+
+	assert.Contains(t, rules, "elements = { 10.44.0.2 }")
+	assert.Contains(t, rules, "elements = { fd48:4c4:7aa9::2 }")
+	assert.Contains(t, rules, "ip6 saddr @policy_staff_ip6 ip6 daddr 2001:db8:5::/48 accept")
+	assert.Contains(t, rules, "ip saddr @policy_v4only_ip ip daddr 192.168.9.0/24 accept")
+	assert.NotContains(t, rules, "policy_v4only_ip6", "a policy without IPv6 networks has nothing to say there")
+}
+
+// Nothing but a name the configuration was checked for may end up in a set
+// name.
+func TestNftablesRulesetRejectsBadPolicyNames(t *testing.T) {
+	for _, name := range []string{"has space", "semi;colon", "", strings.Repeat("a", 33), "with-dash"} {
+		_, err := nftablesRuleset(ForwardingOptions{
+			CIDR:     "10.44.0.0/24",
+			Policies: []Policy{{Name: name, AllowedIPs: []string{"10.0.5.0/24"}}},
+		})
+		assert.Error(t, err, "policy name %q was accepted", name)
+	}
 }

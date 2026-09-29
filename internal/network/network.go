@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"regexp"
 	"strings"
 
 	"github.com/coreos/go-iptables/iptables"
@@ -100,9 +101,39 @@ type ForwardingOptions struct {
 	AllowedIPs      []string
 	allowedIPv4s    []string
 	allowedIPv6s    []string
+	// Policies restrict what the devices of the people in them may reach,
+	// instead of AllowedIPs. A device whose owner is in no policy keeps
+	// AllowedIPs. Only the nftables backend has them.
+	Policies []Policy
+	// ServerAddresses are the addresses of the WireGuard interface itself.
+	// Every client reaches them whatever a policy says: that is where the
+	// embedded DNS proxy answers, and a policy that cut it off would leave
+	// its members without name resolution.
+	ServerAddresses []string
 	// Firewall is the backend that sets up the rules: FirewallIPTables,
 	// FirewallNftables or FirewallNone.
 	Firewall string
+}
+
+// Policy is what one access policy allows, and whose devices it applies to.
+type Policy struct {
+	// Name is what the configuration calls it. It ends up in the name of an
+	// nftables set, so it is restricted to what an identifier may hold - see
+	// ValidPolicyName.
+	Name string
+	// AllowedIPs are the networks the members may reach.
+	AllowedIPs []string
+	// Members are the addresses of the devices of the people in the policy.
+	Members []string
+}
+
+// policyNamePattern is what a policy may be called: the name becomes part of
+// an nftables set name, and nothing else may end up in the ruleset.
+var policyNamePattern = regexp.MustCompile(`^[A-Za-z0-9_]{1,32}$`)
+
+// ValidPolicyName reports whether a policy may be called that.
+func ValidPolicyName(name string) bool {
+	return policyNamePattern.MatchString(name)
 }
 
 // The chains wg-access-server owns in the iptables backend.

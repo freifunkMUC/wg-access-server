@@ -93,6 +93,14 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	}
 	cmd.AppConfig.VPN.Firewall = firewall
 
+	// The rules of a policy are a set per policy and a lookup per packet,
+	// which iptables cannot do without a rule per device and network. The
+	// nftables backend is where they live; saying so at startup beats a
+	// policy that quietly allows everything.
+	if len(cmd.AppConfig.VPN.Policies) > 0 && firewall != network.FirewallNftables {
+		logrus.Fatalf("access policies need vpn.firewall: nftables, but the firewall is %q", firewall)
+	}
+
 	if !cmd.AppConfig.Auth.IsEnabled() {
 		if cmd.AppConfig.AdminPassword == "" {
 			logrus.Fatal("Missing admin password: please set via environment variable, flag or config file")
@@ -257,6 +265,9 @@ var missingPrivateKey = `Missing WireGuard private key:
 // operator's mistake and it should not take until somebody signs in to show.
 func validatePolicies(policies map[string]config.PolicyConfig, auth *authconfig.AuthConfig) error {
 	for name, policy := range policies {
+		if !network.ValidPolicyName(name) {
+			return fmt.Errorf("the policy name '%s' is not usable: letters, digits and underscores, at most 32 of them - it becomes part of a firewall set name", name)
+		}
 		if len(policy.AllowedIPs) == 0 {
 			return fmt.Errorf("the policy '%s' names no networks - leave people out of every policy to give them vpn.allowedIPs instead", name)
 		}

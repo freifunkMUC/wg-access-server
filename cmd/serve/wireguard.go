@@ -3,12 +3,13 @@ package serve
 import (
 	"fmt"
 	"net/netip"
-	"strings"
+	"sort"
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/internal/config"
+	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/hooks"
 	"github.com/freifunkMUC/wg-access-server/internal/network"
 )
@@ -100,7 +101,7 @@ func (cmd *servecmd) startWireGuard(conf *config.AppConfig, vpn vpnAddressing) (
 
 	logrus.Infof("WireGuard VPN network is %s", network.StringJoinIPNets(vpn.ipv4, vpn.ipv6))
 
-	if err := network.ConfigureForwarding(forwardingOptions(conf, nil)); err != nil {
+	if err := network.ConfigureForwarding(forwardingOptions(conf, vpn, devices.FirewallState{})); err != nil {
 		return wg, stop, err
 	}
 
@@ -111,13 +112,29 @@ func (cmd *servecmd) startWireGuard(conf *config.AppConfig, vpn vpnAddressing) (
 }
 
 // forwardingOptions describes the firewall rules for the clients: what the
-// configuration allows them to reach, plus the networks that are routed
-// through devices - those are added by an admin while the server runs, long
-// after these rules were first set up.
-func forwardingOptions(conf *config.AppConfig, routed []string) network.ForwardingOptions {
-	allowed := make([]string, 0, len(conf.VPN.AllowedIPs)+len(routed))
+// configuration allows them to reach, plus what changes while the server runs
+// - the networks routed through devices, and who is in which access policy.
+func forwardingOptions(conf *config.AppConfig, vpn vpnAddressing, state devices.FirewallState) network.ForwardingOptions {
+	allowed := make([]string, 0, len(conf.VPN.AllowedIPs)+len(state.Routed))
 	allowed = append(allowed, conf.VPN.AllowedIPs...)
-	allowed = append(allowed, routed...)
+	allowed = append(allowed, state.Routed...)
+
+	// Every policy the configuration has, whether anybody is in it or not: a
+	// policy that loses its last member has to lose its rules, and a set that
+	// is not declared cannot be named by one.
+	policies := make([]network.Policy, 0, len(conf.VPN.Policies))
+	for _, name := range sortedPolicyNames(conf.VPN.Policies) {
+		policies = append(policies, network.Policy{
+			Name:       name,
+			AllowedIPs: conf.VPN.Policies[name].AllowedIPs,
+			Members:    state.Policies[name],
+		})
+	}
+
+	serverAddresses := make([]string, 0, len(vpn.addrs))
+	for _, addr := range vpn.addrs {
+		serverAddresses = append(serverAddresses, addr.String())
+	}
 
 	return network.ForwardingOptions{
 		GatewayIface:    conf.VPN.GatewayInterface,
@@ -127,27 +144,36 @@ func forwardingOptions(conf *config.AppConfig, routed []string) network.Forwardi
 		NAT66:           conf.VPN.NAT66,
 		ClientIsolation: conf.VPN.ClientIsolation,
 		AllowedIPs:      allowed,
+		Policies:        policies,
+		ServerAddresses: serverAddresses,
 		Firewall:        conf.VPN.Firewall,
 	}
 }
 
-// routeSync returns what the device manager calls when the routed networks
-// change: the firewall has to let that traffic through as well. The rules are
-// built from scratch every time, which is what happens at startup too - for
-// nftables that is one atomic replacement of the ruleset.
+func sortedPolicyNames(policies map[string]config.PolicyConfig) []string {
+	names := make([]string, 0, len(policies))
+	for name := range policies {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// firewallSync returns what the device manager calls when what the rules are
+// built from has changed: a network routed through a device, or somebody whose
+// access policies are not what they were. The rules are built from scratch
+// every time, which is what happens at startup too - for nftables that is one
+// atomic replacement of the ruleset.
 //
 // Without the WireGuard interface there are no rules of ours to speak of.
-func routeSync(conf *config.AppConfig) func([]string) error {
+func firewallSync(conf *config.AppConfig, vpn vpnAddressing) func(devices.FirewallState) error {
 	if !conf.WireGuard.Enabled {
 		return nil
 	}
-	return func(routed []string) error {
-		if len(routed) > 0 {
-			logrus.Infof("Updating the firewall rules for the networks routed through devices: %s", strings.Join(routed, ", "))
-		} else {
-			logrus.Info("Updating the firewall rules: no networks are routed through devices any more")
-		}
-		return network.ConfigureForwarding(forwardingOptions(conf, routed))
+	return func(state devices.FirewallState) error {
+		logrus.Infof("Updating the firewall rules: %d network(s) routed through devices, %d access policy(s) with members",
+			len(state.Routed), len(state.Policies))
+		return network.ConfigureForwarding(forwardingOptions(conf, vpn, state))
 	}
 }
 

@@ -173,11 +173,8 @@ when they sign in again, as an admin right does today.
 
 Somebody in no policy, and everybody signing in through basic or simple auth, keeps `vpn.allowedIPs`.
 
-!!! note
-
-    **The policies are not enforced yet.** This release works out who is in which policy, remembers
-    it and shows it on the admin page, so that the rules can be checked against what the identity
-    provider actually sends. Building the firewall rules from it comes next.
+The admin page shows which policies somebody ended up in, which is how a rule is checked against
+what the provider actually sends.
 
 ## What the server remembers about a sign-in
 

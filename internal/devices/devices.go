@@ -31,13 +31,17 @@ type DeviceManager struct {
 	// less means no limit.
 	maxDevicesPerUser int
 
-	// routeSync is told the networks routed through the devices whenever that
-	// set changes; routed is what it was told last. The firewall rules are
+	// firewallSync is told what the firewall has to be built from whenever
+	// that changes, and firewall is what it was told last. The rules are
 	// built from the configuration at startup and know nothing of the routes
-	// an admin adds later.
-	routeSync func(routes []string) error
-	routedMu  sync.Mutex
-	routed    []string
+	// an admin adds later, nor of who is in which access policy.
+	firewallSync func(FirewallState) error
+	firewallMu   sync.Mutex
+	firewall     FirewallState
+
+	// resync asks for everything to be brought in line with storage. It has
+	// one slot: one runs at a time and one more is remembered.
+	resync chan struct{}
 }
 
 // Option configures a DeviceManager.
@@ -51,13 +55,13 @@ func WithMaxDevicesPerUser(max int) Option {
 	}
 }
 
-// WithRouteSync registers what to do when the networks routed through the
-// devices change - setting up the firewall rules for them, in the server.
-// It is called with every routed network, not only the new ones, and only
-// when the set differs from the last call.
-func WithRouteSync(sync func(routes []string) error) Option {
+// WithFirewallSync registers what to do when what the firewall has to be built
+// from changes: the networks routed through devices, and which devices belong
+// to which access policy. It is called with the whole state, not only what
+// changed, and only when it differs from the last call.
+func WithFirewallSync(sync func(FirewallState) error) Option {
 	return func(d *DeviceManager) {
-		d.routeSync = sync
+		d.firewallSync = sync
 	}
 }
 
@@ -117,7 +121,7 @@ func validateDeviceName(name string) error {
 }
 
 func New(wg wgembed.WireGuardInterface, s storage.Storage, cidr, cidrv6 string, opts ...Option) *DeviceManager {
-	d := &DeviceManager{wg: wg, storage: s, cidr: cidr, cidrv6: cidrv6}
+	d := &DeviceManager{wg: wg, storage: s, cidr: cidr, cidrv6: cidrv6, resync: make(chan struct{}, 1)}
 	for _, opt := range opts {
 		opt(d)
 	}
@@ -134,7 +138,7 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 		if err := d.applyPeer(device); err != nil {
 			logrus.Error(fmt.Errorf("failed to add WireGuard peer: %w", err))
 		}
-		d.routedNetworksMayHaveChanged(device)
+		d.Resync()
 	})
 
 	// An update is a rename or a change of the device's access. The first
@@ -146,7 +150,7 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 		if err := d.applyPeer(device); err != nil {
 			logrus.Error(fmt.Errorf("failed to update WireGuard peer: %w", err))
 		}
-		d.routedNetworksMayHaveChanged(device)
+		d.Resync()
 	})
 
 	d.storage.OnDelete(func(device *storage.Device) {
@@ -154,7 +158,7 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 		if err := d.wg.RemovePeer(device.PublicKey); err != nil {
 			logrus.Error(fmt.Errorf("failed to remove WireGuard peer: %w", err))
 		}
-		d.routedNetworksMayHaveChanged(device)
+		d.Resync()
 	})
 
 	// The storage backend asks for a resynchronization when it cannot say what
@@ -165,14 +169,8 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 	// They are coalesced: one runs at a time and one more is remembered, so
 	// importing a hundred devices reads them all a few times instead of a
 	// hundred times, and a slow sync does not hold up the events behind it.
-	resync := make(chan struct{}, 1)
-	d.storage.OnReconnect(func() {
-		select {
-		case resync <- struct{}{}:
-		default:
-		}
-	})
-	go resyncLoop(ctx, d, resync)
+	d.storage.OnReconnect(d.Resync)
+	go resyncLoop(ctx, d, d.resync)
 
 	// Do an initial sync of existing devices
 	if err := d.sync(); err != nil {
@@ -457,7 +455,7 @@ func (d *DeviceManager) sync() error {
 		}
 	}
 
-	d.syncRoutedNetworks(devices)
+	d.syncFirewallState(devices)
 
 	return nil
 }
