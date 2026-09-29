@@ -16,17 +16,29 @@ import (
 
 const pgWatcherTestOwner = "pgwatcher-test-"
 
-// pgWatcherDatabase returns a database of this test's own. The events carry no
-// row any more, so an event cannot be attributed to the device it is about -
-// and the other test packages write to the same table at the same time. A
-// database per test makes every event on the channel this test's own.
-func pgWatcherDatabase(t *testing.T) string {
+// freshPostgres returns a database of this test's own, or "" when there is no
+// server to create it on.
+//
+// A test that counts the changes a backend reports needs one: a Postgres
+// notification carries no row, so an event cannot be attributed to the device
+// it is about - and every test in this package, as well as the other packages,
+// writes to the same server at the same time.
+func freshPostgres(t *testing.T) string {
 	t.Helper()
 	uri := os.Getenv("WG_TEST_POSTGRES_URI")
 	if uri == "" {
+		return ""
+	}
+	return createDatabase(t, "pgx", uri, fmt.Sprintf("wgtest_events_%d", time.Now().UnixNano()))
+}
+
+func pgWatcherDatabase(t *testing.T) string {
+	t.Helper()
+	uri := freshPostgres(t)
+	if uri == "" {
 		t.Skip("WG_TEST_POSTGRES_URI not set")
 	}
-	return createDatabase(t, "pgx", uri, fmt.Sprintf("wgtest_pgwatcher_%d", time.Now().UnixNano()))
+	return uri
 }
 
 func openPgStorage(t *testing.T) (*SQLStorage, *PgWatcher) {

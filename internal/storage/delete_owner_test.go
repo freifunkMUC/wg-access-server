@@ -23,7 +23,7 @@ func TestDeleteForOwner(t *testing.T) {
 	backends := map[string]string{
 		"memory":   "memory://",
 		"sqlite3":  "sqlite3://" + filepath.Join(t.TempDir(), "delete.db"),
-		"postgres": os.Getenv("WG_TEST_POSTGRES_URI"),
+		"postgres": freshPostgres(t),
 		"mysql":    os.Getenv("WG_TEST_MYSQL_URI"),
 	}
 
@@ -76,9 +76,9 @@ func TestDeleteForOwner(t *testing.T) {
 			for events.changes() < 3 && time.Now().Before(deadline) {
 				time.Sleep(20 * time.Millisecond)
 			}
-			// At least, not exactly: a Postgres notification carries no row, so
-			// it cannot be told apart from one another test caused in the same
-			// database. What has to hold is that all three were reported.
+			// Not an exact count: on Postgres the three deletions are three
+			// notifications that say only that something changed, and the
+			// devices this test creates first are reported the same way.
 			if got := events.changes(); got < 3 {
 				t.Errorf("got %d reported deletions (%q), want at least 3", got, events.names())
 			}

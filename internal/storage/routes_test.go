@@ -13,7 +13,7 @@ func TestSetRoutesEmitsAnUpdate(t *testing.T) {
 	backends := map[string]string{
 		"memory":   "memory://",
 		"sqlite3":  "sqlite3://" + filepath.Join(t.TempDir(), "routes.db"),
-		"postgres": os.Getenv("WG_TEST_POSTGRES_URI"),
+		"postgres": freshPostgres(t),
 		"mysql":    os.Getenv("WG_TEST_MYSQL_URI"),
 	}
 
