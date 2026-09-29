@@ -2,6 +2,7 @@ package devices
 
 import (
 	"net"
+	"sync"
 	"testing"
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
@@ -57,14 +58,45 @@ func testDeviceKey(t *testing.T, seed byte) string {
 	return parsed.String()
 }
 
-// countingInterface records how often a peer was configured.
+// countingInterface records how often a peer was configured. It is used from
+// the test and from the resynchronization running in the background, so
+// everything it holds is behind a lock.
 type countingInterface struct {
 	wgembed.WireGuardInterface
+	mu    sync.Mutex
 	peers map[string]wgtypes.Peer
 	adds  int
 }
 
+// addCount is how often a peer was configured, and resetAdds starts counting
+// again.
+func (c *countingInterface) addCount() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.adds
+}
+
+func (c *countingInterface) resetAdds() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.adds = 0
+}
+
+// allowedIPs returns the networks a peer is configured with, or nil when
+// there is no such peer.
+func (c *countingInterface) allowedIPs(publicKey string) []net.IPNet {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	peer, ok := c.peers[publicKey]
+	if !ok {
+		return nil
+	}
+	return peer.AllowedIPs
+}
+
 func (c *countingInterface) ListPeers() ([]wgtypes.Peer, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	peers := make([]wgtypes.Peer, 0, len(c.peers))
 	for _, peer := range c.peers {
 		peers = append(peers, peer)
@@ -73,6 +105,8 @@ func (c *countingInterface) ListPeers() ([]wgtypes.Peer, error) {
 }
 
 func (c *countingInterface) AddPeer(publicKey, presharedKey string, addresses []string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.adds++
 	key, err := wgtypes.ParseKey(publicKey)
 	if err != nil {
@@ -98,6 +132,8 @@ func (c *countingInterface) AddPeer(publicKey, presharedKey string, addresses []
 }
 
 func (c *countingInterface) RemovePeer(publicKey string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	delete(c.peers, publicKey)
 	return nil
 }
@@ -129,17 +165,17 @@ func TestSyncLeavesMatchingPeersAlone(t *testing.T) {
 	if err := manager.sync(); err != nil {
 		t.Fatal(err)
 	}
-	if wg.adds != len(devices) {
-		t.Fatalf("the first sync configured %d peers, want %d", wg.adds, len(devices))
+	if wg.addCount() != len(devices) {
+		t.Fatalf("the first sync configured %d peers, want %d", wg.addCount(), len(devices))
 	}
 
 	// nothing changed in between
-	wg.adds = 0
+	wg.resetAdds()
 	if err := manager.sync(); err != nil {
 		t.Fatal(err)
 	}
-	if wg.adds != 0 {
-		t.Errorf("a sync with nothing changed configured %d peers again", wg.adds)
+	if wg.addCount() != 0 {
+		t.Errorf("a sync with nothing changed configured %d peers again", wg.addCount())
 	}
 
 	// a device that moved to another address has to be configured again
@@ -147,12 +183,12 @@ func TestSyncLeavesMatchingPeersAlone(t *testing.T) {
 	if err := s.Save(devices[0]); err != nil {
 		t.Fatal(err)
 	}
-	wg.adds = 0
+	wg.resetAdds()
 	if err := manager.sync(); err != nil {
 		t.Fatal(err)
 	}
-	if wg.adds != 1 {
-		t.Errorf("the moved device was configured %d times, want once", wg.adds)
+	if wg.addCount() != 1 {
+		t.Errorf("the moved device was configured %d times, want once", wg.addCount())
 	}
 
 	// and so does one that was given a pre-shared key
@@ -160,11 +196,11 @@ func TestSyncLeavesMatchingPeersAlone(t *testing.T) {
 	if err := s.Save(devices[1]); err != nil {
 		t.Fatal(err)
 	}
-	wg.adds = 0
+	wg.resetAdds()
 	if err := manager.sync(); err != nil {
 		t.Fatal(err)
 	}
-	if wg.adds != 1 {
-		t.Errorf("the device with the new pre-shared key was configured %d times, want once", wg.adds)
+	if wg.addCount() != 1 {
+		t.Errorf("the device with the new pre-shared key was configured %d times, want once", wg.addCount())
 	}
 }

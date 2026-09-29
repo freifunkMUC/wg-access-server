@@ -26,6 +26,7 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 - WireGuard client configurations as a file or a QR code
 - IPv6: dual-stack, IPv6-only or IPv4-only, with NAT on or off for each
 - Client isolation and a choice of the networks clients may reach
+- Access policies: what somebody's devices may reach, decided by their identity provider ([policies](https://www.freie-netze.org/wg-access-server/configuration/#access-policies))
 - Firewall rules with iptables or nftables ([firewall](https://www.freie-netze.org/wg-access-server/configuration/#firewall))
 - A caching DNS proxy for the clients, with names for their devices
 - PostgreSQL, MySQL or SQLite storage; several replicas can share PostgreSQL or MySQL

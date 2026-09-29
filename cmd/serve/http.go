@@ -61,7 +61,7 @@ func policiesOf(identity *authsession.Identity) []string {
 // recordLogin remembers somebody who signed in. A failure is logged and no
 // more: the sign-in itself worked, and refusing it because of a write that is
 // only needed later would be the worse outcome.
-func recordLogin(storageBackend storage.Storage) func(*authsession.Identity) {
+func recordLogin(storageBackend storage.Storage, deviceManager *devices.DeviceManager) func(*authsession.Identity) {
 	return func(identity *authsession.Identity) {
 		user := &storage.User{
 			Subject:   identity.Subject,
@@ -73,7 +73,15 @@ func recordLogin(storageBackend storage.Storage) func(*authsession.Identity) {
 		}
 		if err := storageBackend.SaveUser(user); err != nil {
 			logrus.Error(fmt.Errorf("failed to remember the user that signed in: %w", err))
+			return
 		}
+
+		// The policies decide what this person's devices may reach, so the
+		// firewall rules have to be built again. On Postgres the other
+		// replicas hear about the write through the database; this is for
+		// the one that took the sign-in, and for the backends that have no
+		// way to tell anybody.
+		deviceManager.Resync()
 	}
 }
 
@@ -101,7 +109,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 
 	// Authentication middleware
 	claims := authnz.ClaimsMiddleware(conf)
-	middleware, err := authnz.NewMiddleware(conf.Auth, claims, authnz.WithLoginRecorder(recordLogin(storageBackend)))
+	middleware, err := authnz.NewMiddleware(conf.Auth, claims, authnz.WithLoginRecorder(recordLogin(storageBackend, deviceManager)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up authnz middleware: %w", err)
 	}

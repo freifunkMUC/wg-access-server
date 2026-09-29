@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -64,12 +65,12 @@ func routesManager(t *testing.T, devicesInStorage ...*storage.Device) (*DeviceMa
 
 func allowedIPsOf(t *testing.T, wg *countingInterface, publicKey string) []string {
 	t.Helper()
-	peer, ok := wg.peers[publicKey]
-	if !ok {
+	networks := wg.allowedIPs(publicKey)
+	if networks == nil {
 		t.Fatalf("there is no peer for %s", publicKey)
 	}
-	allowed := make([]string, 0, len(peer.AllowedIPs))
-	for _, ipnet := range peer.AllowedIPs {
+	allowed := make([]string, 0, len(networks))
+	for _, ipnet := range networks {
 		allowed = append(allowed, ipnet.String())
 	}
 	return allowed
@@ -129,12 +130,12 @@ func TestSyncLeavesARoutedPeerAlone(t *testing.T) {
 	if err := manager.sync(); err != nil {
 		t.Fatal(err)
 	}
-	wg.adds = 0
+	wg.resetAdds()
 	if err := manager.sync(); err != nil {
 		t.Fatal(err)
 	}
-	if wg.adds != 0 {
-		t.Errorf("a sync reconfigured %d peer(s) although nothing changed", wg.adds)
+	if wg.addCount() != 0 {
+		t.Errorf("a sync reconfigured %d peer(s) although nothing changed", wg.addCount())
 	}
 }
 
@@ -247,12 +248,34 @@ func TestRouteSyncIsToldAboutTheNetworks(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// the rules are rebuilt by the resynchronization in the background, so
+	// what it reports and what the test reads need a lock between them
+	var mu sync.Mutex
 	var calls [][]string
-	wg := &countingInterface{WireGuardInterface: wgembed.NewNoOpInterface(), peers: map[string]wgtypes.Peer{}}
-	manager := New(wg, s, "10.44.0.0/24", "", WithRouteSync(func(routes []string) error {
-		calls = append(calls, append([]string{}, routes...))
+	record := func(state FirewallState) error {
+		mu.Lock()
+		defer mu.Unlock()
+		calls = append(calls, append([]string{}, state.Routed...))
 		return nil
-	}))
+	}
+	reported := func() [][]string {
+		mu.Lock()
+		defer mu.Unlock()
+		return append([][]string(nil), calls...)
+	}
+	waitFor := func(what string, cond func([][]string) bool) {
+		t.Helper()
+		deadline := time.Now().Add(5 * time.Second)
+		for !cond(reported()) {
+			if time.Now().After(deadline) {
+				t.Fatalf("timed out waiting for %s, the firewall was told %v", what, reported())
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	wg := &countingInterface{WireGuardInterface: wgembed.NewNoOpInterface(), peers: map[string]wgtypes.Peer{}}
+	manager := New(wg, s, "10.44.0.0/24", "", WithFirewallSync(record))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -261,30 +284,33 @@ func TestRouteSyncIsToldAboutTheNetworks(t *testing.T) {
 	}
 
 	// nothing is routed, so there is nothing to tell the firewall about
-	if len(calls) != 0 {
-		t.Fatalf("the firewall was reconfigured %d time(s) although nothing is routed", len(calls))
+	time.Sleep(100 * time.Millisecond)
+	if got := reported(); len(got) != 0 {
+		t.Fatalf("the firewall was reconfigured %d time(s) although nothing is routed", len(got))
 	}
 
 	if _, err := manager.SetDeviceRoutes("alice", "site", []string{"192.168.5.0/24"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(calls) != 1 || len(calls[0]) != 1 || calls[0][0] != "192.168.5.0/24" {
-		t.Fatalf("the firewall was told %v, want the one routed network", calls)
-	}
+	waitFor("the routed network", func(calls [][]string) bool {
+		return len(calls) > 0 && len(calls[len(calls)-1]) == 1 && calls[len(calls)-1][0] == "192.168.5.0/24"
+	})
+	before := len(reported())
 
 	// setting the same routes again changes nothing, so the rules stay as they are
 	if _, err := manager.SetDeviceRoutes("alice", "site", []string{"192.168.5.0/24"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(calls) != 1 {
-		t.Errorf("the firewall was reconfigured again for the same networks: %v", calls)
+	time.Sleep(200 * time.Millisecond)
+	if got := reported(); len(got) != before {
+		t.Errorf("the firewall was reconfigured again for the same networks: %v", got)
 	}
 
 	// and a device that is deleted takes its networks out of the rules
 	if err := manager.DeleteDevice("alice", "site"); err != nil {
 		t.Fatal(err)
 	}
-	if len(calls) != 2 || len(calls[1]) != 0 {
-		t.Errorf("the firewall was told %v after the device was deleted, want no networks", calls)
-	}
+	waitFor("the networks to be gone", func(calls [][]string) bool {
+		return len(calls) > before && len(calls[len(calls)-1]) == 0
+	})
 }

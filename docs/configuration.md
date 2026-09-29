@@ -109,12 +109,35 @@ every policy rather than writing a policy with nothing in it - the server refuse
 because an empty list is far more often a mistake in the file than a deliberate "reaches nothing".
 
 The server also refuses to start when a rule names a policy that is not configured here, and warns
-about a policy that no rule puts anybody in.
+about a policy that no rule puts anybody in. A policy name may hold letters, digits and underscores,
+at most 32 of them: it becomes part of a firewall set name.
 
-!!! note
+### What the rules look like
 
-    **Not enforced yet**: this release works out and remembers who is in which policy and shows it
-    on the admin page. The firewall rules follow.
+Policies need `vpn.firewall: nftables`, and the server refuses to start with any other backend. Each
+policy becomes a set of the addresses of its members' devices and a rule per network:
+
+```
+set policy_contractors_ip { type ipv4_addr; elements = { 10.44.0.2 } }
+
+ip saddr 10.44.0.0/24 ip daddr 10.44.0.1 accept          # the server itself, for everybody
+ip saddr @policy_contractors_ip ip daddr 10.0.5.0/24 accept
+ip saddr @policy_members_ip reject                       # a member reaches nothing else
+ip saddr 10.44.0.0/24 ip daddr 0.0.0.0/0 accept          # everybody who is in no policy
+```
+
+The rule count therefore follows the number of policies, not the number of devices: a thousand
+devices change what is in the sets, not how many rules there are. iptables has no such lookup - it
+would need a rule per device and network - which is why policies are nftables only.
+
+Two things every member keeps whatever their policy says: the **server's own addresses**, because
+that is where the embedded DNS proxy answers, and whatever `vpn.allowedIPs` reaches is *not* among
+them - a policy replaces that list rather than adding to it.
+
+The rules are rebuilt when a device is added, changed or removed, and when somebody signs in, since
+that is when their policies can change. On Postgres every replica hears about both. A device that
+may not connect - blocked, or past its expiry - is in no set: it has no peer, so nothing can come
+from its address.
 
 ## Firewall
 
