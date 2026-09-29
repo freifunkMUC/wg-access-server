@@ -1059,12 +1059,8 @@ networks somebody reaches.</p>
 server has no way to ask the provider in between. A group that is taken away therefore takes effect
 when they sign in again, as an admin right does today.</p>
 <p>Somebody in no policy, and everybody signing in through basic or simple auth, keeps <code>vpn.allowedIPs</code>.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p><strong>The policies are not enforced yet.</strong> This release works out who is in which policy, remembers
-it and shows it on the admin page, so that the rules can be checked against what the identity
-provider actually sends. Building the firewall rules from it comes next.</p>
-</div>
+<p>The admin page shows which policies somebody ended up in, which is how a rule is checked against
+what the provider actually sends.</p>
 <h2 id="what-the-server-remembers-about-a-sign-in">What the server remembers about a sign-in<a class="headerlink" href="#what-the-server-remembers-about-a-sign-in" title="Permanent link"> ¶</a></h2>
 <p>A sign-in writes a row: the identifier the provider uses for the person, which provider it was, their
 display name and email address as the provider reports them, and the time. It is replaced at every
