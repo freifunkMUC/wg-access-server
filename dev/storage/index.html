@@ -428,6 +428,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="PostgreSQL">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-replicas-send-each-other" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the replicas send each other
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -831,6 +848,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="PostgreSQL">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-replicas-send-each-other" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the replicas send each other
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1005,6 +1039,18 @@ address to two devices created at the same time.</p>
 <ul>
 <li><code>postgresql://user:password@localhost:5432/database?sslmode=disable</code></li>
 </ul>
+<h4 id="what-the-replicas-send-each-other">What the replicas send each other<a class="headerlink" href="#what-the-replicas-send-each-other" title="Permanent link"> ¶</a></h4>
+<p>The replicas learn about a change through <code>LISTEN</code>/<code>NOTIFY</code>. Those notifications say that the
+devices table changed and nothing more: which device it was, and what is in its row, is not part of
+them. Every replica reads the devices from the database instead, as the user it connects as.</p>
+<p>This matters because a notification reaches <strong>every connection that listens on the channel</strong>, and
+Postgres applies no table privileges to it. A database user who may connect but may not read the
+devices would otherwise see every one of them as it is written, with its addresses, its owner's
+identity and its pre-shared key. Sharing the database with another application, or having a
+read-only user for reports, is enough for that to matter.</p>
+<p>What it costs: a change makes each replica read the devices once, rather than apply the row it was
+handed. The reads are coalesced - one runs at a time and one more is remembered - so importing many
+devices at once does not read them once per device.</p>
 <h3 id="mysql">MySQL<a class="headerlink" href="#mysql" title="Permanent link"> ¶</a></h3>
 <p>This backend requires an external MySQL database to be deployed. Every release is tested against
 MySQL 8.0 and 9, and against MariaDB 11.4 - other flavours are expected to work, as wg-access-server
