@@ -57,7 +57,7 @@ func WithLoginRecorder(record func(*authsession.Identity)) Option {
 	}
 }
 
-func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware, opts ...Option) (*AuthMiddleware, error) {
+func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware, browserSessions authsession.Sessions, opts ...Option) (*AuthMiddleware, error) {
 	router := mux.NewRouter()
 	var storeSecret []byte
 	if config.SessionStore == nil || config.SessionStore.Secret == "" {
@@ -93,7 +93,7 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 		// no longer carry the session cookie (CSRF hardening)
 		SameSite: http.SameSiteLaxMode,
 	}
-	runtime := authruntime.NewProviderRuntime(store)
+	runtime := authruntime.NewProviderRuntime(store, browserSessions)
 	for _, opt := range opts {
 		opt(runtime)
 	}
@@ -167,6 +167,16 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 const DefaultSessionMaxAge = 30 * 24 * time.Hour
 
 // sessionMaxAge reads the configured session lifetime in seconds.
+// SessionMaxAge is how long a session lasts: the cookie and the session in
+// the storage get the same span.
+func SessionMaxAge(config *authconfig.SessionStoreConfig) (time.Duration, error) {
+	seconds, err := sessionMaxAge(config)
+	if err != nil {
+		return 0, err
+	}
+	return time.Duration(seconds) * time.Second, nil
+}
+
 func sessionMaxAge(config *authconfig.SessionStoreConfig) (int, error) {
 	if config == nil || config.MaxAge == "" {
 		return int(DefaultSessionMaxAge.Seconds()), nil
@@ -184,8 +194,8 @@ func sessionMaxAge(config *authconfig.SessionStoreConfig) (int, error) {
 	return int(maxAge.Seconds()), nil
 }
 
-func NewMiddleware(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware, opts ...Option) (mux.MiddlewareFunc, error) {
-	authMiddleware, err := New(config, claimsMiddleware, opts...)
+func NewMiddleware(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware, browserSessions authsession.Sessions, opts ...Option) (mux.MiddlewareFunc, error) {
+	authMiddleware, err := New(config, claimsMiddleware, browserSessions, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -176,6 +176,34 @@ Somebody in no policy, and everybody signing in through basic or simple auth, ke
 The admin page shows which policies somebody ended up in, which is how a rule is checked against
 what the provider actually sends.
 
+## Sessions
+
+Signing in creates a session, and the cookie the browser gets carries **nothing but its id**. Who
+signed in, and what their identity provider said about them, is kept by the server.
+
+That is what makes a session something the server can end:
+
+- **Signing out** ends it, rather than only dropping the cookie. A cookie that was copied elsewhere
+  stops working with it.
+- **Deleting a user** ends every session they have, along with their devices and their API tokens.
+- It takes effect **everywhere at once**: a session is read from the storage on every request, so
+  there is nothing to tell the other replicas.
+
+A session lasts as long as `auth.sessionStore.maxAge` (30 days by default) and is removed once it
+has expired. Along with it the server keeps what the browser said about itself and the address it
+came from, so that somebody can tell their own sessions apart; the id itself is stored only as a
+hash, so whoever reads the database learns which sessions exist, not how to use them.
+
+!!! note
+
+    **Upgrading signs everybody out once.** Their cookies carry an identity, which this version no
+    longer reads - it wants a session id, and there is none. They sign in again and are on the new
+    scheme.
+
+What this does *not* do: end a tunnel. A device keeps connecting whether or not anybody is signed
+in - that is what [blocking a device](../#device-access) is for. A session is the web UI and the
+API: adding devices, downloading their configuration, and whatever else the person may do.
+
 ## What the server remembers about a sign-in
 
 A sign-in writes a row: the identifier the provider uses for the person, which provider it was, their

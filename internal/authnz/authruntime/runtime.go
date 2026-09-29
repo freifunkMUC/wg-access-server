@@ -28,14 +28,16 @@ type ProviderBranding struct {
 
 type ProviderRuntime struct {
 	store sessions.Store
+	// browserSessions keeps who signed in; the cookie carries only an id.
+	browserSessions authsession.Sessions
 	// otherProviders is whether a user can sign in some other way, too.
 	otherProviders bool
 	// recordLogin is told who signed in, once a provider has established it.
 	recordLogin func(*authsession.Identity)
 }
 
-func NewProviderRuntime(store sessions.Store) *ProviderRuntime {
-	return &ProviderRuntime{store: store}
+func NewProviderRuntime(store sessions.Store, browserSessions authsession.Sessions) *ProviderRuntime {
+	return &ProviderRuntime{store: store, browserSessions: browserSessions}
 }
 
 // OnLogin registers what to do when somebody signed in. Every provider ends
@@ -56,7 +58,7 @@ func (p *ProviderRuntime) HasOtherProviders() bool {
 }
 
 func (p *ProviderRuntime) SetSession(w http.ResponseWriter, r *http.Request, s *authsession.AuthSession) error {
-	if err := authsession.SetSession(p.store, r, w, s); err != nil {
+	if err := authsession.SetSession(p.store, p.browserSessions, r, w, s); err != nil {
 		return err
 	}
 
@@ -69,11 +71,11 @@ func (p *ProviderRuntime) SetSession(w http.ResponseWriter, r *http.Request, s *
 }
 
 func (p *ProviderRuntime) GetSession(r *http.Request) (*authsession.AuthSession, error) {
-	return authsession.GetSession(p.store, r)
+	return authsession.GetSession(p.store, p.browserSessions, r)
 }
 
 func (p *ProviderRuntime) ClearSession(w http.ResponseWriter, r *http.Request) error {
-	return authsession.ClearSession(p.store, r, w)
+	return authsession.ClearSession(p.store, p.browserSessions, r, w)
 }
 
 // Restart sends the browser back to the sign-in page. 303, so that it gets

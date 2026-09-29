@@ -43,7 +43,7 @@ func TestNotAuthorizedIsAnswered(t *testing.T) {
 		SessionStore:   plain.config.SessionStore,
 	}, func(*authsession.Identity) error {
 		return &LoginError{msg: "no access", code: NotAuthorized}
-	})
+	}, testSessions())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestOtherClaimsErrorsRedirectToSignIn(t *testing.T) {
 		SessionStore:   plain.config.SessionStore,
 	}, func(*authsession.Identity) error {
 		return &LoginError{msg: "not logged in", code: NotAuthenticated}
-	})
+	}, testSessions())
 	if err != nil {
 		t.Fatal(err)
 	}

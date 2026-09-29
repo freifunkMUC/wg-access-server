@@ -11,6 +11,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
+	"github.com/freifunkMUC/wg-access-server/internal/websessions"
 	"github.com/freifunkMUC/wg-access-server/proto/proto"
 )
 
@@ -18,6 +19,8 @@ type UserService struct {
 	DeviceManager *devices.DeviceManager
 	// Tokens is nil in tests that do not care about them.
 	Tokens *apitokens.Manager
+	// Sessions is nil in tests that do not care about them.
+	Sessions *websessions.Manager
 }
 
 func (d *UserService) ListUsers(ctx context.Context, _ *connect.Request[proto.ListUsersReq]) (*connect.Response[proto.ListUsersRes], error) {
@@ -51,11 +54,18 @@ func (d *UserService) DeleteUser(ctx context.Context, request *connect.Request[p
 		return nil, errNotAdmin()
 	}
 
-	// The tokens go first: they are access, the devices are what it is for.
-	// They are revoked even while tokens are disabled, so that enabling them
-	// again cannot bring back the tokens of a deleted user.
+	// The ways in first: the tokens and the sessions are access, the devices
+	// are what it is for. The tokens are revoked even while tokens are
+	// disabled, so that enabling them again cannot bring back the tokens of a
+	// deleted user.
 	if d.Tokens != nil {
 		if err := d.Tokens.DeleteForOwner(req.Name); err != nil {
+			return nil, internalError(ctx, err, "failed to delete user")
+		}
+	}
+
+	if d.Sessions != nil {
+		if err := d.Sessions.EndAllForOwner(req.Name); err != nil {
 			return nil, internalError(ctx, err, "failed to delete user")
 		}
 	}

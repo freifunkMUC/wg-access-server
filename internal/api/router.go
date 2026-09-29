@@ -15,6 +15,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/traces"
+	"github.com/freifunkMUC/wg-access-server/internal/websessions"
 	"github.com/freifunkMUC/wg-access-server/proto/proto/protoconnect"
 )
 
@@ -26,6 +27,7 @@ type Services struct {
 	Config        *config.AppConfig
 	DeviceManager *devices.DeviceManager
 	Tokens        *apitokens.Manager
+	Sessions      *websessions.Manager
 	Wg            wgembed.WireGuardInterface
 }
 
@@ -44,7 +46,7 @@ func Router(deps *Services) http.Handler {
 			return protoconnect.NewDevicesHandler(&DeviceService{DeviceManager: deps.DeviceManager}, options)
 		},
 		func() (string, http.Handler) {
-			return protoconnect.NewUsersHandler(&UserService{DeviceManager: deps.DeviceManager, Tokens: deps.Tokens}, options)
+			return protoconnect.NewUsersHandler(&UserService{DeviceManager: deps.DeviceManager, Tokens: deps.Tokens, Sessions: deps.Sessions}, options)
 		},
 		func() (string, http.Handler) {
 			return protoconnect.NewTokensHandler(&TokenService{Tokens: deps.Tokens, Enabled: deps.Config.EnableAPITokens}, options)
