@@ -1,7 +1,8 @@
 package storage
 
 import (
-	"encoding/json"
+	"context"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -9,46 +10,49 @@ import (
 	"time"
 
 	"github.com/freifunkMUC/pg-events/pkg/pgevents"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 )
 
 const pgWatcherTestOwner = "pgwatcher-test-"
 
-func openPgStorage(t *testing.T) (*SQLStorage, *PgWatcher) {
+// pgWatcherDatabase returns a database of this test's own. The events carry no
+// row any more, so an event cannot be attributed to the device it is about -
+// and the other test packages write to the same table at the same time. A
+// database per test makes every event on the channel this test's own.
+func pgWatcherDatabase(t *testing.T) string {
 	t.Helper()
 	uri := os.Getenv("WG_TEST_POSTGRES_URI")
 	if uri == "" {
 		t.Skip("WG_TEST_POSTGRES_URI not set")
 	}
+	return createDatabase(t, "pgx", uri, fmt.Sprintf("wgtest_pgwatcher_%d", time.Now().UnixNano()))
+}
+
+func openPgStorage(t *testing.T) (*SQLStorage, *PgWatcher) {
+	t.Helper()
+	return openPgStorageAt(t, pgWatcherDatabase(t))
+}
+
+func openPgStorageAt(t *testing.T, uri string) (*SQLStorage, *PgWatcher) {
+	t.Helper()
 	s, err := NewStorage(uri)
 	require.NoError(t, err)
 	require.NoError(t, s.Open())
 	sql := s.(*SQLStorage)
-	t.Cleanup(func() {
-		if devices, err := sql.List(""); err == nil {
-			for _, d := range devices {
-				if strings.HasPrefix(d.Owner, pgWatcherTestOwner) {
-					_ = sql.Delete(d)
-				}
-			}
-		}
-		_ = sql.Close()
-	})
+	t.Cleanup(func() { _ = sql.Close() })
 	return sql, sql.Watcher.(*PgWatcher)
 }
 
-// ownActions records the actions of events for this test's devices only; other
-// test packages write to the same table at the same time.
-func ownActions(w *PgWatcher, owner string) func() []string {
+// actions records what the events reported, in order. The database belongs to
+// the test, so every event on the channel is one it caused.
+func actionsOf(w *PgWatcher) func() []string {
 	var mu sync.Mutex
 	var actions []string
 	w.OnEvent(func(e *pgevents.TableEvent) {
-		var d Device
-		if json.Unmarshal([]byte(e.Data), &d) == nil && d.Owner == owner {
-			mu.Lock()
-			actions = append(actions, e.Action)
-			mu.Unlock()
-		}
+		mu.Lock()
+		actions = append(actions, e.Action)
+		mu.Unlock()
 	})
 	return func() []string {
 		mu.Lock()
@@ -69,7 +73,7 @@ func eventually(t *testing.T, what string, cond func() bool) {
 func TestPgWatcherIgnoresMetadataUpdates(t *testing.T) {
 	s, w := openPgStorage(t)
 	owner := pgWatcherTestOwner + "updates"
-	actions := ownActions(w, owner)
+	actions := actionsOf(w)
 
 	device := &Device{Owner: owner, Name: "phone", PublicKey: "pgwatcher-updates-key", Address: "10.77.0.2/32"}
 	require.NoError(t, s.Save(device))
@@ -85,7 +89,8 @@ func TestPgWatcherIgnoresMetadataUpdates(t *testing.T) {
 // Databases of existing installations carry the old trigger that also fires on
 // UPDATE. Opening the storage must replace it, or the change does nothing there.
 func TestPgWatcherReplacesTriggerOfOlderVersions(t *testing.T) {
-	s, _ := openPgStorage(t)
+	uri := pgWatcherDatabase(t)
+	s, _ := openPgStorageAt(t, uri)
 	table, err := deviceTable(s.db)
 	require.NoError(t, err)
 	// what pg-events v0.4.x installed
@@ -93,9 +98,9 @@ func TestPgWatcherReplacesTriggerOfOlderVersions(t *testing.T) {
 	require.NoError(t, s.db.Exec("CREATE TRIGGER "+table+"_events AFTER INSERT OR UPDATE OR DELETE ON "+table+" FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event()").Error)
 	require.NoError(t, s.Close())
 
-	s, w := openPgStorage(t)
+	s, w := openPgStorageAt(t, uri)
 	owner := pgWatcherTestOwner + "upgrade"
-	actions := ownActions(w, owner)
+	actions := actionsOf(w)
 	device := &Device{Owner: owner, Name: "laptop", PublicKey: "pgwatcher-upgrade-key", Address: "10.77.0.3/32"}
 	require.NoError(t, s.Save(device))
 	require.NoError(t, s.RecordMetadata([]MetadataUpdate{{PublicKey: device.PublicKey, ReceiveBytes: 5}}))
@@ -137,4 +142,54 @@ func TestPgWatcherResyncsOnTruncatedEvent(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	require.Zero(t, adds, "an event without data cannot be applied as an add")
+}
+
+// A notification reaches every connection that listens on the channel, and
+// Postgres applies no table privileges to it: a user who may connect to this
+// database but may not read the devices would see every one of them as it is
+// written. The row must not be in there.
+func TestPgWatcherNotificationsCarryNoDeviceRow(t *testing.T) {
+	uri := pgWatcherDatabase(t)
+	s, _ := openPgStorageAt(t, uri)
+
+	// a connection of our own, listening like any other client on that
+	// database could
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	conn, err := pgx.Connect(ctx, uri)
+	require.NoError(t, err)
+	defer func() { _ = conn.Close(context.Background()) }()
+	_, err = conn.Exec(ctx, `LISTEN "pgevents_event"`)
+	require.NoError(t, err)
+
+	device := &Device{
+		Owner: pgWatcherTestOwner + "payload", OwnerName: "Alice Example",
+		OwnerEmail: "alice@example.com", Name: "laptop",
+		PublicKey: "pgwatcher-payload-public-key", PresharedKey: "pgwatcher-payload-preshared-key",
+		Address: "10.77.0.5/32",
+	}
+	require.NoError(t, s.Save(device))
+	_, err = s.SetAccess(device, true, nil)
+	require.NoError(t, err)
+
+	secrets := []string{
+		device.PublicKey, device.PresharedKey, device.Owner,
+		device.OwnerName, device.OwnerEmail, device.Address,
+	}
+
+	// the insert and the access change, both of which reach every listener
+	for _, want := range []string{"INSERT", "UPDATE"} {
+		waitCtx, cancelWait := context.WithTimeout(ctx, 10*time.Second)
+		notification, err := conn.WaitForNotification(waitCtx)
+		cancelWait()
+		require.NoError(t, err, "no %s notification arrived", want)
+
+		require.Contains(t, notification.Payload, want)
+		for _, secret := range secrets {
+			require.NotContains(t, notification.Payload, secret,
+				"the notification carries the device: %s", notification.Payload)
+		}
+		require.Contains(t, notification.Payload, `"truncated" : true`,
+			"the notification does not say that the row is missing: %s", notification.Payload)
+	}
 }

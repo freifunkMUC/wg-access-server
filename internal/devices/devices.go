@@ -151,11 +151,22 @@ func (d *DeviceManager) StartSync(ctx context.Context, enableMetadataCollection,
 		d.routedNetworksMayHaveChanged(device)
 	})
 
+	// The storage backend asks for a resynchronization when it cannot say what
+	// changed: after a reconnect that may have missed events, and - on
+	// Postgres - for every change, because those notifications carry no row
+	// (see storage.PgWatcher).
+	//
+	// They are coalesced: one runs at a time and one more is remembered, so
+	// importing a hundred devices reads them all a few times instead of a
+	// hundred times, and a slow sync does not hold up the events behind it.
+	resync := make(chan struct{}, 1)
 	d.storage.OnReconnect(func() {
-		if err := d.sync(); err != nil {
-			logrus.Error(fmt.Errorf("device sync after storage backend reconnect event failed: %w", err))
+		select {
+		case resync <- struct{}{}:
+		default:
 		}
 	})
+	go resyncLoop(ctx, d, resync)
 
 	// Do an initial sync of existing devices
 	if err := d.sync(); err != nil {

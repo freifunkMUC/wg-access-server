@@ -47,7 +47,14 @@ func NewPgWatcher(db *sql.DB, connectionString string, table string) (*PgWatcher
 	// Without UPDATE in its trigger, the metadata sync - one UPDATE per
 	// active device every 30s on every replica - no longer broadcasts each
 	// row to all replicas.
-	if err := listener.AttachActions(ctx, table, pgevents.Insert, pgevents.Delete); err != nil {
+	//
+	// Without the row: a notification reaches every connection that listens,
+	// and Postgres applies no table privileges to it, so any user who may
+	// connect to this database would otherwise read every device as it is
+	// written - addresses, owner identities, pre-shared keys. The replicas
+	// are told that something changed and read the devices themselves, as
+	// the user this server connects as.
+	if err := listener.AttachWithoutRow(ctx, table, pgevents.Insert, pgevents.Delete); err != nil {
 		_ = listener.Close()
 		return nil, fmt.Errorf("failed to attach listener to table: %s: %w", table, err)
 	}
@@ -77,7 +84,7 @@ func attachUpdateTrigger(db *sql.DB, table string) error {
 		}
 	}
 	statement := fmt.Sprintf(
-		"CREATE TRIGGER %s AFTER UPDATE OF name, disabled, expires_at, routes ON %s FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event()",
+		"CREATE TRIGGER %s AFTER UPDATE OF name, disabled, expires_at, routes ON %s FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event('norow')",
 		trigger, table)
 	if _, err := db.Exec(statement); err != nil {
 		return fmt.Errorf("failed to create the update trigger on %s: %w", table, err)
@@ -86,6 +93,11 @@ func attachUpdateTrigger(db *sql.DB, table string) error {
 	return nil
 }
 
+// OnAdd, OnUpdate and OnDelete report a device only when an event carries one,
+// which the triggers this version installs never ask for. They are still here
+// for the moment after an upgrade in which an older version's trigger is still
+// on the table: its events carry the row, and dropping them would leave a
+// device without a peer until the next resynchronization.
 func (w *PgWatcher) OnAdd(cb Callback) {
 	w.OnEvent(func(event *pgevents.TableEvent) {
 		// we only emit the "add" event on an insert because wg-access-server
@@ -119,15 +131,16 @@ func (w *PgWatcher) OnDelete(cb Callback) {
 func (w *PgWatcher) OnReconnect(cb func()) {
 	w.Listener.OnReconnect(cb)
 
-	// A device row too large for a notification (8000 bytes - owner name and
-	// email come unbounded from the identity provider) arrives without its
-	// data, so there is nothing to add or remove directly. Every replica,
-	// including the one that created the device, adds peers only from these
-	// events, so ignoring it would leave the device without a peer anywhere.
-	// Resynchronize instead, as after a reconnect that may have missed events.
+	// Every event arrives without its row - that is what the triggers ask for,
+	// see NewPgWatcher - so there is nothing to add or remove directly.
+	// Resynchronize instead, as after a reconnect that may have missed events:
+	// the devices are read from the database, where privileges apply.
+	//
+	// A row too large for a notification (8000 bytes) arrives the same way, so
+	// this covers that too.
 	w.OnEvent(func(event *pgevents.TableEvent) {
 		if event.Truncated {
-			logrus.Warnf("received a %s event on %s without its row - it did not fit into a notification; resynchronizing devices", event.Action, event.Table)
+			logrus.Debugf("a %s on %s was reported without its row; resynchronizing devices", event.Action, event.Table)
 			cb()
 		}
 	})
