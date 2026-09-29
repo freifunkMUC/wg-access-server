@@ -19,10 +19,17 @@ jobs:
       # to report the findings in the repository's code scanning
       security-events: write
     steps:
+      # An image reference has to be lower case, and github.repository keeps
+      # the owner's spelling - "freifunkMUC". Trivy could not even parse it:
+      # "could not parse reference: ghcr.io/freifunkMUC/wg-access-server".
+      - name: The image to scan
+        id: image
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY,,}:latest" >> "$GITHUB_OUTPUT"
+
       - name: Report every finding to code scanning
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ghcr.io/${{ github.repository }}:latest
+          image-ref: ${{ steps.image.outputs.ref }}
           format: sarif
           output: trivy.sarif
 
@@ -36,7 +43,7 @@ jobs:
       - name: Fail on fixable high and critical findings
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ghcr.io/${{ github.repository }}:latest
+          image-ref: ${{ steps.image.outputs.ref }}
           format: table
           severity: HIGH,CRITICAL
           ignore-unfixed: true
