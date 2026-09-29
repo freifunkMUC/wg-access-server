@@ -424,6 +424,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-the-server-remembers-about-a-sign-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the server remembers about a sign-in
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#api-tokens" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -750,6 +761,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-the-server-remembers-about-a-sign-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the server remembers about a sign-in
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#api-tokens" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -995,6 +1017,23 @@ config file (config.yaml).</p>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-org/vpn-admins</span>
 <span class="w">    </span><span class="nt">adminUsers</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
 </code></pre></div>
+<h2 id="what-the-server-remembers-about-a-sign-in">What the server remembers about a sign-in<a class="headerlink" href="#what-the-server-remembers-about-a-sign-in" title="Permanent link"> ¶</a></h2>
+<p>A sign-in writes a row: the identifier the provider uses for the person, which provider it was, their
+display name and email address as the provider reports them, and the time. It is replaced at every
+sign-in, so it always describes the last one.</p>
+<p>The server needs this because almost everything it does happens while nobody is signed in. The
+device list, the DNS zone and the firewall rules are built by a background job or after a restart,
+and until now the only thing it knew about a person outside their session was the owner of a device.
+It is also what the access policies will be built on: which groups somebody is in is something only
+their identity provider knows, and only at the moment they sign in.</p>
+<p>Two things follow from it:</p>
+<ul>
+<li>The admin page shows when somebody last signed in, and it lists people who have signed in but have
+  not added a device yet.</li>
+<li>Deleting a user removes that row along with their devices and their API tokens.</li>
+</ul>
+<p>Name and email address were already stored with every device, so nothing is kept that was not kept
+before - except for a person who has no device at all.</p>
 <h2 id="api-tokens">API tokens<a class="headerlink" href="#api-tokens" title="Permanent link"> ¶</a></h2>
 <p>With <code>enableApiTokens: true</code>, users can create tokens on the <em>API tokens</em> page of the web UI (the key
 icon) and use the API from scripts without a browser session:</p>
