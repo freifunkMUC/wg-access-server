@@ -80,6 +80,7 @@ func mapUser(u *devices.User) *proto.User {
 		Name:        u.Name,
 		DisplayName: u.DisplayName,
 		LastLogin:   timeToTimestamp(u.LastLogin),
+		Policies:    u.Policies,
 	}
 }
 

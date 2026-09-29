@@ -79,7 +79,7 @@ describe('AllDevices routes', () => {
   beforeEach(() => {
     AppState.clearLoadingError();
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    listUsers.mockResolvedValue({ items: [{ name: 'alice', displayName: 'Alice' }] });
+    listUsers.mockResolvedValue({ items: [{ name: 'alice', displayName: 'Alice', policies: [] }] });
   });
 
   afterEach(() => {

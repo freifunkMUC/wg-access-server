@@ -85,6 +85,37 @@ Here's what you can configure:
 | `WG_HTTPS_PORT`                      | `--https-port`                      | `https.port`                   |          | 8443                                         | Port for HTTPS server.                                                                                                                                                                                                                                                        |
 | `WG_HTTPS_HOST`                      | `--https-host`                      | `https.host`                   |          | ``  (listen all hosts)                       | Hostname or IP address to bind the HTTPS server to. If left empty, the HTTPS server will listen on all IP addresses on all available network interfaces.                                                                                                                      |
 
+## Access policies
+
+A policy names the networks the devices of the people in it may reach, instead of `vpn.allowedIPs`:
+
+```yaml
+vpn:
+  allowedIPs: ["0.0.0.0/0", "::/0"] # everybody who is in no policy
+  policies:
+    contractors:
+      allowedIPs: ["10.0.5.0/24"]
+    staff:
+      allowedIPs: ["10.0.0.0/8", "192.168.0.0/16"]
+```
+
+Who is in which policy is decided by the identity provider - see
+[policyMapping](./auth.md#access-policies). Somebody in several policies may reach the networks of
+all of them; somebody in none keeps `vpn.allowedIPs`, which is what every device had before policies
+existed.
+
+A policy has to name at least one network. To give somebody `vpn.allowedIPs`, leave them out of
+every policy rather than writing a policy with nothing in it - the server refuses to start on one,
+because an empty list is far more often a mistake in the file than a deliberate "reaches nothing".
+
+The server also refuses to start when a rule names a policy that is not configured here, and warns
+about a policy that no rule puts anybody in.
+
+!!! note
+
+    **Not enforced yet**: this release works out and remembers who is in which policy and shows it
+    on the admin page. The firewall rules follow.
+
 ## Firewall
 
 wg-access-server sets up the rules that forward the clients' traffic to the networks in

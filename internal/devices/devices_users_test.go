@@ -21,7 +21,9 @@ func TestListUsersCombinesWhatIsKnown(t *testing.T) {
 	t.Cleanup(func() { _ = s.Close() })
 
 	login := time.Now().Truncate(time.Second)
-	if err := s.SaveUser(&storage.User{Subject: "alice", Name: "Alice Example", LastLogin: login}); err != nil {
+	if err := s.SaveUser(&storage.User{
+		Subject: "alice", Name: "Alice Example", Policies: "staff", LastLogin: login,
+	}); err != nil {
 		t.Fatal(err)
 	}
 	// signed in, no device yet
@@ -55,6 +57,12 @@ func TestListUsersCombinesWhatIsKnown(t *testing.T) {
 	}
 	if users[0].LastLogin == nil || !users[0].LastLogin.Equal(login) {
 		t.Errorf("alice's last login = %v, want %v", users[0].LastLogin, login)
+	}
+	if policies := users[0].Policies; len(policies) != 1 || policies[0] != "staff" {
+		t.Errorf("alice's policies = %v, want staff", policies)
+	}
+	if len(users[1].Policies) != 0 {
+		t.Errorf("bob has policies although he was never seen signing in: %v", users[1].Policies)
 	}
 	if users[1].LastLogin != nil {
 		t.Errorf("bob has a last login although he was never seen signing in: %v", users[1].LastLogin)

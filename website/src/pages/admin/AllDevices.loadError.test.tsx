@@ -89,13 +89,10 @@ describe('AllDevices initial load', () => {
 
   it('renders the device and user tables when the fetch succeeds', async () => {
     listUsers.mockResolvedValue({
-      items: [{ name: 'alice', displayName: 'Alice Doe' }],
+      items: [{ name: 'alice', displayName: 'Alice Doe', policies: [] }],
     });
     listAllDevices.mockResolvedValue({
-      items: [
-        makeDevice({ name: 'work-laptop', connected: true }),
-        makeDevice({ name: 'phone', connected: false }),
-      ],
+      items: [makeDevice({ name: 'work-laptop', connected: true }), makeDevice({ name: 'phone', connected: false })],
     });
 
     render(<AllDevices />);

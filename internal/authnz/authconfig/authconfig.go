@@ -62,6 +62,26 @@ func (c *AuthConfig) Validate() error {
 	return nil
 }
 
+// PolicyNames returns the access policies the rules of each provider name,
+// so that the configuration can be checked against the policies themselves.
+func (c *AuthConfig) PolicyNames() map[string][]string {
+	names := map[string][]string{}
+	add := func(provider string, config *ProviderConfig) {
+		if config.OIDC == nil {
+			return
+		}
+		for name := range config.OIDC.PolicyMapping {
+			names[provider] = append(names[provider], name)
+		}
+	}
+
+	add("auth.oidc", &c.ProviderConfig)
+	for name, provider := range c.Multiple {
+		add("auth.multiple."+name, provider)
+	}
+	return names
+}
+
 func (c *AuthConfig) DesiresSignInPage() bool {
 	// Basic auth is the only that truly needs the sign-in button
 	if c.Basic != nil {

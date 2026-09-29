@@ -93,7 +93,7 @@ describe('AllDevices deletion', () => {
   });
 
   it('removes the device row after a successful delete', async () => {
-    listUsers.mockResolvedValue({ items: [{ name: 'alice', displayName: 'Alice' }] });
+    listUsers.mockResolvedValue({ items: [{ name: 'alice', displayName: 'Alice', policies: [] }] });
     listAllDevices.mockResolvedValueOnce({ items: [deviceA, deviceB] }).mockResolvedValue({ items: [deviceB] });
     deleteDevice.mockResolvedValue({});
 
@@ -111,7 +111,7 @@ describe('AllDevices deletion', () => {
   });
 
   it('tells the admin and keeps the device row when the delete fails', async () => {
-    listUsers.mockResolvedValue({ items: [{ name: 'alice', displayName: 'Alice' }] });
+    listUsers.mockResolvedValue({ items: [{ name: 'alice', displayName: 'Alice', policies: [] }] });
     listAllDevices.mockResolvedValue({ items: [deviceA, deviceB] });
     deleteDevice.mockRejectedValue(new Error('permission denied'));
 
@@ -134,11 +134,11 @@ describe('AllDevices deletion', () => {
     listUsers
       .mockResolvedValueOnce({
         items: [
-          { name: 'alice', displayName: 'Alice Doe' },
-          { name: 'bob', displayName: 'Bob Roe' },
+          { name: 'alice', displayName: 'Alice Doe', policies: [] },
+          { name: 'bob', displayName: 'Bob Roe', policies: [] },
         ],
       })
-      .mockResolvedValue({ items: [{ name: 'bob', displayName: 'Bob Roe' }] });
+      .mockResolvedValue({ items: [{ name: 'bob', displayName: 'Bob Roe', policies: [] }] });
     listAllDevices.mockResolvedValue({ items: [deviceB] });
     deleteUser.mockResolvedValue({});
 
@@ -156,7 +156,7 @@ describe('AllDevices deletion', () => {
   });
 
   it('tells the admin and keeps the user row when the user delete fails', async () => {
-    listUsers.mockResolvedValue({ items: [{ name: 'alice', displayName: 'Alice Doe' }] });
+    listUsers.mockResolvedValue({ items: [{ name: 'alice', displayName: 'Alice Doe', policies: [] }] });
     listAllDevices.mockResolvedValue({ items: [deviceB] });
     deleteUser.mockRejectedValue(new Error('backend down'));
 

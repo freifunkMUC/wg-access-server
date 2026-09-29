@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -26,14 +27,19 @@ const OIDCAuthProvider = "oidc"
 // OIDCConfig implements an OIDC client using the [Authorization Code Flow]
 // [Authorization Code Flow]: https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth
 type OIDCConfig struct {
-	Name              string                    `yaml:"name"`
-	Issuer            string                    `yaml:"issuer"`
-	ClientID          string                    `yaml:"clientID"`
-	ClientSecret      string                    `yaml:"clientSecret"`
-	Scopes            []string                  `yaml:"scopes"`
-	RedirectURL       string                    `yaml:"redirectURL"`
-	EmailDomains      []string                  `yaml:"emailDomains"`
-	ClaimMapping      map[string]ruleExpression `yaml:"claimMapping"`
+	Name         string                    `yaml:"name"`
+	Issuer       string                    `yaml:"issuer"`
+	ClientID     string                    `yaml:"clientID"`
+	ClientSecret string                    `yaml:"clientSecret"`
+	Scopes       []string                  `yaml:"scopes"`
+	RedirectURL  string                    `yaml:"redirectURL"`
+	EmailDomains []string                  `yaml:"emailDomains"`
+	ClaimMapping map[string]ruleExpression `yaml:"claimMapping"`
+	// PolicyMapping decides which access policies somebody is in: one rule
+	// per policy, over the same claims as ClaimMapping. Every rule that comes
+	// out true puts them in its policy, so they can be in several. The
+	// networks of a policy are configured under vpn.policies.
+	PolicyMapping     map[string]ruleExpression `yaml:"policyMapping"`
 	ClaimsFromIDToken bool                      `yaml:"claimsFromIDToken"`
 	AccessClaim       string                    `yaml:"accessClaim"`
 }
@@ -197,6 +203,11 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 			return
 		}
 
+		if err := evaluatePolicyMapping(claims, c.PolicyMapping, oidcClaims); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		// Build the authnz Identity for the user, they are now considered logged in
 		var subject string
 		if sub, ok := oidcClaims["sub"].(string); ok {
@@ -299,6 +310,31 @@ func evaluateClaimMapping(claimMapping map[string]ruleExpression, oidcClaims map
 		}
 	}
 	return claims, nil
+}
+
+// evaluatePolicyMapping adds a claim for every policy whose rule holds. The
+// names are gone through in order, so the policies of a user do not depend on
+// how Go happened to walk a map.
+func evaluatePolicyMapping(claims *authsession.Claims, policyMapping map[string]ruleExpression, oidcClaims map[string]interface{}) error {
+	names := make([]string, 0, len(policyMapping))
+	for name := range policyMapping {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		result, err := policyMapping[name].Evaluate(oidcClaims)
+		if err != nil {
+			return fmt.Errorf("failed to evaluate the rule of policy '%s': %w", name, err)
+		}
+		// Only a rule that says yes. A policy name is what the configuration
+		// calls it, never something the rule returns - that would let a claim
+		// of the provider name a policy.
+		if applies, ok := result.(bool); ok && applies {
+			claims.Add(authsession.PolicyClaim, name)
+		}
+	}
+	return nil
 }
 
 type ruleExpression struct {

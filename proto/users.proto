@@ -18,6 +18,9 @@ message User {
   string displayName = 2;
   // unset: the server has not seen them sign in
   google.protobuf.Timestamp last_login = 3;
+  // the access policies their identity provider put them in at that login.
+  // Empty: their devices may reach what vpn.allowedIPs says.
+  repeated string policies = 4;
 }
 
 message ListUsersReq {

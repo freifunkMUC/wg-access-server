@@ -165,12 +165,29 @@ type VPNConfig struct {
 	// ClientIsolation configures whether traffic between client devices will be blocked or allowed
 	// defaults to false
 	ClientIsolation bool `yaml:"clientIsolation"`
+	// Policies name what the devices of the people in them may reach,
+	// instead of AllowedIPs. Which policies somebody is in is decided by
+	// their identity provider - see auth.<provider>.policyMapping - and is
+	// remembered from their last login.
+	//
+	// Somebody in no policy keeps AllowedIPs, which is what every device had
+	// before policies existed. Somebody in several may reach the networks of
+	// all of them.
+	Policies map[string]PolicyConfig `yaml:"policies"`
 	// Firewall is how the forwarding rules are set up: "iptables",
 	// "nftables" or "none" (set up nothing).
 	// defaults to iptables
 	Firewall string `yaml:"firewall"`
 	// DisableIPTables is the deprecated way of saying Firewall: none.
 	DisableIPTables bool `yaml:"disableIPTables"`
+}
+
+// PolicyConfig is what the devices of the people in one policy may reach.
+type PolicyConfig struct {
+	// AllowedIPs are the networks their devices may reach. At least one -
+	// leave somebody out of every policy to give them vpn.allowedIPs rather
+	// than writing a policy with nothing in it.
+	AllowedIPs []string `yaml:"allowedIPs"`
 }
 
 type DNSConfig struct {

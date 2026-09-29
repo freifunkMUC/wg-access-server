@@ -146,6 +146,39 @@ auth:
     adminUsers: []
 ```
 
+## Access policies
+
+Which networks somebody's devices may reach can depend on who they are. The networks are configured
+under `vpn.policies` (see [Configuration](./configuration.md)), and a rule per policy decides who is
+in it:
+
+```yaml
+auth:
+  oidc:
+    # ... issuer, clientID and the rest as above
+    policyMapping:
+      # the same claims and the same syntax as claimMapping, one rule per policy
+      contractors: "'Contractors' in group_membership"
+      staff: "'Staff' in group_membership"
+```
+
+Every rule that comes out `true` puts the person in that policy, so they can be in several - a rule
+per policy is why, where `claimMapping` can only give one value to a name. Only `true` counts: a
+rule that returns a string does not name a policy, or a claim of the provider could decide which
+networks somebody reaches.
+
+Which policies somebody is in is worked out at their sign-in and remembered until the next one - the
+server has no way to ask the provider in between. A group that is taken away therefore takes effect
+when they sign in again, as an admin right does today.
+
+Somebody in no policy, and everybody signing in through basic or simple auth, keeps `vpn.allowedIPs`.
+
+!!! note
+
+    **The policies are not enforced yet.** This release works out who is in which policy, remembers
+    it and shows it on the admin page, so that the rules can be checked against what the identity
+    provider actually sends. Building the firewall rules from it comes next.
+
 ## What the server remembers about a sign-in
 
 A sign-in writes a row: the identifier the provider uses for the person, which provider it was, their
