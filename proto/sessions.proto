@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/freifunkMUC/wg-access-server/proto/proto";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// Sessions is what a browser signed in with. Everybody sees and ends their
+// own; taking somebody else's access away is a separate thing an admin does.
+service Sessions {
+  rpc ListSessions(ListSessionsReq) returns (ListSessionsRes) {}
+  rpc DeleteSession(DeleteSessionReq) returns (google.protobuf.Empty) {}
+  // Ends every session but the one the request came with.
+  rpc DeleteOtherSessions(DeleteOtherSessionsReq) returns (DeleteOtherSessionsRes) {}
+}
+
+message Session {
+  string id = 1;
+  // what the browser said about itself when the session started
+  string user_agent = 2;
+  // the address it came from, which behind a reverse proxy is the proxy
+  string remote_addr = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp last_seen_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  // whether this is the session the request was made with
+  bool current = 7;
+}
+
+message ListSessionsReq {}
+
+message ListSessionsRes {
+  repeated Session items = 1;
+}
+
+message DeleteSessionReq {
+  string id = 1;
+}
+
+message DeleteOtherSessionsReq {}
+
+message DeleteOtherSessionsRes {
+  int32 ended = 1;
+}

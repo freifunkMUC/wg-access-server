@@ -153,6 +153,16 @@ func SetIdentityCtx(parent context.Context, session *AuthSession) context.Contex
 	return context.WithValue(parent, sessionKey, session)
 }
 
+// CurrentSessionID returns the id of the browser session a request came with.
+// It is empty for a request that carried an API token, and it is the secret
+// from the cookie - never hand it out.
+func CurrentSessionID(ctx context.Context) string {
+	if session, ok := ctx.Value(sessionKey).(*AuthSession); ok {
+		return session.ID
+	}
+	return ""
+}
+
 func CurrentUser(ctx context.Context) (*Identity, error) {
 	if session, ok := ctx.Value(sessionKey).(*AuthSession); ok {
 		if session.Identity != nil {

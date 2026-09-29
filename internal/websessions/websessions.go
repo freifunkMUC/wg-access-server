@@ -149,6 +149,56 @@ func (m *Manager) List(owner string) ([]*storage.Session, error) {
 	return m.storage.ListSessions(owner)
 }
 
+// Find returns the session an id from a cookie names, so that a caller can
+// tell it apart from the others without ever seeing the ids of those.
+func (m *Manager) Find(id string) (*storage.Session, error) {
+	if id == "" {
+		return nil, ErrInvalid
+	}
+	session, err := m.storage.GetSessionByHash(hash(id))
+	if errors.Is(err, storage.ErrSessionNotFound) {
+		return nil, ErrInvalid
+	}
+	return session, err
+}
+
+// Delete ends one session of a user. A session of somebody else is reported
+// as missing, so that ids cannot be probed.
+func (m *Manager) Delete(owner string, id string) error {
+	sessions, err := m.storage.ListSessions(owner)
+	if err != nil {
+		return err
+	}
+	for _, session := range sessions {
+		if session.ID == id {
+			return m.storage.DeleteSession(id)
+		}
+	}
+	return ErrInvalid
+}
+
+// EndOthers signs a user out everywhere but the session to keep, named as it
+// is stored, and returns how many sessions that was. Only sessions of that
+// user are ended, whatever is passed in.
+func (m *Manager) EndOthers(owner string, keep string) (int, error) {
+	sessions, err := m.storage.ListSessions(owner)
+	if err != nil {
+		return 0, err
+	}
+
+	ended := 0
+	for _, session := range sessions {
+		if session.ID == keep {
+			continue
+		}
+		if err := m.storage.DeleteSession(session.ID); err != nil {
+			return ended, err
+		}
+		ended++
+	}
+	return ended, nil
+}
+
 // EndAllForOwner signs somebody out everywhere.
 func (m *Manager) EndAllForOwner(owner string) error {
 	return m.storage.DeleteSessionsForOwner(owner)
