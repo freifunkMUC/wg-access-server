@@ -75,6 +75,15 @@ var migrations = []migration{
 			return db.AutoMigrate(&userV2{})
 		},
 	},
+	{
+		// The browser sessions. Everybody is signed out once by the upgrade:
+		// the identity used to travel in the cookie, and a cookie from before
+		// this names no session.
+		id: "0007_sessions",
+		apply: func(db *gorm.DB) error {
+			return db.AutoMigrate(&sessionV1{})
+		},
+	},
 }
 
 type migration struct {
@@ -267,4 +276,21 @@ type userV2 struct {
 
 func (userV2) TableName() string {
 	return "users"
+}
+
+// sessionV1 is the sessions table as 0007_sessions created it.
+type sessionV1 struct {
+	ID         string `gorm:"type:varchar(32);primaryKey"`
+	Owner      string `gorm:"type:varchar(100);index:idx_sessions_owner"`
+	Hash       string `gorm:"type:varchar(64);uniqueIndex:uix_sessions_hash"`
+	Identity   string `gorm:"type:text"`
+	UserAgent  string `gorm:"type:varchar(255)"`
+	RemoteAddr string `gorm:"type:varchar(64)"`
+	CreatedAt  time.Time
+	ExpiresAt  time.Time
+	LastSeenAt time.Time
+}
+
+func (sessionV1) TableName() string {
+	return "sessions"
 }

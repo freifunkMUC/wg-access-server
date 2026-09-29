@@ -37,7 +37,7 @@ func newBasicAuthMiddlewareWithSessionStore(t *testing.T, username, password str
 				Users: []string{htpasswdEntry},
 			},
 		},
-	}, nil)
+	}, nil, testSessions())
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
 	}

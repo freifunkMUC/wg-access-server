@@ -26,6 +26,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/metrics"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
 	"github.com/freifunkMUC/wg-access-server/internal/web"
+	"github.com/freifunkMUC/wg-access-server/internal/websessions"
 )
 
 // How long a client may take. Without these, a client that sends its request
@@ -85,7 +86,7 @@ func recordLogin(storageBackend storage.Storage, deviceManager *devices.DeviceMa
 	}
 }
 
-func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, storageBackend storage.Storage, wg wgembed.WireGuardInterface) (http.Handler, error) {
+func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, storageBackend storage.Storage, wg wgembed.WireGuardInterface, browserSessions *websessions.Manager) (http.Handler, error) {
 	router := mux.NewRouter()
 	router.Use(web.TracesMiddleware)
 	router.Use(web.RecoveryMiddleware)
@@ -109,7 +110,8 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 
 	// Authentication middleware
 	claims := authnz.ClaimsMiddleware(conf)
-	middleware, err := authnz.NewMiddleware(conf.Auth, claims, authnz.WithLoginRecorder(recordLogin(storageBackend, deviceManager)))
+	middleware, err := authnz.NewMiddleware(conf.Auth, claims, browserSessions,
+		authnz.WithLoginRecorder(recordLogin(storageBackend, deviceManager)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up authnz middleware: %w", err)
 	}
@@ -132,6 +134,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 		Config:        conf,
 		DeviceManager: deviceManager,
 		Tokens:        tokens,
+		Sessions:      browserSessions,
 		Wg:            wg,
 	}
 

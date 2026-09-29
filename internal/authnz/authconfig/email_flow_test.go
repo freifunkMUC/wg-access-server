@@ -81,7 +81,7 @@ func TestGitlabLoginRequestsTheEmailScope(t *testing.T) {
 	}
 
 	provider := config.Provider()
-	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("test-session-key")))
+	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("test-session-key")), testSessions())
 
 	scopes := requestedScopes(t, provider, runtime)
 
@@ -100,7 +100,7 @@ func TestGitlabWithoutEmailDomainsAsksForOpenIDOnly(t *testing.T) {
 	}
 
 	provider := config.Provider()
-	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("test-session-key")))
+	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("test-session-key")), testSessions())
 
 	assert.Equal(t, []string{"openid"}, requestedScopes(t, provider, runtime))
 }

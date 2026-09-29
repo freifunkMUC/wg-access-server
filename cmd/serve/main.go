@@ -10,8 +10,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/freifunkMUC/wg-access-server/buildinfo"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
+	"github.com/freifunkMUC/wg-access-server/internal/websessions"
 )
 
 func (cmd *servecmd) Name() string {
@@ -74,7 +76,17 @@ func (cmd *servecmd) Run() {
 		return
 	}
 
-	handler, err := newRouter(conf, deviceManager, storageBackend, wg)
+	// The browser sessions: the cookie carries an id, who signed in is kept
+	// here. Expired ones are removed while the server runs.
+	maxAge, err := authnz.SessionMaxAge(conf.Auth.SessionStore)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	browserSessions := websessions.New(storageBackend, maxAge)
+	browserSessions.StartCleanup(backgroundCtx)
+
+	handler, err := newRouter(conf, deviceManager, storageBackend, wg, browserSessions)
 	if err != nil {
 		logrus.Error(err)
 		return

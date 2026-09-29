@@ -3,17 +3,20 @@ package authruntime
 import (
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/sessions"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/storage"
+	"github.com/freifunkMUC/wg-access-server/internal/websessions"
 )
 
 // Every provider ends up in SetSession, which is why the server learns about a
 // sign-in there. A session without an identity is a provider keeping state in
 // the middle of its flow - the OIDC nonce - and nobody has signed in yet.
 func TestSetSessionRecordsOnlyRealSignIns(t *testing.T) {
-	runtime := NewProviderRuntime(sessions.NewCookieStore([]byte("0123456789abcdef0123456789abcdef")))
+	runtime := NewProviderRuntime(sessions.NewCookieStore([]byte("0123456789abcdef0123456789abcdef")), websessions.New(storage.NewMemoryStorage(), time.Hour))
 
 	var recorded []string
 	runtime.OnLogin(func(identity *authsession.Identity) {
@@ -39,7 +42,7 @@ func TestSetSessionRecordsOnlyRealSignIns(t *testing.T) {
 
 // Nothing may depend on somebody having registered interest in sign-ins.
 func TestSetSessionWithoutARecorder(t *testing.T) {
-	runtime := NewProviderRuntime(sessions.NewCookieStore([]byte("0123456789abcdef0123456789abcdef")))
+	runtime := NewProviderRuntime(sessions.NewCookieStore([]byte("0123456789abcdef0123456789abcdef")), websessions.New(storage.NewMemoryStorage(), time.Hour))
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/", nil)
 

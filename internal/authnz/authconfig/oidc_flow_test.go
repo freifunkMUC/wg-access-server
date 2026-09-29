@@ -139,7 +139,7 @@ func newOIDCFlowWith(t *testing.T, adjust func(*OIDCConfig)) (*fakeIDP, *authrun
 	adjust(config)
 
 	provider := config.Provider()
-	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("test-session-key")))
+	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("test-session-key")), testSessions())
 	router := mux.NewRouter()
 	require.NoError(t, provider.RegisterRoutes(router, runtime))
 

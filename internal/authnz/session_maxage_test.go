@@ -64,7 +64,7 @@ func TestSessionCookieUsesTheConfiguredMaxAge(t *testing.T) {
 func TestNewRefusesABadMaxAge(t *testing.T) {
 	_, err := New(authconfig.AuthConfig{
 		SessionStore: &authconfig.SessionStoreConfig{MaxAge: "yesterday"},
-	}, nil)
+	}, nil, testSessions())
 	if err == nil {
 		t.Fatal("New accepted a session lifetime that is not a duration")
 	}

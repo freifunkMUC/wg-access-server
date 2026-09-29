@@ -108,7 +108,7 @@ func (gh *fakeGithub) config() *GithubConfig {
 func newGithubFlow(t *testing.T, config *GithubConfig) (*authruntime.Provider, *authruntime.ProviderRuntime, *mux.Router) {
 	t.Helper()
 	provider := config.Provider()
-	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("test-session-key")))
+	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("test-session-key")), testSessions())
 	router := mux.NewRouter()
 	require.NoError(t, provider.RegisterRoutes(router, runtime))
 	return provider, runtime, router

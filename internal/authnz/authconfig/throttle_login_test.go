@@ -15,7 +15,7 @@ import (
 func simpleAuthHandler(t *testing.T, username, password string) (http.HandlerFunc, *loginThrottle) {
 	t.Helper()
 	config := &SimpleAuthConfig{Users: []string{username + ":" + testHash(t, password)}}
-	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("0123456789abcdef0123456789abcdef")))
+	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("0123456789abcdef0123456789abcdef")), testSessions())
 	throttle := newLoginThrottle()
 	return simpleAuthPostEndpoint(config, runtime, throttle), throttle
 }

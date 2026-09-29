@@ -14,6 +14,7 @@ type Storage interface {
 	Pingable
 	TokenStorage
 	UserStorage
+	SessionStorage
 	Save(device *Device) error
 	// RecordMetadata applies what one metadata sync observed. Traffic is
 	// added to the stored totals, so several server replicas and restarts
