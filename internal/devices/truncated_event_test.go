@@ -1,6 +1,7 @@
 package devices
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -64,40 +65,51 @@ func (r *recordingInterface) has(publicKey string) bool {
 }
 
 // With Postgres every replica - including the one creating a device - adds the
-// WireGuard peer only from the database notification. A device whose row is too
-// large for a notification must still end up with a peer.
-func TestDeviceWithOversizedRowGetsAPeer(t *testing.T) {
+// WireGuard peer from the database notification, and those carry no row: the
+// replica is told that something changed and reads the devices itself. A
+// device must end up with a peer either way, whether its row would have fitted
+// into a notification or not.
+func TestDeviceGetsAPeerFromANotificationWithoutItsRow(t *testing.T) {
 	uri := os.Getenv("WG_TEST_POSTGRES_URI")
 	if uri == "" {
 		t.Skip("WG_TEST_POSTGRES_URI not set")
 	}
-	s := openTruncatedTestStorage(t, uri)
-	wg := &recordingInterface{WireGuardInterface: wgembed.NewNoOpInterface(), peers: map[string]bool{}}
-	manager := New(wg, s, "10.88.0.0/16", "")
-	require.NoError(t, manager.StartSync(t.Context(), false, false, 0))
 
-	owner := "truncated-event-test"
-	t.Cleanup(func() {
-		devices, _ := s.List(owner)
-		for _, d := range devices {
-			_ = s.Delete(d)
-		}
-	})
+	for _, tc := range []struct {
+		name        string
+		displayName string
+	}{
+		{"an ordinary device", "Alice Example"},
+		// display names come from the identity provider and are not bounded,
+		// so a row can also be too large for a notification to carry
+		{"a device with an oversized row", strings.Repeat("a very long display name ", 400)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := openTruncatedTestStorage(t, uri)
+			wg := &recordingInterface{WireGuardInterface: wgembed.NewNoOpInterface(), peers: map[string]bool{}}
+			manager := New(wg, s, "10.88.0.0/16", "")
+			require.NoError(t, manager.StartSync(t.Context(), false, false, 0))
 
-	key, err := wgtypes.GeneratePrivateKey()
-	require.NoError(t, err)
-	identity := &authsession.Identity{
-		Subject: owner,
-		// display names come from the identity provider and are not bounded
-		Name: strings.Repeat("a very long display name ", 400),
-	}
-	device, err := manager.AddDevice(identity, "tablet", key.PublicKey().String(), "", false, "", "")
-	require.NoError(t, err)
+			owner := fmt.Sprintf("truncated-event-test-%d", time.Now().UnixNano())
+			t.Cleanup(func() {
+				devices, _ := s.List(owner)
+				for _, d := range devices {
+					_ = s.Delete(d)
+				}
+			})
 
-	deadline := time.Now().Add(5 * time.Second)
-	for !wg.has(device.PublicKey) {
-		require.True(t, time.Now().Before(deadline), "the device never got a WireGuard peer")
-		time.Sleep(20 * time.Millisecond)
+			key, err := wgtypes.GeneratePrivateKey()
+			require.NoError(t, err)
+			identity := &authsession.Identity{Subject: owner, Name: tc.displayName}
+			device, err := manager.AddDevice(identity, "tablet", key.PublicKey().String(), "", false, "", "")
+			require.NoError(t, err)
+
+			deadline := time.Now().Add(5 * time.Second)
+			for !wg.has(device.PublicKey) {
+				require.True(t, time.Now().Before(deadline), "the device never got a WireGuard peer")
+				time.Sleep(20 * time.Millisecond)
+			}
+		})
 	}
 }
 

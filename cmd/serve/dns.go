@@ -53,6 +53,11 @@ func startDNS(conf *config.AppConfig, deviceManager *devices.DeviceManager, stor
 		storageBackend.OnAdd(updater.notify)
 		storageBackend.OnUpdate(updater.notify)
 		storageBackend.OnDelete(updater.notify)
+		// The backend may also report that something changed without saying
+		// what - after a reconnect, and on Postgres for every change, whose
+		// notifications carry no row. The zone is built from every device
+		// there is, so it does not need to know which one it was.
+		storageBackend.OnReconnect(func() { updater.notify(nil) })
 		stop = func() {
 			updater.stop()
 			_ = dns.Close()

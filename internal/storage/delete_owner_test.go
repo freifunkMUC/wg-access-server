@@ -48,8 +48,7 @@ func TestDeleteForOwner(t *testing.T) {
 				_, _ = s.DeleteForOwner(other)
 			})
 
-			events := &collector{}
-			s.OnDelete(events.record)
+			events := (&collector{}).watch(s, s.OnDelete)
 
 			seedDevices(t, s, owner, "laptop", "phone", "tablet")
 			seedDevices(t, s, other, "desktop")
@@ -70,13 +69,18 @@ func TestDeleteForOwner(t *testing.T) {
 			}
 
 			// every removed device has to be reported, that is how the
-			// WireGuard peers go away
+			// WireGuard peers go away - as three devices from the backends
+			// that carry them, and as three notifications without a row from
+			// Postgres, each of which has the replicas read the devices again
 			deadline := time.Now().Add(5 * time.Second)
-			for len(events.names()) < 3 && time.Now().Before(deadline) {
+			for events.changes() < 3 && time.Now().Before(deadline) {
 				time.Sleep(20 * time.Millisecond)
 			}
-			if got := events.names(); len(got) != 3 {
-				t.Errorf("got %d delete events (%q), want 3", len(got), got)
+			// At least, not exactly: a Postgres notification carries no row, so
+			// it cannot be told apart from one another test caused in the same
+			// database. What has to hold is that all three were reported.
+			if got := events.changes(); got < 3 {
+				t.Errorf("got %d reported deletions (%q), want at least 3", got, events.names())
 			}
 		})
 	}
@@ -136,7 +140,7 @@ func TestDeleteForOwnerRollsBack(t *testing.T) {
 	})
 
 	events := &collector{}
-	s.OnDelete(events.record)
+	events.watch(s, s.OnDelete)
 
 	if _, err := s.DeleteForOwner(owner); err == nil {
 		t.Fatal("the deletion succeeded although one device could not be deleted")

@@ -31,8 +31,7 @@ func TestSetRoutesEmitsAnUpdate(t *testing.T) {
 			}
 			t.Cleanup(func() { _ = s.Close() })
 
-			updates := &collector{}
-			s.OnUpdate(updates.record)
+			updates := (&collector{}).watch(s, s.OnUpdate)
 
 			device := &Device{
 				Owner: "routes-events-" + name, Name: "site",
@@ -60,8 +59,8 @@ func TestSetRoutesEmitsAnUpdate(t *testing.T) {
 				t.Errorf("allowed IPs = %v, want the address and both networks", allowed)
 			}
 
-			if !updates.waitForRoutes(t, routes, 5*time.Second) {
-				t.Error("no update event for the device whose routes changed")
+			if !updates.reported(t, 5*time.Second, func(d *Device) bool { return d.Routes == routes }) {
+				t.Error("the change of the routes was not reported")
 			}
 
 			stored, err := s.Get(device.Owner, device.Name)
@@ -85,23 +84,6 @@ func TestSetRoutesEmitsAnUpdate(t *testing.T) {
 			}
 		})
 	}
-}
-
-func (c *collector) waitForRoutes(t *testing.T, want string, timeout time.Duration) bool {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		c.mu.Lock()
-		for _, device := range c.devices {
-			if device.Routes == want {
-				c.mu.Unlock()
-				return true
-			}
-		}
-		c.mu.Unlock()
-		time.Sleep(20 * time.Millisecond)
-	}
-	return false
 }
 
 // A device that is gone must not come back as a row with only routes in it.

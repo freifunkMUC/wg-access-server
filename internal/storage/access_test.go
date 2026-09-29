@@ -7,26 +7,6 @@ import (
 	"time"
 )
 
-// waitForAccess waits for an update event about a device that carries the
-// access the caller expects. Postgres reports the change through its trigger,
-// so the event arrives on another goroutine.
-func (c *collector) waitForAccess(t *testing.T, disabled bool, expires bool, timeout time.Duration) bool {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		c.mu.Lock()
-		for _, device := range c.devices {
-			if device.Disabled == disabled && (device.ExpiresAt != nil) == expires {
-				c.mu.Unlock()
-				return true
-			}
-		}
-		c.mu.Unlock()
-		time.Sleep(20 * time.Millisecond)
-	}
-	return false
-}
-
 // Blocking a device has to reach every replica: the one holding the client's
 // tunnel is the one that has to drop the peer, and it may not be the one the
 // admin is talking to.
@@ -52,8 +32,7 @@ func TestSetAccessEmitsAnUpdate(t *testing.T) {
 			}
 			t.Cleanup(func() { _ = s.Close() })
 
-			updates := &collector{}
-			s.OnUpdate(updates.record)
+			updates := (&collector{}).watch(s, s.OnUpdate)
 
 			device := &Device{
 				Owner: "access-events-" + name, Name: "laptop",
@@ -78,8 +57,8 @@ func TestSetAccessEmitsAnUpdate(t *testing.T) {
 				t.Errorf("returned device = %+v, want it disabled and with an expiry", changed)
 			}
 
-			if !updates.waitForAccess(t, true, true, 5*time.Second) {
-				t.Error("no update event for the device whose access changed")
+			if !updates.reported(t, 5*time.Second, func(d *Device) bool { return d.Disabled && d.ExpiresAt != nil }) {
+				t.Error("the access change was not reported")
 			}
 
 			// and it has to be what the next replica reads, not only what the

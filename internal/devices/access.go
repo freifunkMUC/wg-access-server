@@ -89,3 +89,20 @@ func removeBlockedPeers(ctx context.Context, d *DeviceManager) {
 		}
 	}
 }
+
+// resyncLoop brings the interface back in line with storage whenever the
+// backend says events may have been missed. See StartSync for why the changes
+// are coalesced rather than counted.
+func resyncLoop(ctx context.Context, d *DeviceManager, resync <-chan struct{}) {
+	for {
+		select {
+		case <-ctx.Done():
+			logrus.Debug("stopping the device resynchronization")
+			return
+		case <-resync:
+			if err := d.sync(); err != nil {
+				logrus.Error(fmt.Errorf("device sync after a storage backend event failed: %w", err))
+			}
+		}
+	}
+}

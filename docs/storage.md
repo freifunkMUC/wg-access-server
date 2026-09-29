@@ -56,6 +56,22 @@ Example connection string:
 
 - `postgresql://user:password@localhost:5432/database?sslmode=disable`
 
+#### What the replicas send each other
+
+The replicas learn about a change through `LISTEN`/`NOTIFY`. Those notifications say that the
+devices table changed and nothing more: which device it was, and what is in its row, is not part of
+them. Every replica reads the devices from the database instead, as the user it connects as.
+
+This matters because a notification reaches **every connection that listens on the channel**, and
+Postgres applies no table privileges to it. A database user who may connect but may not read the
+devices would otherwise see every one of them as it is written, with its addresses, its owner's
+identity and its pre-shared key. Sharing the database with another application, or having a
+read-only user for reports, is enough for that to matter.
+
+What it costs: a change makes each replica read the devices once, rather than apply the row it was
+handed. The reads are coalesced - one runs at a time and one more is remembered - so importing many
+devices at once does not read them once per device.
+
 ### MySQL
 
 This backend requires an external MySQL database to be deployed. Every release is tested against

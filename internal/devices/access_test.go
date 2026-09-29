@@ -226,3 +226,16 @@ func TestAccessLoopStopsWhenTheContextIsCancelled(t *testing.T) {
 		t.Error("accessLoop kept running after its context was cancelled")
 	}
 }
+
+// The resynchronization runs in the background, so a slow sync does not hold up
+// the events behind it - and it has to stop with the rest.
+func TestResyncLoopStopsWhenTheContextIsCancelled(t *testing.T) {
+	manager := New(&fakeWgInterface{}, storage.NewMemoryStorage(), "10.44.0.0/24", "")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	resync := make(chan struct{}, 1)
+	if !returnsWithin(t, time.Second, func() { resyncLoop(ctx, manager, resync) }) {
+		t.Error("resyncLoop kept running after its context was cancelled")
+	}
+}

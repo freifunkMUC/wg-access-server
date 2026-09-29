@@ -18,10 +18,59 @@ func testKey(seed string) string {
 	return base64.StdEncoding.EncodeToString(key[:])
 }
 
-// collector records the devices a watcher reports.
+// collector records what a watcher reports. A change arrives in one of two
+// shapes: the in-process backends - memory, SQLite, MySQL - hand over the
+// device itself, while Postgres notifies without the row (see PgWatcher) and a
+// replica only learns that it has to read the devices again. Counting both
+// keeps a test as strict as it was: a backend that carries devices cannot
+// resynchronize, and the other way round.
 type collector struct {
 	mu      sync.Mutex
 	devices []*Device
+	resyncs int
+}
+
+// watch records both shapes of a change: register is OnUpdate or OnDelete.
+func (c *collector) watch(s Storage, register func(Callback)) *collector {
+	register(c.record)
+	s.OnReconnect(c.recordResync)
+	return c
+}
+
+func (c *collector) recordResync() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.resyncs++
+}
+
+// reported waits until the change arrived - as a device the test recognizes,
+// or as a request to read the devices again.
+func (c *collector) reported(t *testing.T, timeout time.Duration, matches func(*Device) bool) bool {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		c.mu.Lock()
+		for _, device := range c.devices {
+			if matches(device) {
+				c.mu.Unlock()
+				return true
+			}
+		}
+		resynced := c.resyncs > 0
+		c.mu.Unlock()
+		if resynced {
+			return true
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	return false
+}
+
+// changes is how many changes were reported, in either shape.
+func (c *collector) changes() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.devices) + c.resyncs
 }
 
 func (c *collector) record(device *Device) {
@@ -38,20 +87,6 @@ func (c *collector) names() []string {
 		names = append(names, device.Name)
 	}
 	return names
-}
-
-func (c *collector) waitFor(t *testing.T, want string, timeout time.Duration) bool {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		for _, name := range c.names() {
-			if name == want {
-				return true
-			}
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	return false
 }
 
 // Renaming a device has to reach whoever keeps a copy of the names - the
@@ -80,8 +115,7 @@ func TestRenameEmitsAnUpdate(t *testing.T) {
 			// devices - a deferred Close would run before every t.Cleanup
 			t.Cleanup(func() { _ = s.Close() })
 
-			updates := &collector{}
-			s.OnUpdate(updates.record)
+			updates := (&collector{}).watch(s, s.OnUpdate)
 
 			device := &Device{
 				Owner: "rename-events-" + name, Name: "laptop",
@@ -101,8 +135,8 @@ func TestRenameEmitsAnUpdate(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !updates.waitFor(t, "work laptop", 5*time.Second) {
-				t.Errorf("no update event for the renamed device, got %q", updates.names())
+			if !updates.reported(t, 5*time.Second, func(d *Device) bool { return d.Name == "work laptop" }) {
+				t.Errorf("the rename was not reported, got %q", updates.names())
 			}
 		})
 	}
@@ -142,8 +176,7 @@ func TestMetadataWritesEmitNoUpdate(t *testing.T) {
 			}
 
 			// subscribe only now, so the insert is not counted
-			updates := &collector{}
-			s.OnUpdate(updates.record)
+			updates := (&collector{}).watch(s, s.OnUpdate)
 
 			handshake := time.Now()
 			if err := s.RecordMetadata([]MetadataUpdate{{
@@ -156,8 +189,8 @@ func TestMetadataWritesEmitNoUpdate(t *testing.T) {
 
 			// give an event that should not exist the time to show up
 			time.Sleep(500 * time.Millisecond)
-			if got := updates.names(); len(got) != 0 {
-				t.Errorf("the metadata write produced %d update events (%q), want none", len(got), got)
+			if got := updates.changes(); got != 0 {
+				t.Errorf("the metadata write produced %d change(s) (%q), want none", got, updates.names())
 			}
 		})
 	}
@@ -186,7 +219,7 @@ func TestRenameReachesAnotherReplica(t *testing.T) {
 	first, second := open(), open()
 
 	updates := &collector{}
-	second.OnUpdate(updates.record)
+	updates.watch(second, second.OnUpdate)
 
 	device := &Device{
 		Owner: "replica-rename", Name: "laptop",
@@ -206,7 +239,7 @@ func TestRenameReachesAnotherReplica(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !updates.waitFor(t, "work laptop", 5*time.Second) {
+	if !updates.reported(t, 5*time.Second, func(d *Device) bool { return d.Name == "work laptop" }) {
 		t.Errorf("the other replica never heard about the rename, got %q", updates.names())
 	}
 }
