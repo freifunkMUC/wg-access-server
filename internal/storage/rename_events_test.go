@@ -30,11 +30,23 @@ type collector struct {
 	resyncs int
 }
 
-// watch records both shapes of a change: register is OnUpdate or OnDelete.
-func (c *collector) watch(s Storage, register func(Callback)) *collector {
-	register(c.record)
+// watch records both shapes of a change. register is OnAdd, OnUpdate or
+// OnDelete - a resync says only that something changed, so a test that has to
+// tell an insert from an update watches for both and counts what arrives.
+func (c *collector) watch(s Storage, register ...func(Callback)) *collector {
+	for _, r := range register {
+		r(c.record)
+	}
 	s.OnReconnect(c.recordResync)
 	return c
+}
+
+// reset starts counting again, once what the test set up has been reported.
+func (c *collector) reset() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.devices = nil
+	c.resyncs = 0
 }
 
 func (c *collector) recordResync() {
@@ -95,7 +107,7 @@ func TestRenameEmitsAnUpdate(t *testing.T) {
 	backends := map[string]string{
 		"memory":   "memory://",
 		"sqlite3":  "sqlite3://" + filepath.Join(t.TempDir(), "rename.db"),
-		"postgres": os.Getenv("WG_TEST_POSTGRES_URI"),
+		"postgres": freshPostgres(t),
 		"mysql":    os.Getenv("WG_TEST_MYSQL_URI"),
 	}
 
@@ -148,7 +160,7 @@ func TestRenameEmitsAnUpdate(t *testing.T) {
 func TestMetadataWritesEmitNoUpdate(t *testing.T) {
 	backends := map[string]string{
 		"sqlite3":  "sqlite3://" + filepath.Join(t.TempDir(), "metadata.db"),
-		"postgres": os.Getenv("WG_TEST_POSTGRES_URI"),
+		"postgres": freshPostgres(t),
 		"mysql":    os.Getenv("WG_TEST_MYSQL_URI"),
 	}
 
@@ -166,6 +178,11 @@ func TestMetadataWritesEmitNoUpdate(t *testing.T) {
 			}
 			t.Cleanup(func() { _ = s.Close() })
 
+			// Watch the insert as well: on Postgres a change is reported
+			// without saying what it was, so the only way to leave the insert
+			// out of the count is to wait for it and start again.
+			updates := (&collector{}).watch(s, s.OnAdd, s.OnUpdate)
+
 			device := &Device{
 				Owner: "metadata-events-" + name, Name: "laptop",
 				PublicKey: testKey("metadata-events-" + name), Address: "10.44.0.2/32", CreatedAt: time.Now(),
@@ -174,9 +191,10 @@ func TestMetadataWritesEmitNoUpdate(t *testing.T) {
 			if err := s.Save(device); err != nil {
 				t.Fatal(err)
 			}
-
-			// subscribe only now, so the insert is not counted
-			updates := (&collector{}).watch(s, s.OnUpdate)
+			if !updates.reported(t, 5*time.Second, func(d *Device) bool { return d.Name == device.Name }) {
+				t.Fatal("the insert was not reported, so the metadata write cannot be told from it")
+			}
+			updates.reset()
 
 			handshake := time.Now()
 			if err := s.RecordMetadata([]MetadataUpdate{{
@@ -199,7 +217,7 @@ func TestMetadataWritesEmitNoUpdate(t *testing.T) {
 // The point of the database trigger: a rename on one replica has to reach the
 // others, because each of them keeps its own copy of the DNS zone.
 func TestRenameReachesAnotherReplica(t *testing.T) {
-	uri := os.Getenv("WG_TEST_POSTGRES_URI")
+	uri := freshPostgres(t)
 	if uri == "" {
 		t.Skip("WG_TEST_POSTGRES_URI not set")
 	}
