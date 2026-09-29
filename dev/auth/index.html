@@ -443,6 +443,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Sessions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-you-are-signed-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where you are signed in
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -802,6 +819,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Sessions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-you-are-signed-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where you are signed in
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1104,6 +1138,19 @@ hash, so whoever reads the database learns which sessions exist, not how to use 
 longer reads - it wants a session id, and there is none. They sign in again and are on the new
 scheme.</p>
 </div>
+<h3 id="where-you-are-signed-in">Where you are signed in<a class="headerlink" href="#where-you-are-signed-in" title="Permanent link"> ¶</a></h3>
+<p>The shield in the navigation lists every browser that is signed in as you: what it said it was,
+the address it came from, when it signed in and when it was last used. The one asking is marked
+<strong>This browser</strong>.</p>
+<ul>
+<li><strong>Sign out</strong> on a row ends that one session, at once and everywhere. Do that for a session you do
+  not recognise, or for a computer you left signed in somewhere.</li>
+<li><strong>Sign out everywhere else</strong> ends all of them but the one you are looking at, which is the thing
+  to reach for after a password went through the wrong hands.</li>
+</ul>
+<p>Everybody manages their own sessions; there is no admin view of somebody else's. Taking another
+person's access away is a different job, and it has to take their devices and their API tokens with
+it - until then, deleting the user does all three.</p>
 <p>What this does <em>not</em> do: end a tunnel. A device keeps connecting whether or not anybody is signed
 in - that is what <a href="../#device-access">blocking a device</a> is for. A session is the web UI and the
 API: adding devices, downloading their configuration, and whatever else the person may do.</p>
