@@ -5,7 +5,10 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import InputAdornment from '@mui/material/InputAdornment';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
+import TablePagination from '@mui/material/TablePagination';
 import TextField from '@mui/material/TextField';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -15,6 +18,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
+import SearchIcon from '@mui/icons-material/Search';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import Avatar from '@mui/material/Avatar';
@@ -37,6 +41,15 @@ type SortColumn = keyof Device.AsObject | 'download' | 'upload' | 'connected' | 
 export const AllDevices = observer(function AllDevices() {
   const [sortBy, setSortBy] = React.useState<SortColumn>('lastHandshakeTime');
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
+  // what the device table shows of what was loaded
+  const [deviceQuery, setDeviceQuery] = React.useState('');
+  const [deviceState, setDeviceState] = React.useState<DeviceState>('all');
+  const [devicePage, setDevicePage] = React.useState(0);
+  const [devicesPerPage, setDevicesPerPage] = React.useState(25);
+  // ... and of the users
+  const [userQuery, setUserQuery] = React.useState('');
+  const [userPage, setUserPage] = React.useState(0);
+  const [usersPerPage, setUsersPerPage] = React.useState(25);
   // the device whose expiry date is being changed, if any
   const [expiryDevice, setExpiryDevice] = React.useState<Device.AsObject>();
   // ... and the one whose networks are being changed
@@ -72,7 +85,16 @@ export const AllDevices = observer(function AllDevices() {
     setSortBy(column);
   };
 
-  const sortedDevices = sortDevices(deviceResource.current, sortBy, sortOrder);
+  const matchingDevices = sortDevices(
+    filterDevices(deviceResource.current, deviceQuery, deviceState),
+    sortBy,
+    sortOrder,
+  );
+
+  // a search that leaves fewer rows than the page we are on would show an
+  // empty table, so every change of what is looked for starts at the front
+  React.useEffect(() => setDevicePage(0), [deviceQuery, deviceState]);
+  React.useEffect(() => setUserPage(0), [userQuery]);
 
   const deleteUser = async (user: User.AsObject) => {
     if (await confirm('Are you sure you want to delete all devices from ' + user.name + '?')) {
@@ -158,13 +180,17 @@ export const AllDevices = observer(function AllDevices() {
   if (!deviceResource.current || !userResource.current) {
     return <Loading />;
   }
-  const users = userResource.current;
-  const devices = sortedDevices;
+  const allDevices = deviceResource.current;
+  const allUsers = userResource.current;
+  const matchingUsers = filterUsers(allUsers, userQuery);
+  const devices = matchingDevices.slice(devicePage * devicesPerPage, (devicePage + 1) * devicesPerPage);
+  const users = matchingUsers.slice(userPage * usersPerPage, (userPage + 1) * usersPerPage);
 
-  // show the provider column
-  // when there is more than 1 provider in use
-  // i.e. not all devices are from the same auth provider.
-  const showProviderCol = devices.length >= 2 && devices.some((d) => d.ownerProvider !== devices[0].ownerProvider);
+  // show the provider column when there is more than 1 provider in use, i.e.
+  // not all devices are from the same auth provider. Taken from all of them,
+  // so that a column does not come and go while somebody searches.
+  const showProviderCol =
+    allDevices.length >= 2 && allDevices.some((d) => d.ownerProvider !== allDevices[0].ownerProvider);
 
   return (
     <div style={{ display: 'grid', gridGap: 25, gridAutoFlow: 'row' }}>
@@ -172,9 +198,44 @@ export const AllDevices = observer(function AllDevices() {
         Devices
         <Typography component="span">
           {' '}
-          ({devices.filter((p) => p.connected).length} of {devices.length} online)
+          ({allDevices.filter((p) => p.connected).length} of {allDevices.length} online
+          {matchingDevices.length !== allDevices.length && `, ${matchingDevices.length} shown`})
         </Typography>
       </Typography>
+
+      <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 2 }}>
+        <TextField
+          size="small"
+          label="Search devices"
+          placeholder="name, owner, address"
+          value={deviceQuery}
+          onChange={(event) => setDeviceQuery(event.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+          sx={{ minWidth: 280 }}
+        />
+        <TextField
+          select
+          size="small"
+          label="Show"
+          value={deviceState}
+          onChange={(event) => setDeviceState(event.target.value as DeviceState)}
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value="all">All devices</MenuItem>
+          <MenuItem value="connected">Connected</MenuItem>
+          <MenuItem value="blocked">Blocked or expired</MenuItem>
+          <MenuItem value="routing">Carrying networks</MenuItem>
+        </TextField>
+      </Stack>
+
       <TableContainer>
         <Table stickyHeader>
           <TableHead>
@@ -322,14 +383,56 @@ export const AllDevices = observer(function AllDevices() {
                 </TableCell>
               </TableRow>
             ))}
+            {devices.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={12}>
+                  <Typography color="text.secondary">No device matches what you are looking for.</Typography>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
+        <TablePagination
+          component="div"
+          count={matchingDevices.length}
+          page={devicePage}
+          onPageChange={(_, page) => setDevicePage(page)}
+          rowsPerPage={devicesPerPage}
+          rowsPerPageOptions={[25, 50, 100]}
+          onRowsPerPageChange={(event) => {
+            setDevicesPerPage(parseInt(event.target.value, 10));
+            setDevicePage(0);
+          }}
+        />
       </TableContainer>
 
       <Typography variant="h5" component="h5">
         Users
-        <Typography component="span"> ({users.length})</Typography>
+        <Typography component="span">
+          {' '}
+          ({allUsers.length}
+          {matchingUsers.length !== allUsers.length && `, ${matchingUsers.length} shown`})
+        </Typography>
       </Typography>
+
+      <TextField
+        size="small"
+        label="Search users"
+        placeholder="name or policy"
+        value={userQuery}
+        onChange={(event) => setUserQuery(event.target.value)}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" />
+              </InputAdornment>
+            ),
+          },
+        }}
+        sx={{ maxWidth: 360 }}
+      />
+
       <TableContainer>
         <Table stickyHeader>
           <TableHead>
@@ -355,8 +458,27 @@ export const AllDevices = observer(function AllDevices() {
                 </TableCell>
               </TableRow>
             ))}
+            {users.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4}>
+                  <Typography color="text.secondary">No user matches what you are looking for.</Typography>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
+        <TablePagination
+          component="div"
+          count={matchingUsers.length}
+          page={userPage}
+          onPageChange={(_, page) => setUserPage(page)}
+          rowsPerPage={usersPerPage}
+          rowsPerPageOptions={[25, 50, 100]}
+          onRowsPerPageChange={(event) => {
+            setUsersPerPage(parseInt(event.target.value, 10));
+            setUserPage(0);
+          }}
+        />
       </TableContainer>
 
       <Typography variant="h5" component="h5">
@@ -550,6 +672,70 @@ export function endOfDay(day: string, now: Date = new Date()): Date | undefined 
     return undefined;
   }
   return at;
+}
+
+// DeviceState is what the table is narrowed down to besides the search.
+export type DeviceState = 'all' | 'connected' | 'blocked' | 'routing';
+
+// filterDevices keeps the devices a search and a state filter leave. The
+// search looks at everything an admin is likely to have in front of them: the
+// name of the device, who it belongs to however they are named, its addresses
+// and the networks behind it.
+export function filterDevices(
+  devices: Device.AsObject[] | null | undefined,
+  query: string,
+  state: DeviceState,
+  now: Date = new Date(),
+): Device.AsObject[] {
+  if (!devices) {
+    return [];
+  }
+
+  const needle = query.trim().toLowerCase();
+  return devices.filter((device) => {
+    switch (state) {
+      case 'connected':
+        if (!device.connected) return false;
+        break;
+      case 'blocked':
+        if (!deviceAccess(device, now)?.blocked) return false;
+        break;
+      case 'routing':
+        if (!device.routes?.length) return false;
+        break;
+    }
+
+    if (needle === '') {
+      return true;
+    }
+    return [
+      device.name,
+      device.owner,
+      device.ownerName,
+      device.ownerEmail,
+      device.ownerProvider,
+      device.address,
+      device.endpoint,
+      ...(device.routes ?? []),
+    ].some((field) => field?.toLowerCase().includes(needle));
+  });
+}
+
+// filterUsers keeps the users a search leaves, by what they are called and by
+// the policies they are in - "who is in contractors" is a question an admin
+// asks of this table.
+export function filterUsers(users: User.AsObject[] | null | undefined, query: string): User.AsObject[] {
+  if (!users) {
+    return [];
+  }
+
+  const needle = query.trim().toLowerCase();
+  if (needle === '') {
+    return users;
+  }
+  return users.filter((user) =>
+    [user.name, user.displayName, ...(user.policies ?? [])].some((field) => field?.toLowerCase().includes(needle)),
+  );
 }
 
 // sortDevices orders the table by the column its header was last clicked on.
