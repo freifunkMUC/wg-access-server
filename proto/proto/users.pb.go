@@ -593,6 +593,336 @@ func (x *ResetTwoFactorReq) GetName() string {
 	return ""
 }
 
+type Passkey struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// what the person called it, so they can tell one from another
+	Name      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// unset: it has not been used to sign in yet
+	LastUsedAt    *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Passkey) Reset() {
+	*x = Passkey{}
+	mi := &file_users_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Passkey) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Passkey) ProtoMessage() {}
+
+func (x *Passkey) ProtoReflect() protoreflect.Message {
+	mi := &file_users_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Passkey.ProtoReflect.Descriptor instead.
+func (*Passkey) Descriptor() ([]byte, []int) {
+	return file_users_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *Passkey) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Passkey) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Passkey) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Passkey) GetLastUsedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastUsedAt
+	}
+	return nil
+}
+
+type ListPasskeysReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPasskeysReq) Reset() {
+	*x = ListPasskeysReq{}
+	mi := &file_users_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPasskeysReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPasskeysReq) ProtoMessage() {}
+
+func (x *ListPasskeysReq) ProtoReflect() protoreflect.Message {
+	mi := &file_users_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPasskeysReq.ProtoReflect.Descriptor instead.
+func (*ListPasskeysReq) Descriptor() ([]byte, []int) {
+	return file_users_proto_rawDescGZIP(), []int{13}
+}
+
+type ListPasskeysRes struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*Passkey             `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPasskeysRes) Reset() {
+	*x = ListPasskeysRes{}
+	mi := &file_users_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPasskeysRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPasskeysRes) ProtoMessage() {}
+
+func (x *ListPasskeysRes) ProtoReflect() protoreflect.Message {
+	mi := &file_users_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPasskeysRes.ProtoReflect.Descriptor instead.
+func (*ListPasskeysRes) Descriptor() ([]byte, []int) {
+	return file_users_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ListPasskeysRes) GetItems() []*Passkey {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+type BeginPasskeyReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BeginPasskeyReq) Reset() {
+	*x = BeginPasskeyReq{}
+	mi := &file_users_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeginPasskeyReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeginPasskeyReq) ProtoMessage() {}
+
+func (x *BeginPasskeyReq) ProtoReflect() protoreflect.Message {
+	mi := &file_users_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeginPasskeyReq.ProtoReflect.Descriptor instead.
+func (*BeginPasskeyReq) Descriptor() ([]byte, []int) {
+	return file_users_proto_rawDescGZIP(), []int{15}
+}
+
+// What the browser needs to make a credential, as the JSON the WebAuthn API
+// takes. It is passed through rather than taken apart: it is the browser's
+// business, not this server's.
+type BeginPasskeyRes struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Options       string                 `protobuf:"bytes,1,opt,name=options,proto3" json:"options,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BeginPasskeyRes) Reset() {
+	*x = BeginPasskeyRes{}
+	mi := &file_users_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeginPasskeyRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeginPasskeyRes) ProtoMessage() {}
+
+func (x *BeginPasskeyRes) ProtoReflect() protoreflect.Message {
+	mi := &file_users_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeginPasskeyRes.ProtoReflect.Descriptor instead.
+func (*BeginPasskeyRes) Descriptor() ([]byte, []int) {
+	return file_users_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *BeginPasskeyRes) GetOptions() string {
+	if x != nil {
+		return x.Options
+	}
+	return ""
+}
+
+type FinishPasskeyReq struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// what the browser made, as JSON
+	Credential    string `protobuf:"bytes,1,opt,name=credential,proto3" json:"credential,omitempty"`
+	Name          string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishPasskeyReq) Reset() {
+	*x = FinishPasskeyReq{}
+	mi := &file_users_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishPasskeyReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishPasskeyReq) ProtoMessage() {}
+
+func (x *FinishPasskeyReq) ProtoReflect() protoreflect.Message {
+	mi := &file_users_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishPasskeyReq.ProtoReflect.Descriptor instead.
+func (*FinishPasskeyReq) Descriptor() ([]byte, []int) {
+	return file_users_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *FinishPasskeyReq) GetCredential() string {
+	if x != nil {
+		return x.Credential
+	}
+	return ""
+}
+
+func (x *FinishPasskeyReq) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type DeletePasskeyReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeletePasskeyReq) Reset() {
+	*x = DeletePasskeyReq{}
+	mi := &file_users_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeletePasskeyReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeletePasskeyReq) ProtoMessage() {}
+
+func (x *DeletePasskeyReq) ProtoReflect() protoreflect.Message {
+	mi := &file_users_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeletePasskeyReq.ProtoReflect.Descriptor instead.
+func (*DeletePasskeyReq) Descriptor() ([]byte, []int) {
+	return file_users_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *DeletePasskeyReq) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 type RevokeAccessReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -602,7 +932,7 @@ type RevokeAccessReq struct {
 
 func (x *RevokeAccessReq) Reset() {
 	*x = RevokeAccessReq{}
-	mi := &file_users_proto_msgTypes[12]
+	mi := &file_users_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -614,7 +944,7 @@ func (x *RevokeAccessReq) String() string {
 func (*RevokeAccessReq) ProtoMessage() {}
 
 func (x *RevokeAccessReq) ProtoReflect() protoreflect.Message {
-	mi := &file_users_proto_msgTypes[12]
+	mi := &file_users_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -627,7 +957,7 @@ func (x *RevokeAccessReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeAccessReq.ProtoReflect.Descriptor instead.
 func (*RevokeAccessReq) Descriptor() ([]byte, []int) {
-	return file_users_proto_rawDescGZIP(), []int{12}
+	return file_users_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *RevokeAccessReq) GetName() string {
@@ -650,7 +980,7 @@ type RevokeAccessRes struct {
 
 func (x *RevokeAccessRes) Reset() {
 	*x = RevokeAccessRes{}
-	mi := &file_users_proto_msgTypes[13]
+	mi := &file_users_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -662,7 +992,7 @@ func (x *RevokeAccessRes) String() string {
 func (*RevokeAccessRes) ProtoMessage() {}
 
 func (x *RevokeAccessRes) ProtoReflect() protoreflect.Message {
-	mi := &file_users_proto_msgTypes[13]
+	mi := &file_users_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -675,7 +1005,7 @@ func (x *RevokeAccessRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeAccessRes.ProtoReflect.Descriptor instead.
 func (*RevokeAccessRes) Descriptor() ([]byte, []int) {
-	return file_users_proto_rawDescGZIP(), []int{13}
+	return file_users_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *RevokeAccessRes) GetDevicesBlocked() int32 {
@@ -733,13 +1063,33 @@ const file_users_proto_rawDesc = "" +
 	"\x13DisableTwoFactorReq\x12\x1a\n" +
 	"\bpassword\x18\x01 \x01(\tR\bpassword\"'\n" +
 	"\x11ResetTwoFactorReq\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\"%\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"\xa6\x01\n" +
+	"\aPasskey\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x129\n" +
+	"\n" +
+	"created_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12<\n" +
+	"\flast_used_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"lastUsedAt\"\x11\n" +
+	"\x0fListPasskeysReq\"7\n" +
+	"\x0fListPasskeysRes\x12$\n" +
+	"\x05items\x18\x01 \x03(\v2\x0e.proto.PasskeyR\x05items\"\x11\n" +
+	"\x0fBeginPasskeyReq\"+\n" +
+	"\x0fBeginPasskeyRes\x12\x18\n" +
+	"\aoptions\x18\x01 \x01(\tR\aoptions\"F\n" +
+	"\x10FinishPasskeyReq\x12\x1e\n" +
+	"\n" +
+	"credential\x18\x01 \x01(\tR\n" +
+	"credential\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\"\n" +
+	"\x10DeletePasskeyReq\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"%\n" +
 	"\x0fRevokeAccessReq\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"\x88\x01\n" +
 	"\x0fRevokeAccessRes\x12'\n" +
 	"\x0fdevices_blocked\x18\x01 \x01(\x05R\x0edevicesBlocked\x12%\n" +
 	"\x0etokens_deleted\x18\x02 \x01(\x05R\rtokensDeleted\x12%\n" +
-	"\x0esessions_ended\x18\x03 \x01(\x05R\rsessionsEnded2\xae\x04\n" +
+	"\x0esessions_ended\x18\x03 \x01(\x05R\rsessionsEnded2\xb2\x06\n" +
 	"\x05Users\x127\n" +
 	"\tListUsers\x12\x13.proto.ListUsersReq\x1a\x13.proto.ListUsersRes\"\x00\x12<\n" +
 	"\n" +
@@ -749,7 +1099,11 @@ const file_users_proto_rawDesc = "" +
 	"\x0eStartTwoFactor\x12\x18.proto.StartTwoFactorReq\x1a\x18.proto.StartTwoFactorRes\"\x00\x12L\n" +
 	"\x10ConfirmTwoFactor\x12\x1a.proto.ConfirmTwoFactorReq\x1a\x1a.proto.ConfirmTwoFactorRes\"\x00\x12H\n" +
 	"\x10DisableTwoFactor\x12\x1a.proto.DisableTwoFactorReq\x1a\x16.google.protobuf.Empty\"\x00\x12D\n" +
-	"\x0eResetTwoFactor\x12\x18.proto.ResetTwoFactorReq\x1a\x16.google.protobuf.Empty\"\x00B5Z3github.com/freifunkMUC/wg-access-server/proto/protob\x06proto3"
+	"\x0eResetTwoFactor\x12\x18.proto.ResetTwoFactorReq\x1a\x16.google.protobuf.Empty\"\x00\x12@\n" +
+	"\fListPasskeys\x12\x16.proto.ListPasskeysReq\x1a\x16.proto.ListPasskeysRes\"\x00\x12@\n" +
+	"\fBeginPasskey\x12\x16.proto.BeginPasskeyReq\x1a\x16.proto.BeginPasskeyRes\"\x00\x12:\n" +
+	"\rFinishPasskey\x12\x17.proto.FinishPasskeyReq\x1a\x0e.proto.Passkey\"\x00\x12B\n" +
+	"\rDeletePasskey\x12\x17.proto.DeletePasskeyReq\x1a\x16.google.protobuf.Empty\"\x00B5Z3github.com/freifunkMUC/wg-access-server/proto/protob\x06proto3"
 
 var (
 	file_users_proto_rawDescOnce sync.Once
@@ -763,7 +1117,7 @@ func file_users_proto_rawDescGZIP() []byte {
 	return file_users_proto_rawDescData
 }
 
-var file_users_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_users_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_users_proto_goTypes = []any{
 	(*User)(nil),                  // 0: proto.User
 	(*ListUsersReq)(nil),          // 1: proto.ListUsersReq
@@ -777,35 +1131,53 @@ var file_users_proto_goTypes = []any{
 	(*ConfirmTwoFactorRes)(nil),   // 9: proto.ConfirmTwoFactorRes
 	(*DisableTwoFactorReq)(nil),   // 10: proto.DisableTwoFactorReq
 	(*ResetTwoFactorReq)(nil),     // 11: proto.ResetTwoFactorReq
-	(*RevokeAccessReq)(nil),       // 12: proto.RevokeAccessReq
-	(*RevokeAccessRes)(nil),       // 13: proto.RevokeAccessRes
-	(*timestamppb.Timestamp)(nil), // 14: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 15: google.protobuf.Empty
+	(*Passkey)(nil),               // 12: proto.Passkey
+	(*ListPasskeysReq)(nil),       // 13: proto.ListPasskeysReq
+	(*ListPasskeysRes)(nil),       // 14: proto.ListPasskeysRes
+	(*BeginPasskeyReq)(nil),       // 15: proto.BeginPasskeyReq
+	(*BeginPasskeyRes)(nil),       // 16: proto.BeginPasskeyRes
+	(*FinishPasskeyReq)(nil),      // 17: proto.FinishPasskeyReq
+	(*DeletePasskeyReq)(nil),      // 18: proto.DeletePasskeyReq
+	(*RevokeAccessReq)(nil),       // 19: proto.RevokeAccessReq
+	(*RevokeAccessRes)(nil),       // 20: proto.RevokeAccessRes
+	(*timestamppb.Timestamp)(nil), // 21: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 22: google.protobuf.Empty
 }
 var file_users_proto_depIdxs = []int32{
-	14, // 0: proto.User.last_login:type_name -> google.protobuf.Timestamp
+	21, // 0: proto.User.last_login:type_name -> google.protobuf.Timestamp
 	0,  // 1: proto.ListUsersRes.items:type_name -> proto.User
-	1,  // 2: proto.Users.ListUsers:input_type -> proto.ListUsersReq
-	3,  // 3: proto.Users.DeleteUser:input_type -> proto.DeleteUserReq
-	12, // 4: proto.Users.RevokeAccess:input_type -> proto.RevokeAccessReq
-	4,  // 5: proto.Users.ChangePassword:input_type -> proto.ChangePasswordReq
-	6,  // 6: proto.Users.StartTwoFactor:input_type -> proto.StartTwoFactorReq
-	8,  // 7: proto.Users.ConfirmTwoFactor:input_type -> proto.ConfirmTwoFactorReq
-	10, // 8: proto.Users.DisableTwoFactor:input_type -> proto.DisableTwoFactorReq
-	11, // 9: proto.Users.ResetTwoFactor:input_type -> proto.ResetTwoFactorReq
-	2,  // 10: proto.Users.ListUsers:output_type -> proto.ListUsersRes
-	15, // 11: proto.Users.DeleteUser:output_type -> google.protobuf.Empty
-	13, // 12: proto.Users.RevokeAccess:output_type -> proto.RevokeAccessRes
-	5,  // 13: proto.Users.ChangePassword:output_type -> proto.ChangePasswordRes
-	7,  // 14: proto.Users.StartTwoFactor:output_type -> proto.StartTwoFactorRes
-	9,  // 15: proto.Users.ConfirmTwoFactor:output_type -> proto.ConfirmTwoFactorRes
-	15, // 16: proto.Users.DisableTwoFactor:output_type -> google.protobuf.Empty
-	15, // 17: proto.Users.ResetTwoFactor:output_type -> google.protobuf.Empty
-	10, // [10:18] is the sub-list for method output_type
-	2,  // [2:10] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	21, // 2: proto.Passkey.created_at:type_name -> google.protobuf.Timestamp
+	21, // 3: proto.Passkey.last_used_at:type_name -> google.protobuf.Timestamp
+	12, // 4: proto.ListPasskeysRes.items:type_name -> proto.Passkey
+	1,  // 5: proto.Users.ListUsers:input_type -> proto.ListUsersReq
+	3,  // 6: proto.Users.DeleteUser:input_type -> proto.DeleteUserReq
+	19, // 7: proto.Users.RevokeAccess:input_type -> proto.RevokeAccessReq
+	4,  // 8: proto.Users.ChangePassword:input_type -> proto.ChangePasswordReq
+	6,  // 9: proto.Users.StartTwoFactor:input_type -> proto.StartTwoFactorReq
+	8,  // 10: proto.Users.ConfirmTwoFactor:input_type -> proto.ConfirmTwoFactorReq
+	10, // 11: proto.Users.DisableTwoFactor:input_type -> proto.DisableTwoFactorReq
+	11, // 12: proto.Users.ResetTwoFactor:input_type -> proto.ResetTwoFactorReq
+	13, // 13: proto.Users.ListPasskeys:input_type -> proto.ListPasskeysReq
+	15, // 14: proto.Users.BeginPasskey:input_type -> proto.BeginPasskeyReq
+	17, // 15: proto.Users.FinishPasskey:input_type -> proto.FinishPasskeyReq
+	18, // 16: proto.Users.DeletePasskey:input_type -> proto.DeletePasskeyReq
+	2,  // 17: proto.Users.ListUsers:output_type -> proto.ListUsersRes
+	22, // 18: proto.Users.DeleteUser:output_type -> google.protobuf.Empty
+	20, // 19: proto.Users.RevokeAccess:output_type -> proto.RevokeAccessRes
+	5,  // 20: proto.Users.ChangePassword:output_type -> proto.ChangePasswordRes
+	7,  // 21: proto.Users.StartTwoFactor:output_type -> proto.StartTwoFactorRes
+	9,  // 22: proto.Users.ConfirmTwoFactor:output_type -> proto.ConfirmTwoFactorRes
+	22, // 23: proto.Users.DisableTwoFactor:output_type -> google.protobuf.Empty
+	22, // 24: proto.Users.ResetTwoFactor:output_type -> google.protobuf.Empty
+	14, // 25: proto.Users.ListPasskeys:output_type -> proto.ListPasskeysRes
+	16, // 26: proto.Users.BeginPasskey:output_type -> proto.BeginPasskeyRes
+	12, // 27: proto.Users.FinishPasskey:output_type -> proto.Passkey
+	22, // 28: proto.Users.DeletePasskey:output_type -> google.protobuf.Empty
+	17, // [17:29] is the sub-list for method output_type
+	5,  // [5:17] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_users_proto_init() }
@@ -819,7 +1191,7 @@ func file_users_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_users_proto_rawDesc), len(file_users_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

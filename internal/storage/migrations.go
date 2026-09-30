@@ -101,6 +101,18 @@ var migrations = []migration{
 			return db.AutoMigrate(&userV4{})
 		},
 	},
+	{
+		// Passkeys, and the challenge a registration or a sign-in with one
+		// needs between its two halves. Nobody has a passkey after the
+		// upgrade, and nothing asks for one until they register it.
+		id: "0010_passkeys",
+		apply: func(db *gorm.DB) error {
+			if err := db.AutoMigrate(&passkeyV1{}); err != nil {
+				return err
+			}
+			return db.AutoMigrate(&userV5{})
+		},
+	},
 }
 
 type migration struct {
@@ -328,6 +340,41 @@ type userV4 struct {
 
 func (userV4) TableName() string {
 	return "users"
+}
+
+// userV5 is the users table as 0010_passkeys left it.
+type userV5 struct {
+	Subject                string `gorm:"type:varchar(100);primaryKey"`
+	Provider               string
+	Name                   string
+	Email                  string
+	Policies               string
+	LastLogin              time.Time
+	PasswordHash           string
+	PasswordFrom           string
+	TotpSecret             string
+	TotpEnabledAt          *time.Time
+	TotpRecovery           string
+	WebauthnChallenge      string
+	WebauthnChallengeUntil *time.Time
+}
+
+func (userV5) TableName() string {
+	return "users"
+}
+
+// passkeyV1 is the passkeys table as 0010_passkeys created it.
+type passkeyV1 struct {
+	ID         string `gorm:"type:varchar(255);primaryKey"`
+	Owner      string `gorm:"type:varchar(100);index"`
+	Name       string
+	Data       []byte
+	CreatedAt  time.Time
+	LastUsedAt *time.Time
+}
+
+func (passkeyV1) TableName() string {
+	return "passkeys"
 }
 
 // sessionV1 is the sessions table as 0007_sessions created it.

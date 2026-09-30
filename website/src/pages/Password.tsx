@@ -9,6 +9,7 @@ import { grpc } from '../Api';
 import { AppState } from '../AppState';
 import { toast } from '../components/Toast';
 import { errorMessage } from '../Util';
+import { Passkeys } from './Passkeys';
 import { TwoFactor } from './TwoFactor';
 
 // what the server refuses anything shorter than; saying so before the request
@@ -114,6 +115,8 @@ export const Password = observer(function Password() {
           Change password
         </Button>
       </form>
+
+      <Passkeys />
 
       <TwoFactor />
     </Box>

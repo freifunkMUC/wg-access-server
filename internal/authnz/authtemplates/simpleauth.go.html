@@ -4,13 +4,23 @@
 	<h2>Sign in</h2>
 
 	{{- if .AskForCode}}
+	{{- if .OfferPasskey}}
+	<form action="{{.PostURL}}" method="POST" id="passkey-form">
+		<p>Sign in with your passkey.</p>
+		<input type="hidden" name="passkey" id="passkey">
+		<button id="passkey-button" type="button" data-options="{{.PasskeyURL}}">Use a passkey</button>
+		<div class="error" role="alert" id="passkey-error" hidden></div>
+	</form>
+	{{- end}}
+	{{- if .HasCodes}}
 	<form action="{{.PostURL}}" method="POST">
 		<p>Enter the code from your authenticator app, or one of your recovery codes.</p>
 		<label for="code">Code</label>
 		<input type="text" name="code" id="code" autocomplete="one-time-code" inputmode="text"
-			spellcheck="false" autocapitalize="off" autofocus required>
+			spellcheck="false" autocapitalize="off" {{if not .OfferPasskey}}autofocus{{end}} required>
 		<button id="submit" type="submit">Sign in</button>
 	</form>
+	{{- end}}
 	{{- else}}
 	<form action="{{.PostURL}}" method="POST">
 		<label for="username">Username</label>
@@ -25,6 +35,13 @@
 	{{- end}}
 	{{- if .OtherProviders}}
 	<a class="back" href="/signin">Other ways to sign in</a>
+	{{- end}}
+	{{- if .OfferPasskey}}
+	<!-- A page served under a Content-Security-Policy of script-src 'self'
+	     cannot carry an inline script, and the policy is worth more than the
+	     convenience: the script is served from this server like everything
+	     else, and reads what it needs from the button. -->
+	<script src="{{.PasskeyScriptURL}}" defer></script>
 	{{- end}}
 
 	{{template "footer"}}

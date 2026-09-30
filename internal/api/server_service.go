@@ -33,6 +33,19 @@ type ServerService struct {
 	// TwoFactor is the second factor of the built-in sign-in, nil when the
 	// server keeps none.
 	TwoFactor *users.TwoFactor
+	// Passkeys are the other second factor, nil for the same reason.
+	Passkeys *users.Passkeys
+}
+
+func passkeyCount(passkeys *users.Passkeys, subject string) int32 {
+	if passkeys == nil {
+		return 0
+	}
+	registered, err := passkeys.List(subject)
+	if err != nil {
+		return 0
+	}
+	return int32(len(registered))
 }
 
 func recoveryCodesLeft(twoFactor *users.TwoFactor, subject string) int32 {
@@ -92,6 +105,7 @@ func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoR
 		PasswordChangeEnabled:           s.PasswordChange && authconfig.HasPassword(user.Provider),
 		TwoFactorEnabled:                s.TwoFactor != nil && s.TwoFactor.Enabled(user.Subject),
 		RecoveryCodesLeft:               recoveryCodesLeft(s.TwoFactor, user.Subject),
+		Passkeys:                        passkeyCount(s.Passkeys, user.Subject),
 	}), nil
 }
 

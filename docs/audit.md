@@ -25,6 +25,8 @@ level=info msg=device.delete audit=device.delete actor=admin actor_is_admin=true
 | `user.password` | Somebody changed their own password                | `sessions_ended`               |
 | `user.two_factor` | Somebody turned their own second factor on or off | `enabled`                    |
 | `user.two_factor_reset` | An admin removed somebody's second factor  | `target_user`                  |
+| `user.passkey_add` | Somebody registered a passkey of their own     | `passkey` (its name)           |
+| `user.passkey_delete` | Somebody removed a passkey of their own     | `passkey` (its id)             |
 | `session.delete` | Somebody ended a browser session of theirs        | `session`, or `sessions` and `reason`\*\*\* |
 | `api_token.create` | An API token was created                        | `token`, `token_name`, `expires_at` |
 | `api_token.delete` | An API token was revoked                        | `token`, `token_name`, `owner` |

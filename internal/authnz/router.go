@@ -74,6 +74,13 @@ func WithTwoFactor(twoFactor authruntime.TwoFactor) Option {
 	}
 }
 
+// WithPasskeys registers where the passkeys of the built-in sign-in are kept.
+func WithPasskeys(passkeys authruntime.Passkeys) Option {
+	return func(runtime *authruntime.ProviderRuntime) {
+		runtime.UsePasskeys(passkeys)
+	}
+}
+
 func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware, browserSessions authsession.Sessions, opts ...Option) (*AuthMiddleware, error) {
 	router := mux.NewRouter()
 	var storeSecret []byte

@@ -19,7 +19,15 @@ vi.hoisted(() => {
 });
 
 vi.mock('../Api', () => ({
-  grpc: { users: { changePassword: vi.fn() } },
+  grpc: {
+    server: { info: vi.fn() },
+    users: {
+      changePassword: vi.fn(),
+      // the page carries the passkey and two-factor sections as well; they
+      // are tested in their own files and only have to be quiet here
+      listPasskeys: vi.fn().mockResolvedValue({ items: [] }),
+    },
+  },
 }));
 
 vi.mock('../components/Toast', () => ({ toast: vi.fn() }));
@@ -117,7 +125,11 @@ describe('changing your password', () => {
     fill('Repeat the new password', 'a-longer-new-one');
     fireEvent.click(button());
 
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/not your current password/));
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole('alert').some((alert) => /not your current password/.test(alert.textContent ?? '')),
+      ).toBe(true),
+    );
     // the form is still filled in, so nobody has to type it all again
     expect(field('New password')).toHaveProperty('value', 'a-longer-new-one');
   });

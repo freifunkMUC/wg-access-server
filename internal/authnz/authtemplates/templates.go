@@ -19,6 +19,12 @@ var (
 	simpleAuthPage string
 	//go:embed signout.go.html
 	signoutPage string
+	// PasskeyScript is the sign-in page's passkey button, served as a file
+	// so that the pages keep their Content-Security-Policy of script-src
+	// 'self'.
+	//
+	//go:embed passkey.js
+	PasskeyScript string
 )
 
 // iconURL lets the provider logos through, which are data: URLs that
@@ -56,6 +62,17 @@ type SimpleAuthPage struct {
 	// AskForCode turns the page into the second step: the password was
 	// right, and the code from the authenticator app is what is missing.
 	AskForCode bool
+	// OfferPasskey adds the passkey button to that step, for somebody who
+	// registered one.
+	OfferPasskey bool
+	// PasskeyURL is where the browser asks what to sign.
+	PasskeyURL string
+	// PasskeyScriptURL is where the script that does the asking is served.
+	PasskeyScriptURL string
+	// HasCodes is whether an authenticator app is set up as well. Without
+	// one, the passkey is the only way on and the code field would be a
+	// field nobody can fill in.
+	HasCodes bool
 }
 
 func RenderSimpleAuthPage(w io.Writer, data SimpleAuthPage) error {

@@ -138,6 +138,7 @@ export declare namespace InfoRes {
 		passwordChangeEnabled: boolean,
 		twoFactorEnabled: boolean,
 		recoveryCodesLeft: number,
+		passkeys: number,
 	}
 }
 
@@ -310,6 +311,13 @@ export class InfoRes extends jspb.Message {
 		(jspb.Message as any).setProto3IntField(this, 23, value);
 	}
 
+	getPasskeys(): number {return jspb.Message.getFieldWithDefault(this, 24, 0);
+	}
+
+	setPasskeys(value: number): void {
+		(jspb.Message as any).setProto3IntField(this, 24, value);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		InfoRes.serializeBinaryToWriter(this, writer);
@@ -341,6 +349,7 @@ export class InfoRes extends jspb.Message {
 			passwordChangeEnabled: this.getPasswordChangeEnabled(),
 			twoFactorEnabled: this.getTwoFactorEnabled(),
 			recoveryCodesLeft: this.getRecoveryCodesLeft(),
+			passkeys: this.getPasskeys(),
 		};
 	}
 
@@ -432,6 +441,10 @@ export class InfoRes extends jspb.Message {
 		const field23 = message.getRecoveryCodesLeft();
 		if (field23 != 0) {
 			writer.writeInt32(23, field23);
+		}
+		const field24 = message.getPasskeys();
+		if (field24 != 0) {
+			writer.writeInt32(24, field24);
 		}
 	}
 
@@ -539,6 +552,10 @@ export class InfoRes extends jspb.Message {
 				const field23 = reader.readInt32()
 				message.setRecoveryCodesLeft(field23);
 				break;
+			case 24:
+				const field24 = reader.readInt32()
+				message.setPasskeys(field24);
+				break;
 			default:
 				reader.skipField();
 				break;
@@ -585,6 +602,7 @@ function InfoResFromObject(obj: InfoRes.AsObject | undefined): InfoRes | undefin
 	message.setPasswordChangeEnabled(obj.passwordChangeEnabled);
 	message.setTwoFactorEnabled(obj.twoFactorEnabled);
 	message.setRecoveryCodesLeft(obj.recoveryCodesLeft);
+	message.setPasskeys(obj.passkeys);
 	return message;
 }
 
