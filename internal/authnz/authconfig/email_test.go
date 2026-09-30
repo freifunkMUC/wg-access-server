@@ -12,7 +12,12 @@ func TestEnsureScopes(t *testing.T) {
 		emailDomains []string
 		want         []string
 	}{
-		{name: "nothing configured", want: []string{"openid"}},
+		{
+			// profile comes along: without it the provider sends nothing to
+			// call anybody by, and every user shows up as their subject
+			name: "nothing configured",
+			want: []string{"openid", "profile"},
+		},
 		{
 			name:       "configured scopes are kept",
 			configured: []string{"openid", "profile"},
@@ -23,7 +28,7 @@ func TestEnsureScopes(t *testing.T) {
 			// would be refused
 			name:         "email domains add the email scope",
 			emailDomains: []string{"example.com"},
-			want:         []string{"openid", "email"},
+			want:         []string{"openid", "profile", "email"},
 		},
 		{
 			name:         "an already configured email scope is not repeated",
