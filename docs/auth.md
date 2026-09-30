@@ -231,7 +231,10 @@ as many as they like: one to carry, one in a drawer.
 
 Which host the passkey is bound to comes from `vpn.externalHost`. Behind a reverse proxy that is the
 name people type, which is what it has to be: the `Host` header is whatever reached the server. With
-no `externalHost` configured, the request's host is used instead.
+no `externalHost` configured, the request's host is used instead, and the server says so at startup:
+a passkey registered under one name is not offered under another, so whoever registers one through a
+second name - or through a proxy that passes a different `Host` on - ends up with a credential the
+sign-in page will not ask for.
 
 ## Two-factor authentication
 
