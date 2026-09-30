@@ -20,7 +20,7 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 - Sign-in with OpenID Connect, GitLab, GitHub or a list of users of your own ([auth](https://www.freie-netze.org/wg-access-server/auth/))
 - [API tokens](https://www.freie-netze.org/wg-access-server/auth/#api-tokens) for scripts, using the same API as the web UI
 - Devices can be renamed; admins see and manage the devices of all users
-- Admins can block a device or give it an expiry date, for temporary access ([device access](#device-access))
+- Admins can block a device or give it an expiry date, for temporary access, one device or many at once ([device access](#device-access))
 - Admins can take somebody's access away in one action, without deleting anything ([revoking access](#taking-somebodys-access-away))
 - A device can be given a new key without being deleted, keeping its name and address ([new key](#giving-a-device-a-new-key))
 - Networks behind a device, for site-to-site links and subnet routers ([routed networks](#networks-behind-a-device))
@@ -128,6 +128,13 @@ An admin can take a device's access away without deleting it, from the device li
 Both are admin-only on purpose. A user can see on their own device why it cannot connect, but cannot
 lift a block or push an expiry out - a block they could lift would be no block. They can still delete
 the device.
+
+**Several at once.** Every row in the device list has a tick box, and the one in the header takes
+everything the search and the filter leave - not only the page in view, which matters when the
+search narrows three hundred devices down to the twelve of one person. A bar above the table then
+blocks, unblocks or deletes all of them, a few requests at a time, and says how many worked: a
+failure in the middle does not stop the rest, and "10 devices blocked, 2 failed" is what you get if
+two of them were gone already.
 
 A device whose expiry passes loses its peer within a minute; the server checks for it rather than
 waiting for the next restart. Blocking takes effect right away, on every replica sharing a database.

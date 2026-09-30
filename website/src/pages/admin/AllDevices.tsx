@@ -1,4 +1,5 @@
 import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -42,6 +43,42 @@ export function count(n: number, thing: string): string {
   return `${n} ${thing}${n === 1 ? '' : 's'}`;
 }
 
+// deviceKey names a device across the table: the name alone is not unique,
+// two users may both have a "laptop".
+export function deviceKey(device: Pick<Device.AsObject, 'owner' | 'name'>): string {
+  return `${device.owner}/${device.name}`;
+}
+
+// runAll applies an action to many devices, a few at a time, and reports how
+// many worked. Sequentially it would be one round trip per device - three
+// hundred of them is a minute of waiting - and all at once it would be three
+// hundred requests in flight, which is a way to knock over the server an admin
+// is trying to tidy up.
+export async function runAll<T>(
+  items: T[],
+  action: (item: T) => Promise<unknown>,
+  concurrency = 5,
+): Promise<{ done: number; failed: number }> {
+  let done = 0;
+  let failed = 0;
+  let next = 0;
+
+  const worker = async () => {
+    for (let i = next++; i < items.length; i = next++) {
+      try {
+        await action(items[i]);
+        done++;
+      } catch (error) {
+        console.error('Bulk action failed for one device:', error);
+        failed++;
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  return { done, failed };
+}
+
 type SortColumn = keyof Device.AsObject | 'download' | 'upload' | 'connected' | 'access';
 
 export const AllDevices = observer(function AllDevices() {
@@ -60,6 +97,10 @@ export const AllDevices = observer(function AllDevices() {
   const [expiryDevice, setExpiryDevice] = React.useState<Device.AsObject>();
   // ... and the one whose networks are being changed
   const [routesDevice, setRoutesDevice] = React.useState<Device.AsObject>();
+  // the devices ticked for an action on all of them at once, by deviceKey
+  const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
+  // whether one of those actions is running, so it cannot be started twice
+  const [working, setWorking] = React.useState(false);
 
   const userResource = useLoaded(async () => {
     try {
@@ -98,8 +139,13 @@ export const AllDevices = observer(function AllDevices() {
   );
 
   // a search that leaves fewer rows than the page we are on would show an
-  // empty table, so every change of what is looked for starts at the front
-  React.useEffect(() => setDevicePage(0), [deviceQuery, deviceState]);
+  // empty table, so every change of what is looked for starts at the front.
+  // What was ticked goes with it: acting on devices the table no longer shows
+  // is the kind of surprise a bulk action must not hold.
+  React.useEffect(() => {
+    setDevicePage(0);
+    setSelected(new Set());
+  }, [deviceQuery, deviceState]);
   React.useEffect(() => setUserPage(0), [userQuery]);
 
   const deleteUser = async (user: User.AsObject) => {
@@ -194,6 +240,72 @@ export const AllDevices = observer(function AllDevices() {
     }
   };
 
+  const toggleSelected = (device: Device.AsObject) => {
+    const next = new Set(selected);
+    const key = deviceKey(device);
+    if (!next.delete(key)) {
+      next.add(key);
+    }
+    setSelected(next);
+  };
+
+  const selectedDevices = matchingDevices.filter((device) => selected.has(deviceKey(device)));
+  const allSelected = matchingDevices.length > 0 && selectedDevices.length === matchingDevices.length;
+
+  // The header box ticks everything the search and the filter leave, not only
+  // the page in view: finding the devices of one user and acting on all of
+  // them is what this is for, and they rarely fit on one page.
+  const toggleSelectedAll = () => {
+    setSelected(allSelected ? new Set() : new Set(matchingDevices.map(deviceKey)));
+  };
+
+  // bulk runs one action over everything that is ticked and says how it went.
+  // A failure in the middle does not stop the rest: the others have nothing to
+  // do with it, and leaving half a selection untouched is worse than saying
+  // that two of twelve did not work.
+  const bulk = async (question: string, action: (device: Device.AsObject) => Promise<unknown>, done: string) => {
+    const devices = selectedDevices;
+    if (devices.length === 0 || !(await confirm(question))) {
+      return;
+    }
+    setWorking(true);
+    try {
+      const result = await runAll(devices, action);
+      toast({
+        text: result.failed
+          ? `${count(result.done, 'device')} ${done}, ${result.failed} failed`
+          : `${count(result.done, 'device')} ${done}`,
+        intent: result.failed ? 'error' : 'success',
+      });
+      setSelected(new Set());
+      await deviceResource.refresh();
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const blockSelected = (blocked: boolean) =>
+    bulk(
+      blocked
+        ? `Block ${count(selectedDevices.length, 'device')}? They stop connecting at once. Nothing is deleted - you can unblock them later.`
+        : `Let ${count(selectedDevices.length, 'device')} connect again? The configurations their users have keep working.`,
+      (device) =>
+        grpc.devices.setDeviceAccess({
+          name: device.name,
+          owner: { value: device.owner },
+          clearExpiresAt: false,
+          disabled: { value: blocked },
+        }),
+      blocked ? 'blocked' : 'unblocked',
+    );
+
+  const deleteSelected = () =>
+    bulk(
+      `Delete ${count(selectedDevices.length, 'device')}? This cannot be undone, and their users have to set up a new device to connect again.`,
+      (device) => grpc.devices.deleteDevice({ name: device.name, owner: { value: device.owner } }),
+      'deleted',
+    );
+
   const deleteDevice = async (device: Device.AsObject) => {
     if (await confirm('Are you sure you want to delete ' + device.name + ' from ' + device.ownerName + '?')) {
       try {
@@ -271,10 +383,42 @@ export const AllDevices = observer(function AllDevices() {
         </TextField>
       </Stack>
 
+      {selectedDevices.length > 0 && (
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: 'center', flexWrap: 'wrap', p: 1, mb: 1, borderRadius: 1, bgcolor: 'action.selected' }}
+        >
+          <Typography sx={{ flexGrow: 1 }}>{count(selectedDevices.length, 'device')} selected</Typography>
+          {/* named for what they act on: the rows carry a Block and a Delete
+              of their own, and the two must not be mistaken for each other */}
+          <Button variant="outlined" color="secondary" disabled={working} onClick={() => blockSelected(true)}>
+            Block selected
+          </Button>
+          <Button variant="outlined" color="primary" disabled={working} onClick={() => blockSelected(false)}>
+            Unblock selected
+          </Button>
+          <Button variant="outlined" color="error" disabled={working} onClick={deleteSelected}>
+            Delete selected
+          </Button>
+          <Button disabled={working} onClick={() => setSelected(new Set())}>
+            Clear
+          </Button>
+        </Stack>
+      )}
+
       <TableContainer>
         <Table stickyHeader>
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  slotProps={{ input: { 'aria-label': 'Select every device shown' } }}
+                  checked={allSelected}
+                  indeterminate={selectedDevices.length > 0 && !allSelected}
+                  onChange={toggleSelectedAll}
+                />
+              </TableCell>
               <TableCell></TableCell>
               <TableCell>
                 <TableSortLabel
@@ -373,7 +517,16 @@ export const AllDevices = observer(function AllDevices() {
           </TableHead>
           <TableBody>
             {devices.map((device, i) => (
-              <TableRow key={i}>
+              <TableRow key={i} selected={selected.has(deviceKey(device))}>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    slotProps={{
+                      input: { 'aria-label': `Select ${device.name} of ${device.ownerName || device.owner}` },
+                    }}
+                    checked={selected.has(deviceKey(device))}
+                    onChange={() => toggleSelected(device)}
+                  />
+                </TableCell>
                 <TableCell>
                   <Avatar style={{ backgroundColor: device.connected ? '#76de8a' : '#bdbdbd' }}>
                     {/* <DonutSmallIcon /> */}
@@ -420,7 +573,7 @@ export const AllDevices = observer(function AllDevices() {
             ))}
             {devices.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12}>
+                <TableCell colSpan={13}>
                   <Typography color="text.secondary">No device matches what you are looking for.</Typography>
                 </TableCell>
               </TableRow>
