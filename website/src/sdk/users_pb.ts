@@ -120,6 +120,15 @@ export class Users {
 		Passkey.deserializeBinary
 	);
 
+	private methodInfoRenamePasskey = new grpcWeb.MethodDescriptor<RenamePasskeyReq, Passkey>(
+		"RenamePasskey",
+		'unary',
+		RenamePasskeyReq as unknown as MessageCtor<RenamePasskeyReq>,
+		Passkey as unknown as MessageCtor<Passkey>,
+		(req: RenamePasskeyReq) => req.serializeBinary(),
+		Passkey.deserializeBinary
+	);
+
 	private methodInfoDeletePasskey = new grpcWeb.MethodDescriptor<DeletePasskeyReq, googleProtobufEmpty.Empty>(
 		"DeletePasskey",
 		'unary',
@@ -332,6 +341,25 @@ export class Users {
 				message,
 				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
 				this.methodInfoFinishPasskey,
+				(err: grpcWeb.Error, res: Passkey) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(res.toObject());
+					}
+				},
+			);
+		});
+	}
+
+	renamePasskey(req: RenamePasskeyReq.AsObject, metadata?: grpcWeb.Metadata): Promise<Passkey.AsObject> {
+		return new Promise((resolve, reject) => {
+			const message = RenamePasskeyReqFromObject(req);
+			this.client_.rpcCall(
+				this.hostname + '/proto.Users/RenamePasskey',
+				message,
+				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
+				this.methodInfoRenamePasskey,
 				(err: grpcWeb.Error, res: Passkey) => {
 					if (err) {
 						reject(err);
@@ -1773,6 +1801,94 @@ export class FinishPasskeyReq extends jspb.Message {
 	}
 
 }
+export declare namespace RenamePasskeyReq {
+	export type AsObject = {
+		id: string,
+		name: string,
+	}
+}
+
+export class RenamePasskeyReq extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, RenamePasskeyReq.repeatedFields_, null);
+	}
+
+
+	getId(): string {return jspb.Message.getFieldWithDefault(this, 1, "");
+	}
+
+	setId(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 1, value);
+	}
+
+	getName(): string {return jspb.Message.getFieldWithDefault(this, 2, "");
+	}
+
+	setName(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 2, value);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		RenamePasskeyReq.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): RenamePasskeyReq.AsObject {
+		let f: any;
+		return {
+			id: this.getId(),
+			name: this.getName(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: RenamePasskeyReq, writer: jspb.BinaryWriter): void {
+		const field1 = message.getId();
+		if (field1.length > 0) {
+			writer.writeString(1, field1);
+		}
+		const field2 = message.getName();
+		if (field2.length > 0) {
+			writer.writeString(2, field2);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): RenamePasskeyReq {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new RenamePasskeyReq();
+		return RenamePasskeyReq.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: RenamePasskeyReq, reader: jspb.BinaryReader): RenamePasskeyReq {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readString()
+				message.setId(field1);
+				break;
+			case 2:
+				const field2 = reader.readString()
+				message.setName(field2);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
 export declare namespace DeletePasskeyReq {
 	export type AsObject = {
 		id: string,
@@ -2202,6 +2318,16 @@ function FinishPasskeyReqFromObject(obj: FinishPasskeyReq.AsObject | undefined):
 	}
 	const message = new FinishPasskeyReq();
 	message.setCredential(obj.credential);
+	message.setName(obj.name);
+	return message;
+}
+
+function RenamePasskeyReqFromObject(obj: RenamePasskeyReq.AsObject | undefined): RenamePasskeyReq | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new RenamePasskeyReq();
+	message.setId(obj.id);
 	message.setName(obj.name);
 	return message;
 }

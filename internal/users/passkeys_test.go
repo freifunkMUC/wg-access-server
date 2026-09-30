@@ -162,6 +162,82 @@ func TestListingAndRemoving(t *testing.T) {
 	}
 }
 
+func TestRenaming(t *testing.T) {
+	passkeys, s := testPasskeys(t)
+
+	used := time.Now().Add(-time.Hour).UTC()
+	for _, passkey := range []*storage.Passkey{
+		{ID: "one", Owner: "alice", Name: "A key", Data: []byte(`{"count":7}`), CreatedAt: used, LastUsedAt: &used},
+		{ID: "two", Owner: "bob", Name: "Not hers", Data: []byte("{}"), CreatedAt: used},
+	} {
+		if err := s.AddPasskey(passkey); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	renamed, err := passkeys.Rename("alice", "one", "The key on my keyring")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if renamed.Name != "The key on my keyring" {
+		t.Errorf("name = %q, want the new one", renamed.Name)
+	}
+
+	// The credential and when it was last used are none of a rename's
+	// business: a passkey that is relabelled must still sign its owner in.
+	stored, err := s.GetPasskey("one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(stored.Data) != `{"count":7}` {
+		t.Errorf("data = %q, want the credential untouched", stored.Data)
+	}
+	if stored.LastUsedAt == nil || !stored.LastUsedAt.Equal(used) {
+		t.Errorf("last used = %v, want %v", stored.LastUsedAt, used)
+	}
+	if !stored.CreatedAt.Equal(used) {
+		t.Errorf("created = %v, want it unchanged", stored.CreatedAt)
+	}
+
+	// somebody else's is not hers to rename, and is reported as missing
+	if _, err := passkeys.Rename("alice", "two", "Mine now"); !errors.Is(err, ErrNoPasskey) {
+		t.Errorf("err = %v, want ErrNoPasskey", err)
+	}
+	if other, _ := s.GetPasskey("two"); other.Name != "Not hers" {
+		t.Errorf("name = %q, want somebody else's passkey left alone", other.Name)
+	}
+
+	if _, err := passkeys.Rename("alice", "nothing", "A name"); !errors.Is(err, ErrNoPasskey) {
+		t.Errorf("err = %v, want ErrNoPasskey for an id nobody has", err)
+	}
+}
+
+// A name is the person's own text, so it gets the same treatment as at
+// registration: trimmed, never empty, and no longer than the column.
+func TestRenamingTidiesTheName(t *testing.T) {
+	passkeys, s := testPasskeys(t)
+	if err := s.AddPasskey(&storage.Passkey{ID: "one", Owner: "alice", Name: "A key", Data: []byte("{}"), CreatedAt: time.Now().UTC()}); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		given string
+		want  string
+	}{
+		{given: "  My phone  ", want: "My phone"},
+		{given: "   ", want: "Passkey"},
+		{given: strings.Repeat("x", maxPasskeyName+10), want: strings.Repeat("x", maxPasskeyName)},
+	} {
+		renamed, err := passkeys.Rename("alice", "one", tc.given)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if renamed.Name != tc.want {
+			t.Errorf("Rename(%q) = %q, want %q", tc.given, renamed.Name, tc.want)
+		}
+	}
+}
+
 // The credentials handed to the library come out of the stored rows; a row
 // that cannot be read is skipped rather than taking the sign-in down.
 func TestTheUserTheLibrarySees(t *testing.T) {

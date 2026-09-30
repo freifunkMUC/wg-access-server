@@ -25,18 +25,19 @@ vi.mock('../Api', () => ({
       listPasskeys: vi.fn(),
       beginPasskey: vi.fn(),
       finishPasskey: vi.fn(),
+      renamePasskey: vi.fn(),
       deletePasskey: vi.fn(),
     },
   },
   toDate: (t: { seconds: number }) => new Date(t.seconds * 1000),
 }));
 
-vi.mock('../components/Present', () => ({ confirm: vi.fn(), present: vi.fn() }));
+vi.mock('../components/Present', () => ({ confirm: vi.fn(), prompt: vi.fn(), present: vi.fn() }));
 vi.mock('../components/Toast', () => ({ toast: vi.fn() }));
 
 import { grpc } from '../Api';
 import { AppState } from '../AppState';
-import { confirm } from '../components/Present';
+import { confirm, prompt } from '../components/Present';
 import { toast } from '../components/Toast';
 import { InfoRes } from '../sdk/server_pb';
 import { Passkey } from '../sdk/users_pb';
@@ -45,8 +46,10 @@ import { Passkeys } from './Passkeys';
 const list = vi.mocked(grpc.users.listPasskeys);
 const begin = vi.mocked(grpc.users.beginPasskey);
 const finish = vi.mocked(grpc.users.finishPasskey);
+const renamed = vi.mocked(grpc.users.renamePasskey);
 const remove = vi.mocked(grpc.users.deletePasskey);
 const asked = vi.mocked(confirm);
+const askedForName = vi.mocked(prompt);
 const toasted = vi.mocked(toast);
 
 const options = JSON.stringify({
@@ -91,8 +94,10 @@ describe('passkeys', () => {
     list.mockResolvedValue({ items: [] });
     begin.mockResolvedValue({ options });
     finish.mockResolvedValue(aPasskey());
+    renamed.mockResolvedValue(aPasskey({ name: 'My phone' }));
     remove.mockResolvedValue({});
     asked.mockResolvedValue(true);
+    askedForName.mockResolvedValue('My phone');
     vi.mocked(grpc.server.info).mockImplementation(async () => AppState.info!);
 
     Object.defineProperty(window, 'isSecureContext', { writable: true, value: true });
@@ -154,6 +159,62 @@ describe('passkeys', () => {
     await waitFor(() => expect(remove).toHaveBeenCalledWith({ id: 'passkey-2' }));
     // two are registered, so removing one is not the last word on signing in
     expect(asked.mock.calls[0][0]).not.toMatch(/last one/);
+  });
+
+  it('renames one, offering the current name to edit', async () => {
+    list.mockResolvedValue({ items: [aPasskey()] });
+    render(<Passkeys />);
+
+    await screen.findByText('The key on my keyring');
+    fireEvent.click(screen.getByRole('button', { name: 'Rename The key on my keyring' }));
+
+    await waitFor(() => expect(renamed).toHaveBeenCalledWith({ id: 'passkey-1', name: 'My phone' }));
+    expect(askedForName.mock.calls[0][1]).toBe('The key on my keyring');
+    // the list is read again, so the row shows the stored name rather than
+    // what was typed
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  it('asks nothing of the server when the rename is cancelled', async () => {
+    askedForName.mockResolvedValue(null);
+    list.mockResolvedValue({ items: [aPasskey()] });
+    render(<Passkeys />);
+
+    await screen.findByText('The key on my keyring');
+    fireEvent.click(screen.getByRole('button', { name: 'Rename The key on my keyring' }));
+
+    await waitFor(() => expect(askedForName).toHaveBeenCalled());
+    expect(renamed).not.toHaveBeenCalled();
+  });
+
+  // a dialog somebody confirmed without typing is not a change worth a round
+  // trip, and the toast would claim something happened
+  it('asks nothing of the server when the name is unchanged', async () => {
+    askedForName.mockResolvedValue('The key on my keyring');
+    list.mockResolvedValue({ items: [aPasskey()] });
+    render(<Passkeys />);
+
+    await screen.findByText('The key on my keyring');
+    fireEvent.click(screen.getByRole('button', { name: 'Rename The key on my keyring' }));
+
+    await waitFor(() => expect(askedForName).toHaveBeenCalled());
+    expect(renamed).not.toHaveBeenCalled();
+    expect(toasted).not.toHaveBeenCalled();
+  });
+
+  it('says so when the rename fails', async () => {
+    renamed.mockRejectedValue(new Error('no such passkey'));
+    list.mockResolvedValue({ items: [aPasskey()] });
+    render(<Passkeys />);
+
+    await screen.findByText('The key on my keyring');
+    fireEvent.click(screen.getByRole('button', { name: 'Rename The key on my keyring' }));
+
+    await waitFor(() =>
+      expect(toasted).toHaveBeenCalledWith(
+        expect.objectContaining({ text: expect.stringMatching(/Failed to rename/), intent: 'error' }),
+      ),
+    );
   });
 
   // removing the last one takes the second factor away entirely, which the

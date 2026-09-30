@@ -77,6 +77,32 @@ func (p *Passkeys) Delete(subject string, id string) error {
 	return nil
 }
 
+// Rename changes what somebody calls one of their passkeys. The credential
+// itself is untouched - the name is the person's label for it, nothing the
+// authenticator or a sign-in depends on.
+func (p *Passkeys) Rename(subject string, id string, name string) (*storage.Passkey, error) {
+	if err := p.storage.RenamePasskey(subject, id, passkeyName(name)); err != nil {
+		if errors.Is(err, storage.ErrPasskeyNotFound) {
+			return nil, ErrNoPasskey
+		}
+		return nil, fmt.Errorf("failed to rename the passkey: %w", err)
+	}
+
+	// Read it back rather than assembling it here, so that what the caller
+	// shows is what the storage holds.
+	renamed, err := p.storage.GetPasskey(id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the renamed passkey: %w", err)
+	}
+	if renamed.Owner != subject {
+		// The rename named the owner, so this cannot happen without the row
+		// changing hands underneath us. Refusing beats reporting somebody
+		// else's credential back.
+		return nil, ErrNoPasskey
+	}
+	return renamed, nil
+}
+
 // BeginRegistration returns the options the browser needs to make a
 // credential, and remembers the challenge until the answer comes back.
 func (p *Passkeys) BeginRegistration(r *http.Request, subject string) (json.RawMessage, error) {

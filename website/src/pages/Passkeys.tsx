@@ -13,10 +13,11 @@ import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import { observer } from 'mobx-react';
 import { grpc, toDate } from '../Api';
 import { AppState } from '../AppState';
-import { confirm } from '../components/Present';
+import { confirm, prompt } from '../components/Present';
 import { toast } from '../components/Toast';
 import { decodeCreationOptions, encodeCredential, passkeysSupported } from '../components/webauthn';
 import { Passkey } from '../sdk/users_pb';
@@ -70,6 +71,23 @@ export const Passkeys = observer(function Passkeys() {
       setError(errorMessage(e));
     } finally {
       setWorking(false);
+    }
+  };
+
+  // Renaming touches nothing but the label: the credential stays as it is, so
+  // a passkey whose name no longer fits need not be removed and registered
+  // again.
+  const rename = async (passkey: Passkey.AsObject) => {
+    const name = await prompt('What should this passkey be called?', passkey.name);
+    if (name === null || name === passkey.name) {
+      return;
+    }
+    try {
+      await grpc.users.renamePasskey({ id: passkey.id, name });
+      toast({ text: `Now called "${name}"`, intent: 'success' });
+      await load();
+    } catch (e) {
+      toast({ text: 'Failed to rename the passkey: ' + errorMessage(e), intent: 'error' });
     }
   };
 
@@ -135,6 +153,13 @@ export const Passkeys = observer(function Passkeys() {
                   <TableCell>{passkey.createdAt ? toDate(passkey.createdAt).toLocaleDateString() : ''}</TableCell>
                   <TableCell>{lastSeen(passkey.lastUsedAt)}</TableCell>
                   <TableCell align="right">
+                    <IconButton
+                      aria-label={`Rename ${passkey.name}`}
+                      title="Rename"
+                      onClick={() => void rename(passkey)}
+                    >
+                      <EditIcon />
+                    </IconButton>
                     <IconButton
                       aria-label={`Remove ${passkey.name}`}
                       title="Remove"

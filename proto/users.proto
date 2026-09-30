@@ -32,6 +32,7 @@ service Users {
   rpc ListPasskeys(ListPasskeysReq) returns (ListPasskeysRes) {}
   rpc BeginPasskey(BeginPasskeyReq) returns (BeginPasskeyRes) {}
   rpc FinishPasskey(FinishPasskeyReq) returns (Passkey) {}
+  rpc RenamePasskey(RenamePasskeyReq) returns (Passkey) {}
   rpc DeletePasskey(DeletePasskeyReq) returns (google.protobuf.Empty) {}
 }
 
@@ -124,6 +125,13 @@ message BeginPasskeyRes {
 message FinishPasskeyReq {
   // what the browser made, as JSON
   string credential = 1;
+  string name = 2;
+}
+
+// Only the name changes. The credential is the authenticator's, and nothing
+// here may touch it.
+message RenamePasskeyReq {
+  string id = 1;
   string name = 2;
 }
 
