@@ -55,10 +55,9 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime, th
 		if attempted {
 			throttle.wait(u)
 		}
-		credentialsOK := false
-
+		// Every way out of a right password returns, so reaching past this
+		// block means the credentials were not right.
 		if ok := checkCreds(c.Users, u, p, runtime); ok {
-			credentialsOK = true
 			throttle.recordSuccess(u)
 			err := runtime.SetSession(w, r, &authsession.AuthSession{
 				Identity: &authsession.Identity{
@@ -72,9 +71,15 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime, th
 				runtime.Done(w, r)
 				return
 			}
+			// As in simple auth: the password was right, so this is not a
+			// credentials problem and saying so would send people looking
+			// for the wrong thing.
+			logrus.Error(fmt.Errorf("failed to start the session after the password: %w", err))
+			http.Error(w, "Could not sign in", http.StatusInternalServerError)
+			return
 		}
 
-		if attempted && !credentialsOK {
+		if attempted {
 			throttle.recordFailure(u)
 			logrus.Warnf("Failed login attempt for user '%s' (basic auth, remote address: %s)", u, r.RemoteAddr)
 		}
