@@ -98,6 +98,15 @@ func GetSession(store sessions.Store, browserSessions Sessions, r *http.Request)
 }
 
 func SetSession(store sessions.Store, browserSessions Sessions, r *http.Request, w http.ResponseWriter, s *AuthSession) error {
+	// The cookie is about to be replaced, and with it the session it names.
+	// Nothing could use that session any more but a copy of the old cookie,
+	// so it ends here rather than when it expires.
+	if previous, err := GetSession(store, browserSessions, r); err == nil && previous.ID != "" && previous.ID != s.ID {
+		if err := browserSessions.End(previous.ID); err != nil {
+			logrus.Warn(fmt.Errorf("failed to end the session the new one replaces: %w", err))
+		}
+	}
+
 	// Somebody signed in: the identity goes to the server, the cookie gets
 	// the id of the session it now belongs to.
 	if s.Identity != nil && s.ID == "" {
