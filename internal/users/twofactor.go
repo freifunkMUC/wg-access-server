@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
@@ -44,6 +45,10 @@ const (
 // they are long random strings, so a fast hash is enough, and a slow one
 // would make checking ten of them per attempt a way to hold the server up.
 type TwoFactor struct {
+	// mu makes reading and writing somebody's second factor one step. Without
+	// it, a code sent twice at once was accepted twice, and a sign-in could
+	// write back a second factor that was turned off in the meantime.
+	mu        sync.Mutex
 	storage   storage.UserStorage
 	passwords *Passwords
 	// passkeys are the other kind of second factor. Somebody with a passkey
@@ -87,6 +92,9 @@ func (t *TwoFactor) CodesEnabled(subject string) bool {
 // Nothing is asked of the user yet - the secret only counts once they have
 // proved with a code that their app has it too.
 func (t *TwoFactor) Start(subject string, account string) (secret string, uri string, err error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	user, err := t.storage.GetUser(subject)
 	if err != nil || user == nil {
 		return "", "", ErrNoPasswordHere
@@ -113,6 +121,9 @@ func (t *TwoFactor) Start(subject string, account string) (secret string, uri st
 // recovery codes. They are shown once: what is kept here cannot produce them
 // again.
 func (t *TwoFactor) Confirm(subject string, code string) ([]string, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	user, err := t.storage.GetUser(subject)
 	if err != nil || user == nil {
 		return nil, ErrNoPasswordHere
@@ -147,6 +158,9 @@ func (t *TwoFactor) Confirm(subject string, code string) ([]string, error) {
 // Check is the sign-in asking whether a code is right: one from the app, or
 // one of the recovery codes, which is used up by being right.
 func (t *TwoFactor) Check(subject string, given string) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	user, err := t.storage.GetUser(subject)
 	if err != nil || user == nil || !user.TwoFactorEnabled() {
 		return false
@@ -212,6 +226,19 @@ func (t *TwoFactor) ReplaceRecoveryCodes(subject string, password string) ([]str
 		return nil, err
 	}
 
+	// Read again under the lock: the password check is slow and must not
+	// hold up everybody else's sign-in, and what was read before it may have
+	// changed since.
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	user, err = t.storage.GetUser(subject)
+	if err != nil || user == nil {
+		return nil, ErrNoPasswordHere
+	}
+	if !user.TwoFactorEnabled() {
+		return nil, ErrNoTwoFactor
+	}
+
 	codes, hashes, err := newRecoveryCodes()
 	if err != nil {
 		return nil, err
@@ -257,6 +284,8 @@ func (t *TwoFactor) Reset(subject string) error {
 }
 
 func (t *TwoFactor) clear(subject string) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if err := t.storage.SetUserTOTP(subject, storage.TOTPState{}); err != nil {
 		return fmt.Errorf("failed to remove the second factor: %w", err)
 	}
