@@ -37,6 +37,20 @@ type AppConfig struct {
 	// By default, this will be empty and the web ui
 	// will use the current page's origin.
 	ExternalHost string `yaml:"externalHost"`
+	// TrustedProxies lists the networks - CIDRs, or bare addresses - that
+	// requests legitimately reach this server through. Only for a request
+	// that arrives from one of them is the X-Forwarded-For header believed,
+	// and the address it names is then what the logs, the audit trail and
+	// the list of sessions in the web UI report.
+	//
+	// Empty by default, and then nothing is believed: the address a request
+	// came from is the one it connected from. Behind a reverse proxy that is
+	// the proxy, for every user alike.
+	//
+	// It does not decide access, and the login throttle does not use it -
+	// that is keyed by username on purpose, so a forged header cannot skip
+	// it.
+	TrustedProxies []string `yaml:"trustedProxies"`
 	// The storage backend where device configuration will
 	// be persisted.
 	// Supports memory:// postgresql:// mysql:// sqlite3://
