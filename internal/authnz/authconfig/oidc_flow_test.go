@@ -35,6 +35,12 @@ type fakeIDP struct {
 	tokenNonce string
 	// extraClaims are merged into the next issued ID token
 	extraClaims map[string]interface{}
+	// pkce makes the discovery document offer PKCE with S256
+	pkce bool
+	// verifier is the code_verifier the token endpoint was last sent
+	verifier string
+	// tokenFails makes the token endpoint refuse the code
+	tokenFails bool
 }
 
 func newFakeIDP(t *testing.T) *fakeIDP {
@@ -50,15 +56,19 @@ func newFakeIDP(t *testing.T) *fakeIDP {
 	t.Cleanup(idp.server.Close)
 
 	handler.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		discovery := map[string]interface{}{
 			"issuer":                                idp.server.URL,
 			"authorization_endpoint":                idp.server.URL + "/auth",
 			"token_endpoint":                        idp.server.URL + "/token",
 			"jwks_uri":                              idp.server.URL + "/keys",
 			"userinfo_endpoint":                     idp.server.URL + "/userinfo",
 			"id_token_signing_alg_values_supported": []string{"RS256"},
-		})
+		}
+		if idp.pkce {
+			discovery["code_challenge_methods_supported"] = []string{"plain", "S256"}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(discovery)
 	})
 
 	handler.HandleFunc("/keys", func(w http.ResponseWriter, r *http.Request) {
@@ -76,6 +86,13 @@ func newFakeIDP(t *testing.T) *fakeIDP {
 	})
 
 	handler.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		idp.verifier = r.FormValue("code_verifier")
+		if idp.tokenFails {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"invalid_grant"}`))
+			return
+		}
 		claims := map[string]interface{}{
 			"iss":   idp.server.URL,
 			"aud":   idp.clientID,

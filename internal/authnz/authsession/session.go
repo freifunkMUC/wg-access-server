@@ -17,6 +17,9 @@ type AuthSession struct {
 	State *string
 	// Nonce holds the OpenID Connect nonce used to bind an ID token to the login session
 	Nonce *string
+	// Verifier holds the PKCE code verifier, which binds the authorization
+	// code to the browser that started the login
+	Verifier *string
 	// ID names the session the identity belongs to. It is what the cookie
 	// carries once somebody has signed in; the identity itself is kept by the
 	// server, so that a session can be ended.
