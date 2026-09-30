@@ -51,13 +51,13 @@ func (k *softKey) register(t *testing.T, s storage.Storage, signCount uint32, cl
 		XCoord: k.key.X.FillBytes(make([]byte, 32)),
 		YCoord: k.key.Y.FillBytes(make([]byte, 32)),
 	}
-	cose, err := webauthncbor.Marshal(public)
+	encoded, err := webauthncbor.Marshal(public)
 	if err != nil {
 		t.Fatal(err)
 	}
 	data, err := json.Marshal(webauthn.Credential{
 		ID:              k.id,
-		PublicKey:       cose,
+		PublicKey:       encoded,
 		AttestationType: "none",
 		Authenticator:   webauthn.Authenticator{SignCount: signCount, CloneWarning: cloneWarning},
 	})
