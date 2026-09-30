@@ -396,6 +396,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#giving-a-device-a-new-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Giving a device a new key
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#taking-somebodys-access-away" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -924,6 +935,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#giving-a-device-a-new-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Giving a device a new key
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#taking-somebodys-access-away" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1089,6 +1111,7 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 <li>Devices can be renamed; admins see and manage the devices of all users</li>
 <li>Admins can block a device or give it an expiry date, for temporary access (<a href="#device-access">device access</a>)</li>
 <li>Admins can take somebody's access away in one action, without deleting anything (<a href="#taking-somebodys-access-away">revoking access</a>)</li>
+<li>A device can be given a new key without being deleted, keeping its name and address (<a href="#giving-a-device-a-new-key">new key</a>)</li>
 <li>Networks behind a device, for site-to-site links and subnet routers (<a href="#networks-behind-a-device">routed networks</a>)</li>
 <li>An optional limit on how many devices a user may create</li>
 <li>WireGuard client configurations as a file or a QR code</li>
@@ -1179,6 +1202,20 @@ waiting for the next restart. Blocking takes effect right away, on every replica
 Both are recorded in the <a href="https://www.freie-netze.org/wg-access-server/audit/">audit log</a>, and
 <code>wg_access_server_devices_blocked</code> counts the devices in that state wherever the device
 <a href="#metrics">metrics</a> are enabled.</p>
+<h2 id="giving-a-device-a-new-key">Giving a device a new key<a class="headerlink" href="#giving-a-device-a-new-key" title="Permanent link"> ¶</a></h2>
+<p>A WireGuard device is its key: whoever has the private half is the device, wherever they are. If it
+may have got out - a laptop handed on, a configuration file mailed to the wrong person, a phone
+backup nobody can account for - the key icon on the device gives it a <strong>new key pair</strong>, and the
+browser hands back the configuration that goes with it.</p>
+<p>The device keeps everything else: its name, its address, the networks behind it, its expiry. Nothing
+else has to be changed around it, and the old key stops reaching the VPN the moment the new one is
+stored - on every replica, not only the one that took the request.</p>
+<p>Your own devices only. The private half of the new key is made in the browser and never sent
+anywhere, so this is the person using the device, not an admin acting on it. An admin who wants
+somebody's device off the VPN blocks it or deletes it - see <a href="#device-access">device access</a> and
+<a href="#taking-somebodys-access-away">revoking access</a>.</p>
+<p>Until the new configuration is installed, the device does not connect. That is the point, and the
+question the UI asks says so.</p>
 <h2 id="taking-somebodys-access-away">Taking somebody's access away<a class="headerlink" href="#taking-somebodys-access-away" title="Permanent link"> ¶</a></h2>
 <p>When a person leaves or a laptop is lost, the device list is the wrong place to start: their access
 is their devices, their API tokens and the browsers they are signed in with. <strong>Revoke access</strong>, next
