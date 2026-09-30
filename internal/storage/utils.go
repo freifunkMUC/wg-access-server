@@ -1,11 +1,14 @@
 package storage
 
 import (
-	"path/filepath"
+	"fmt"
 )
 
+// keyStr identifies a device in the in-memory storage. Both parts are quoted,
+// so no owner or device name can produce the key of another owner's device -
+// joining them as a path did, because "../bob/laptop" was cleaned to bob's.
 func keyStr(owner string, name string) string {
-	return filepath.Join(owner, name)
+	return fmt.Sprintf("%q/%q", owner, name)
 }
 
 func key(device *Device) string {
