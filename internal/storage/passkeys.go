@@ -50,6 +50,11 @@ type PasskeyStorage interface {
 	// sign count and the time it was used. It only ever writes a credential
 	// of the owner named on it.
 	UpdatePasskey(passkey *Passkey) error
+	// RenamePasskey changes only what the person called it. It writes the
+	// name column alone, so a sign-in writing the credential back at the
+	// same moment cannot lose its sign count to a rename. Somebody else's
+	// credential is reported as missing rather than refused.
+	RenamePasskey(owner string, id string, name string) error
 	// ListPasskeys returns the credentials of one user, newest first.
 	ListPasskeys(owner string) ([]*Passkey, error)
 	// GetPasskey returns one credential by its id.
@@ -82,6 +87,19 @@ func (s *InMemoryStorage) UpdatePasskey(passkey *Passkey) error {
 	}
 	stored := *passkey
 	s.passkeys[passkey.ID] = &stored
+	return nil
+}
+
+func (s *InMemoryStorage) RenamePasskey(owner string, id string, name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	existing, ok := s.passkeys[id]
+	if !ok || existing.Owner != owner {
+		return ErrPasskeyNotFound
+	}
+	renamed := *existing
+	renamed.Name = name
+	s.passkeys[id] = &renamed
 	return nil
 }
 
@@ -157,6 +175,21 @@ func (s *SQLStorage) UpdatePasskey(passkey *Passkey) error {
 		UpdateColumns(map[string]interface{}{"name": passkey.Name, "data": passkey.Data, "last_used_at": passkey.LastUsedAt})
 	if q.Error != nil {
 		return fmt.Errorf("failed to write the passkey: %w", q.Error)
+	}
+	if q.RowsAffected == 0 {
+		return ErrPasskeyNotFound
+	}
+	return nil
+}
+
+func (s *SQLStorage) RenamePasskey(owner string, id string, name string) error {
+	// The name is the only column written. A rename and a sign-in can land
+	// at the same moment, and the sign-in's new count must survive it.
+	q := s.db.Model(&Passkey{}).
+		Where("id = ? AND owner = ?", id, owner).
+		UpdateColumns(map[string]interface{}{"name": name})
+	if q.Error != nil {
+		return fmt.Errorf("failed to rename the passkey: %w", q.Error)
 	}
 	if q.RowsAffected == 0 {
 		return ErrPasskeyNotFound

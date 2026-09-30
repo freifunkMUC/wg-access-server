@@ -218,6 +218,9 @@ as many as they like: one to carry, one in a drawer.
 - It is asked for **after the password**, like a code. Which of the two a person uses is up to them;
   the sign-in page offers both when both are set up.
 - Removing the last one hands the account back to the password alone, and the question says so.
+- **A passkey can be renamed.** The name is the person's own label, and a drawer key that moved to a
+  keyring should not have to be registered again to say so. Only the name changes: the credential
+  and the sign count stay as they are, so a renamed passkey signs its owner in exactly as before.
 - The credential itself never leaves the browser. The server keeps the public half, the name the
   person gave it, and how often it has been used - the count is what gives a cloned authenticator
   away.

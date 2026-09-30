@@ -56,6 +56,8 @@ const (
 	UsersBeginPasskeyProcedure = "/proto.Users/BeginPasskey"
 	// UsersFinishPasskeyProcedure is the fully-qualified name of the Users's FinishPasskey RPC.
 	UsersFinishPasskeyProcedure = "/proto.Users/FinishPasskey"
+	// UsersRenamePasskeyProcedure is the fully-qualified name of the Users's RenamePasskey RPC.
+	UsersRenamePasskeyProcedure = "/proto.Users/RenamePasskey"
 	// UsersDeletePasskeyProcedure is the fully-qualified name of the Users's DeletePasskey RPC.
 	UsersDeletePasskeyProcedure = "/proto.Users/DeletePasskey"
 )
@@ -83,6 +85,7 @@ type UsersClient interface {
 	ListPasskeys(context.Context, *connect.Request[proto.ListPasskeysReq]) (*connect.Response[proto.ListPasskeysRes], error)
 	BeginPasskey(context.Context, *connect.Request[proto.BeginPasskeyReq]) (*connect.Response[proto.BeginPasskeyRes], error)
 	FinishPasskey(context.Context, *connect.Request[proto.FinishPasskeyReq]) (*connect.Response[proto.Passkey], error)
+	RenamePasskey(context.Context, *connect.Request[proto.RenamePasskeyReq]) (*connect.Response[proto.Passkey], error)
 	DeletePasskey(context.Context, *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error)
 }
 
@@ -163,6 +166,12 @@ func NewUsersClient(httpClient connect.HTTPClient, baseURL string, opts ...conne
 			connect.WithSchema(usersMethods.ByName("FinishPasskey")),
 			connect.WithClientOptions(opts...),
 		),
+		renamePasskey: connect.NewClient[proto.RenamePasskeyReq, proto.Passkey](
+			httpClient,
+			baseURL+UsersRenamePasskeyProcedure,
+			connect.WithSchema(usersMethods.ByName("RenamePasskey")),
+			connect.WithClientOptions(opts...),
+		),
 		deletePasskey: connect.NewClient[proto.DeletePasskeyReq, emptypb.Empty](
 			httpClient,
 			baseURL+UsersDeletePasskeyProcedure,
@@ -185,6 +194,7 @@ type usersClient struct {
 	listPasskeys     *connect.Client[proto.ListPasskeysReq, proto.ListPasskeysRes]
 	beginPasskey     *connect.Client[proto.BeginPasskeyReq, proto.BeginPasskeyRes]
 	finishPasskey    *connect.Client[proto.FinishPasskeyReq, proto.Passkey]
+	renamePasskey    *connect.Client[proto.RenamePasskeyReq, proto.Passkey]
 	deletePasskey    *connect.Client[proto.DeletePasskeyReq, emptypb.Empty]
 }
 
@@ -243,6 +253,11 @@ func (c *usersClient) FinishPasskey(ctx context.Context, req *connect.Request[pr
 	return c.finishPasskey.CallUnary(ctx, req)
 }
 
+// RenamePasskey calls proto.Users.RenamePasskey.
+func (c *usersClient) RenamePasskey(ctx context.Context, req *connect.Request[proto.RenamePasskeyReq]) (*connect.Response[proto.Passkey], error) {
+	return c.renamePasskey.CallUnary(ctx, req)
+}
+
 // DeletePasskey calls proto.Users.DeletePasskey.
 func (c *usersClient) DeletePasskey(ctx context.Context, req *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error) {
 	return c.deletePasskey.CallUnary(ctx, req)
@@ -271,6 +286,7 @@ type UsersHandler interface {
 	ListPasskeys(context.Context, *connect.Request[proto.ListPasskeysReq]) (*connect.Response[proto.ListPasskeysRes], error)
 	BeginPasskey(context.Context, *connect.Request[proto.BeginPasskeyReq]) (*connect.Response[proto.BeginPasskeyRes], error)
 	FinishPasskey(context.Context, *connect.Request[proto.FinishPasskeyReq]) (*connect.Response[proto.Passkey], error)
+	RenamePasskey(context.Context, *connect.Request[proto.RenamePasskeyReq]) (*connect.Response[proto.Passkey], error)
 	DeletePasskey(context.Context, *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error)
 }
 
@@ -347,6 +363,12 @@ func NewUsersHandler(svc UsersHandler, opts ...connect.HandlerOption) (string, h
 		connect.WithSchema(usersMethods.ByName("FinishPasskey")),
 		connect.WithHandlerOptions(opts...),
 	)
+	usersRenamePasskeyHandler := connect.NewUnaryHandler(
+		UsersRenamePasskeyProcedure,
+		svc.RenamePasskey,
+		connect.WithSchema(usersMethods.ByName("RenamePasskey")),
+		connect.WithHandlerOptions(opts...),
+	)
 	usersDeletePasskeyHandler := connect.NewUnaryHandler(
 		UsersDeletePasskeyProcedure,
 		svc.DeletePasskey,
@@ -377,6 +399,8 @@ func NewUsersHandler(svc UsersHandler, opts ...connect.HandlerOption) (string, h
 			usersBeginPasskeyHandler.ServeHTTP(w, r)
 		case UsersFinishPasskeyProcedure:
 			usersFinishPasskeyHandler.ServeHTTP(w, r)
+		case UsersRenamePasskeyProcedure:
+			usersRenamePasskeyHandler.ServeHTTP(w, r)
 		case UsersDeletePasskeyProcedure:
 			usersDeletePasskeyHandler.ServeHTTP(w, r)
 		default:
@@ -430,6 +454,10 @@ func (UnimplementedUsersHandler) BeginPasskey(context.Context, *connect.Request[
 
 func (UnimplementedUsersHandler) FinishPasskey(context.Context, *connect.Request[proto.FinishPasskeyReq]) (*connect.Response[proto.Passkey], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.FinishPasskey is not implemented"))
+}
+
+func (UnimplementedUsersHandler) RenamePasskey(context.Context, *connect.Request[proto.RenamePasskeyReq]) (*connect.Response[proto.Passkey], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.RenamePasskey is not implemented"))
 }
 
 func (UnimplementedUsersHandler) DeletePasskey(context.Context, *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error) {

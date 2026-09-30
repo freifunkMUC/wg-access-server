@@ -94,6 +94,40 @@ func TestPasskeys(t *testing.T) {
 				t.Errorf("%d passkeys after writing one back, want two", len(listed))
 			}
 
+			// a rename writes the name and nothing else: the credential and
+			// the count a sign-in just wrote back have to survive being
+			// relabelled
+			if err := s.RenamePasskey(owner, owner+"-2", "The key on my keyring"); err != nil {
+				t.Fatal(err)
+			}
+			if stored, err = s.GetPasskey(owner + "-2"); err != nil {
+				t.Fatal(err)
+			}
+			if stored.Name != "The key on my keyring" {
+				t.Errorf("name = %q, want the new one", stored.Name)
+			}
+			if string(stored.Data) != `{"id":"two","signCount":7}` {
+				t.Errorf("data = %q, want the credential untouched by a rename", stored.Data)
+			}
+			if stored.LastUsedAt == nil || !stored.LastUsedAt.Equal(used) {
+				t.Errorf("last used = %v, want it untouched by a rename", stored.LastUsedAt)
+			}
+
+			// somebody else's is not theirs to rename
+			if err := s.RenamePasskey(owner, other+"-1", "Mine now"); !errors.Is(err, ErrPasskeyNotFound) {
+				t.Errorf("err = %v, want ErrPasskeyNotFound", err)
+			}
+			if theirs, err := s.GetPasskey(other + "-1"); err != nil {
+				t.Fatal(err)
+			} else if theirs.Name != "Not theirs" {
+				t.Errorf("name = %q, want somebody else's passkey left alone", theirs.Name)
+			}
+
+			// put the name back, so what follows reads as it did before
+			if err := s.RenamePasskey(owner, owner+"-2", "My phone"); err != nil {
+				t.Fatal(err)
+			}
+
 			// a credential id somebody already has is refused, whoever asks:
 			// an authenticator picks its own ids, so this is what stops one
 			// person taking another's passkey away

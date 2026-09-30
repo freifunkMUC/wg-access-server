@@ -46,9 +46,10 @@ const (
 	// UserTwoFactorReset is an admin taking somebody's second factor away,
 	// for a person whose phone is gone.
 	UserTwoFactorReset = "user.two_factor_reset"
-	// UserPasskeyAdd and UserPasskeyDelete are somebody registering or
-	// removing a passkey of their own.
+	// UserPasskeyAdd, UserPasskeyRename and UserPasskeyDelete are somebody
+	// registering, relabelling or removing a passkey of their own.
 	UserPasskeyAdd    = "user.passkey_add"
+	UserPasskeyRename = "user.passkey_rename"
 	UserPasskeyDelete = "user.passkey_delete"
 	// UserRevoke is an admin taking somebody's access away in one action:
 	// their devices are blocked, their tokens revoked, their sessions ended.

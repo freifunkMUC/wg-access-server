@@ -410,6 +410,32 @@ func (d *UserService) FinishPasskey(ctx context.Context, request *connect.Reques
 	}), nil
 }
 
+// RenamePasskey changes the name of one. Somebody else's is reported as
+// missing, so that ids cannot be probed.
+func (d *UserService) RenamePasskey(ctx context.Context, request *connect.Request[proto.RenamePasskeyReq]) (*connect.Response[proto.Passkey], error) {
+	user, err := d.passkeysFor(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	passkey, err := d.Passkeys.Rename(user.Subject, request.Msg.GetId(), request.Msg.GetName())
+	if err != nil {
+		if errors.Is(err, users.ErrNoPasskey) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("no such passkey"))
+		}
+		return nil, internalError(ctx, err, "failed to rename the passkey")
+	}
+
+	audit.Log(ctx, audit.UserPasskeyRename, logrus.Fields{"passkey": passkey.Name})
+
+	return connect.NewResponse(&proto.Passkey{
+		Id:         passkey.ID,
+		Name:       passkey.Name,
+		CreatedAt:  timeToTimestamp(&passkey.CreatedAt),
+		LastUsedAt: timeToTimestamp(passkey.LastUsedAt),
+	}), nil
+}
+
 // DeletePasskey removes one. Somebody else's is reported as missing, so that
 // ids cannot be probed.
 func (d *UserService) DeletePasskey(ctx context.Context, request *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error) {
