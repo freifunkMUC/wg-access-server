@@ -25,7 +25,9 @@ level=info msg=device.delete audit=device.delete actor=admin actor_is_admin=true
 | `user.password` | Somebody changed their own password                | `sessions_ended`               |
 | `user.two_factor` | Somebody turned their own second factor on or off | `enabled`                    |
 | `user.two_factor_reset` | An admin removed somebody's second factor  | `target_user`                  |
+| `user.recovery_codes` | Somebody replaced their own recovery codes | `codes_left_before`            |
 | `user.passkey_add` | Somebody registered a passkey of their own     | `passkey` (its name)           |
+| `user.passkey_rename` | Somebody renamed a passkey of their own     | `passkey` (its new name)       |
 | `user.passkey_delete` | Somebody removed a passkey of their own     | `passkey` (its id)             |
 | `session.delete` | Somebody ended a browser session of theirs        | `session`, or `sessions` and `reason`\*\*\* |
 | `api_token.create` | An API token was created                        | `token`, `token_name`, `expires_at` |
@@ -41,8 +43,9 @@ device grace period.
 once and records `sessions` as how many that was, with `reason=all others`; the ids are not worth a
 record each, they are gone.
 
-`user.two_factor` and `user.two_factor_reset` record that it happened, never the secret, a code or
-a recovery code.
+`user.two_factor`, `user.two_factor_reset` and `user.recovery_codes` record that it happened, never
+the secret, a code or a recovery code. `codes_left_before` is how many unused codes there were when
+the set was replaced, which is what says whether somebody was running out or had lost the paper.
 
 `user.password` records that the password changed and how many other sessions that ended. Neither
 the old nor the new password is recorded, in any form.

@@ -46,6 +46,9 @@ const (
 	// UserTwoFactorReset is an admin taking somebody's second factor away,
 	// for a person whose phone is gone.
 	UserTwoFactorReset = "user.two_factor_reset"
+	// UserRecoveryCodes is somebody replacing their own recovery codes. How
+	// many were left is recorded, the codes themselves are not.
+	UserRecoveryCodes = "user.recovery_codes"
 	// UserPasskeyAdd, UserPasskeyRename and UserPasskeyDelete are somebody
 	// registering, relabelling or removing a passkey of their own.
 	UserPasskeyAdd    = "user.passkey_add"

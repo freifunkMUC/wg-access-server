@@ -48,6 +48,8 @@ const (
 	UsersConfirmTwoFactorProcedure = "/proto.Users/ConfirmTwoFactor"
 	// UsersDisableTwoFactorProcedure is the fully-qualified name of the Users's DisableTwoFactor RPC.
 	UsersDisableTwoFactorProcedure = "/proto.Users/DisableTwoFactor"
+	// UsersNewRecoveryCodesProcedure is the fully-qualified name of the Users's NewRecoveryCodes RPC.
+	UsersNewRecoveryCodesProcedure = "/proto.Users/NewRecoveryCodes"
 	// UsersResetTwoFactorProcedure is the fully-qualified name of the Users's ResetTwoFactor RPC.
 	UsersResetTwoFactorProcedure = "/proto.Users/ResetTwoFactor"
 	// UsersListPasskeysProcedure is the fully-qualified name of the Users's ListPasskeys RPC.
@@ -78,6 +80,9 @@ type UsersClient interface {
 	StartTwoFactor(context.Context, *connect.Request[proto.StartTwoFactorReq]) (*connect.Response[proto.StartTwoFactorRes], error)
 	ConfirmTwoFactor(context.Context, *connect.Request[proto.ConfirmTwoFactorReq]) (*connect.Response[proto.ConfirmTwoFactorRes], error)
 	DisableTwoFactor(context.Context, *connect.Request[proto.DisableTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
+	// Replaces the recovery codes with a fresh set, for whoever has used most
+	// of theirs or cannot find the paper any more.
+	NewRecoveryCodes(context.Context, *connect.Request[proto.NewRecoveryCodesReq]) (*connect.Response[proto.NewRecoveryCodesRes], error)
 	// admin only: take somebody's second factor away when their phone is gone
 	ResetTwoFactor(context.Context, *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
 	// Passkeys: the other second factor, a credential the browser holds and
@@ -142,6 +147,12 @@ func NewUsersClient(httpClient connect.HTTPClient, baseURL string, opts ...conne
 			connect.WithSchema(usersMethods.ByName("DisableTwoFactor")),
 			connect.WithClientOptions(opts...),
 		),
+		newRecoveryCodes: connect.NewClient[proto.NewRecoveryCodesReq, proto.NewRecoveryCodesRes](
+			httpClient,
+			baseURL+UsersNewRecoveryCodesProcedure,
+			connect.WithSchema(usersMethods.ByName("NewRecoveryCodes")),
+			connect.WithClientOptions(opts...),
+		),
 		resetTwoFactor: connect.NewClient[proto.ResetTwoFactorReq, emptypb.Empty](
 			httpClient,
 			baseURL+UsersResetTwoFactorProcedure,
@@ -190,6 +201,7 @@ type usersClient struct {
 	startTwoFactor   *connect.Client[proto.StartTwoFactorReq, proto.StartTwoFactorRes]
 	confirmTwoFactor *connect.Client[proto.ConfirmTwoFactorReq, proto.ConfirmTwoFactorRes]
 	disableTwoFactor *connect.Client[proto.DisableTwoFactorReq, emptypb.Empty]
+	newRecoveryCodes *connect.Client[proto.NewRecoveryCodesReq, proto.NewRecoveryCodesRes]
 	resetTwoFactor   *connect.Client[proto.ResetTwoFactorReq, emptypb.Empty]
 	listPasskeys     *connect.Client[proto.ListPasskeysReq, proto.ListPasskeysRes]
 	beginPasskey     *connect.Client[proto.BeginPasskeyReq, proto.BeginPasskeyRes]
@@ -231,6 +243,11 @@ func (c *usersClient) ConfirmTwoFactor(ctx context.Context, req *connect.Request
 // DisableTwoFactor calls proto.Users.DisableTwoFactor.
 func (c *usersClient) DisableTwoFactor(ctx context.Context, req *connect.Request[proto.DisableTwoFactorReq]) (*connect.Response[emptypb.Empty], error) {
 	return c.disableTwoFactor.CallUnary(ctx, req)
+}
+
+// NewRecoveryCodes calls proto.Users.NewRecoveryCodes.
+func (c *usersClient) NewRecoveryCodes(ctx context.Context, req *connect.Request[proto.NewRecoveryCodesReq]) (*connect.Response[proto.NewRecoveryCodesRes], error) {
+	return c.newRecoveryCodes.CallUnary(ctx, req)
 }
 
 // ResetTwoFactor calls proto.Users.ResetTwoFactor.
@@ -279,6 +296,9 @@ type UsersHandler interface {
 	StartTwoFactor(context.Context, *connect.Request[proto.StartTwoFactorReq]) (*connect.Response[proto.StartTwoFactorRes], error)
 	ConfirmTwoFactor(context.Context, *connect.Request[proto.ConfirmTwoFactorReq]) (*connect.Response[proto.ConfirmTwoFactorRes], error)
 	DisableTwoFactor(context.Context, *connect.Request[proto.DisableTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
+	// Replaces the recovery codes with a fresh set, for whoever has used most
+	// of theirs or cannot find the paper any more.
+	NewRecoveryCodes(context.Context, *connect.Request[proto.NewRecoveryCodesReq]) (*connect.Response[proto.NewRecoveryCodesRes], error)
 	// admin only: take somebody's second factor away when their phone is gone
 	ResetTwoFactor(context.Context, *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
 	// Passkeys: the other second factor, a credential the browser holds and
@@ -339,6 +359,12 @@ func NewUsersHandler(svc UsersHandler, opts ...connect.HandlerOption) (string, h
 		connect.WithSchema(usersMethods.ByName("DisableTwoFactor")),
 		connect.WithHandlerOptions(opts...),
 	)
+	usersNewRecoveryCodesHandler := connect.NewUnaryHandler(
+		UsersNewRecoveryCodesProcedure,
+		svc.NewRecoveryCodes,
+		connect.WithSchema(usersMethods.ByName("NewRecoveryCodes")),
+		connect.WithHandlerOptions(opts...),
+	)
 	usersResetTwoFactorHandler := connect.NewUnaryHandler(
 		UsersResetTwoFactorProcedure,
 		svc.ResetTwoFactor,
@@ -391,6 +417,8 @@ func NewUsersHandler(svc UsersHandler, opts ...connect.HandlerOption) (string, h
 			usersConfirmTwoFactorHandler.ServeHTTP(w, r)
 		case UsersDisableTwoFactorProcedure:
 			usersDisableTwoFactorHandler.ServeHTTP(w, r)
+		case UsersNewRecoveryCodesProcedure:
+			usersNewRecoveryCodesHandler.ServeHTTP(w, r)
 		case UsersResetTwoFactorProcedure:
 			usersResetTwoFactorHandler.ServeHTTP(w, r)
 		case UsersListPasskeysProcedure:
@@ -438,6 +466,10 @@ func (UnimplementedUsersHandler) ConfirmTwoFactor(context.Context, *connect.Requ
 
 func (UnimplementedUsersHandler) DisableTwoFactor(context.Context, *connect.Request[proto.DisableTwoFactorReq]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.DisableTwoFactor is not implemented"))
+}
+
+func (UnimplementedUsersHandler) NewRecoveryCodes(context.Context, *connect.Request[proto.NewRecoveryCodesReq]) (*connect.Response[proto.NewRecoveryCodesRes], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.NewRecoveryCodes is not implemented"))
 }
 
 func (UnimplementedUsersHandler) ResetTwoFactor(context.Context, *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error) {
