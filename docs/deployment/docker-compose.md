@@ -47,6 +47,10 @@ services:
       WG_ADMIN_PASSWORD: "${WG_ADMIN_PASSWORD:?set WG_ADMIN_PASSWORD, the password of the admin account}"
       WG_WIREGUARD_PRIVATE_KEY: "${WG_WIREGUARD_PRIVATE_KEY:?set WG_WIREGUARD_PRIVATE_KEY, e.g. to the output of wg genkey}"
       WG_HTTPS_ENABLED: "false" # Traefik terminates TLS
+      # Believe Traefik's X-Forwarded-For, so that the logs, the audit trail
+      # and everybody's own list of sessions name the client rather than
+      # Traefik. Use the network Traefik reaches this container on.
+      WG_TRUSTED_PROXIES: "172.16.0.0/12"
     ports:
       - "51820:51820/udp"
     devices:
@@ -83,6 +87,15 @@ volumes:
 ```
 
 Replace `vpn.example.com` and the email address with yours; the name must point to the server.
+
+`WG_TRUSTED_PROXIES` is worth setting for any proxy, not only Traefik. Without it every request
+appears to come from the proxy, so the sign-in log, the audit trail and the list of sessions people
+see of their own all name one address for everybody - which makes them useless for the question they
+exist to answer. With it, `X-Forwarded-For` is believed, but only on requests that really arrive from
+one of the networks named: a client that can reach the server directly cannot choose the address it
+is logged under. Use the network the proxy speaks to this container on - `docker network inspect`
+prints it - rather than a wider one than needed. The login throttle is keyed by username either way,
+so no header can skip it.
 
 ## Behind Traefik, with a self-signed certificate
 

@@ -115,6 +115,17 @@ func recordLogin(storageBackend storage.Storage, deviceManager *devices.DeviceMa
 
 func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, storageBackend storage.Storage, wg wgembed.WireGuardInterface, browserSessions *websessions.Manager) (http.Handler, error) {
 	router := mux.NewRouter()
+	// First of all, so that everything after it - the traces, the audit
+	// trail, the sign-in log, the sessions somebody sees of their own -
+	// reports the client rather than the proxy in front of this server.
+	trustedProxies, err := web.ParseTrustedProxies(conf.TrustedProxies)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read trustedProxies: %w", err)
+	}
+	if trustedProxies.Any() {
+		logrus.Infof("Trusting the X-Forwarded-For header of requests from %s: the address reported for a client is the one it connected to the proxy from", strings.Join(conf.TrustedProxies, ", "))
+		router.Use(web.ClientAddrMiddleware(trustedProxies))
+	}
 	router.Use(web.TracesMiddleware)
 	router.Use(web.RecoveryMiddleware)
 	router.Use(web.SecurityHeadersMiddleware)

@@ -65,7 +65,7 @@ date an admin set earlier simply passed. It is recorded once per device, when th
 | `actor_is_admin` | Whether the actor acted with admin rights                                              |
 | `actor_api_token`| The id of the API token the change was made with; absent for the web UI               |
 | `owner`          | The user the affected device belongs to - different from `actor` means an admin acted on somebody else's device |
-| `remote_addr`    | The address the request came from. Behind a reverse proxy this is the proxy           |
+| `remote_addr`    | The address the request came from. Behind a reverse proxy this is the proxy, unless [`trustedProxies`](configuration.md) names it |
 | `trace.id`       | Ties the record to the other log lines of the same request                            |
 
 Only successful changes are recorded: an action that was refused or failed leaves no record, it is
