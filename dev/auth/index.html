@@ -1099,9 +1099,14 @@ config file (config.yaml).</p>
 <span class="w">    </span><span class="c1"># /callback is recommended.</span>
 <span class="w">    </span><span class="nt">redirectURL</span><span class="p">:</span><span class="w"> </span><span class="s">"https://wg-access-server.example.com/callback"</span>
 <span class="w">    </span><span class="c1"># List of scopes to request claims for. Must include 'openid'.</span>
-<span class="w">    </span><span class="c1"># 'email' is added automatically when 'emailDomains' is used. Can include 'profile' to show the user's name in the UI.</span>
+<span class="w">    </span><span class="c1"># 'email' is added automatically when 'emailDomains' is used.</span>
+<span class="w">    </span><span class="c1"># 'profile' is what makes the provider send a name or a username: without</span>
+<span class="w">    </span><span class="c1"># it the UI lists everybody by their subject, the opaque identifier the</span>
+<span class="w">    </span><span class="c1"># provider issues. The name is taken from the 'name' claim, falling back</span>
+<span class="w">    </span><span class="c1"># to 'preferred_username', 'nickname' and 'given_name' - Keycloak only</span>
+<span class="w">    </span><span class="c1"># fills 'name' for users who have a first and a last name.</span>
 <span class="w">    </span><span class="c1"># Add custom ones if required for 'claimMapping'.</span>
-<span class="w">    </span><span class="c1"># Defaults to ["openid"]</span>
+<span class="w">    </span><span class="c1"># Defaults to ["openid", "profile"]</span>
 <span class="w">    </span><span class="nt">scopes</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openid</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">profile</span>
