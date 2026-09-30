@@ -1149,8 +1149,9 @@ the address it came from, when it signed in and when it was last used. The one a
   to reach for after a password went through the wrong hands.</li>
 </ul>
 <p>Everybody manages their own sessions; there is no admin view of somebody else's. Taking another
-person's access away is a different job, and it has to take their devices and their API tokens with
-it - until then, deleting the user does all three.</p>
+person's access away is a different job, and it takes their devices and their API tokens with it:
+that is what <a href="https://github.com/freifunkMUC/wg-access-server#taking-somebodys-access-away">Revoke access</a>
+in the admin user list does.</p>
 <p>What this does <em>not</em> do: end a tunnel. A device keeps connecting whether or not anybody is signed
 in - that is what <a href="../#device-access">blocking a device</a> is for. A session is the web UI and the
 API: adding devices, downloading their configuration, and whatever else the person may do.</p>

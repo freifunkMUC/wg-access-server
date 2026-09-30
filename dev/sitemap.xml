@@ -2,42 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://www.freie-netze.org/wg-access-server/dev/</loc>
-         <lastmod>2026-09-29</lastmod>
+         <lastmod>2026-09-30</lastmod>
     </url>
     <url>
          <loc>https://www.freie-netze.org/wg-access-server/dev/about/</loc>
-         <lastmod>2026-09-29</lastmod>
+         <lastmod>2026-09-30</lastmod>
     </url>
     <url>
          <loc>https://www.freie-netze.org/wg-access-server/dev/audit/</loc>
-         <lastmod>2026-09-29</lastmod>
+         <lastmod>2026-09-30</lastmod>
     </url>
     <url>
          <loc>https://www.freie-netze.org/wg-access-server/dev/auth/</loc>
-         <lastmod>2026-09-29</lastmod>
+         <lastmod>2026-09-30</lastmod>
     </url>
     <url>
          <loc>https://www.freie-netze.org/wg-access-server/dev/configuration/</loc>
-         <lastmod>2026-09-29</lastmod>
+         <lastmod>2026-09-30</lastmod>
     </url>
     <url>
          <loc>https://www.freie-netze.org/wg-access-server/dev/storage/</loc>
-         <lastmod>2026-09-29</lastmod>
+         <lastmod>2026-09-30</lastmod>
     </url>
     <url>
          <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/docker-compose/</loc>
-         <lastmod>2026-09-29</lastmod>
+         <lastmod>2026-09-30</lastmod>
     </url>
     <url>
          <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/docker/</loc>
-         <lastmod>2026-09-29</lastmod>
+         <lastmod>2026-09-30</lastmod>
     </url>
     <url>
          <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/kubernetes/</loc>
-         <lastmod>2026-09-29</lastmod>
+         <lastmod>2026-09-30</lastmod>
     </url>
     <url>
          <loc>https://www.freie-netze.org/wg-access-server/dev/deployment/raspberry-pi-pi-hole/</loc>
-         <lastmod>2026-09-29</lastmod>
+         <lastmod>2026-09-30</lastmod>
     </url>
 </urlset>
