@@ -23,6 +23,9 @@ export const TwoFactor = observer(function TwoFactor() {
   const [setup, setSetup] = useState<{ secret: string; uri: string }>();
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
+  // a field of its own, so that the password typed to get new codes cannot
+  // end up submitted by the button that turns the second factor off
+  const [codesPassword, setCodesPassword] = useState('');
   const [recovery, setRecovery] = useState<string[]>();
   const [error, setError] = useState<string>();
   const [working, setWorking] = useState(false);
@@ -62,6 +65,25 @@ export const TwoFactor = observer(function TwoFactor() {
       setSetup(undefined);
       setCode('');
       toast({ text: 'Two-factor authentication is on', intent: 'success' });
+      await refreshInfo();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  // A fresh set, without turning the second factor off and on again: the
+  // authenticator app stays as it is, only the codes change.
+  const newCodes = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(undefined);
+    setWorking(true);
+    try {
+      const res = await grpc.users.newRecoveryCodes({ password: codesPassword });
+      setRecovery(res.recoveryCodes);
+      setCodesPassword('');
+      toast({ text: 'New recovery codes', intent: 'success' });
       await refreshInfo();
     } catch (e) {
       setError(errorMessage(e));
@@ -162,12 +184,34 @@ export const TwoFactor = observer(function TwoFactor() {
       {enabled && (
         <>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            You are asked for a code from your authenticator app when you sign in.{' '}
-            {left > 0
-              ? `${left} recovery code${left === 1 ? '' : 's'} left.`
-              : 'No recovery codes left - turn it off and on again to get new ones.'}
-            {left > 0 && left <= fewRecoveryCodes && ' Turn it off and on again to get a new set.'}
+            You are asked for a code from your authenticator app when you sign in.
           </Typography>
+
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Recovery codes
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            {left > 0 ? `${left} recovery code${left === 1 ? '' : 's'} left.` : 'No recovery codes left.'}
+            {left <= fewRecoveryCodes && ' A fresh set of ten replaces them; the old ones stop working at once.'} Your
+            authenticator app is not touched, so there is nothing to scan again.
+          </Typography>
+          <form onSubmit={newCodes}>
+            <Stack direction="row" spacing={1} sx={{ mb: 3, alignItems: 'flex-start' }}>
+              <TextField
+                required
+                type="password"
+                label="Password"
+                autoComplete="current-password"
+                value={codesPassword}
+                onChange={(e) => setCodesPassword(e.target.value)}
+                helperText="Asked for, so that a browser you left signed in cannot hand out new codes"
+              />
+              <Button type="submit" variant="outlined" disabled={working} sx={{ mt: 1 }}>
+                New recovery codes
+              </Button>
+            </Stack>
+          </form>
+
           <form onSubmit={disable}>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
               <TextField

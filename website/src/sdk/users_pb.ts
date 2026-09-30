@@ -84,6 +84,15 @@ export class Users {
 		googleProtobufEmpty.Empty.deserializeBinary
 	);
 
+	private methodInfoNewRecoveryCodes = new grpcWeb.MethodDescriptor<NewRecoveryCodesReq, NewRecoveryCodesRes>(
+		"NewRecoveryCodes",
+		'unary',
+		NewRecoveryCodesReq as unknown as MessageCtor<NewRecoveryCodesReq>,
+		NewRecoveryCodesRes as unknown as MessageCtor<NewRecoveryCodesRes>,
+		(req: NewRecoveryCodesReq) => req.serializeBinary(),
+		NewRecoveryCodesRes.deserializeBinary
+	);
+
 	private methodInfoResetTwoFactor = new grpcWeb.MethodDescriptor<ResetTwoFactorReq, googleProtobufEmpty.Empty>(
 		"ResetTwoFactor",
 		'unary',
@@ -266,6 +275,25 @@ export class Users {
 				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
 				this.methodInfoDisableTwoFactor,
 				(err: grpcWeb.Error, res: googleProtobufEmpty.Empty) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(res.toObject());
+					}
+				},
+			);
+		});
+	}
+
+	newRecoveryCodes(req: NewRecoveryCodesReq.AsObject, metadata?: grpcWeb.Metadata): Promise<NewRecoveryCodesRes.AsObject> {
+		return new Promise((resolve, reject) => {
+			const message = NewRecoveryCodesReqFromObject(req);
+			this.client_.rpcCall(
+				this.hostname + '/proto.Users/NewRecoveryCodes',
+				message,
+				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
+				this.methodInfoNewRecoveryCodes,
+				(err: grpcWeb.Error, res: NewRecoveryCodesRes) => {
 					if (err) {
 						reject(err);
 					} else {
@@ -1250,6 +1278,152 @@ export class DisableTwoFactorReq extends jspb.Message {
 			case 1:
 				const field1 = reader.readString()
 				message.setPassword(field1);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
+export declare namespace NewRecoveryCodesReq {
+	export type AsObject = {
+		password: string,
+	}
+}
+
+export class NewRecoveryCodesReq extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, NewRecoveryCodesReq.repeatedFields_, null);
+	}
+
+
+	getPassword(): string {return jspb.Message.getFieldWithDefault(this, 1, "");
+	}
+
+	setPassword(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 1, value);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		NewRecoveryCodesReq.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): NewRecoveryCodesReq.AsObject {
+		let f: any;
+		return {
+			password: this.getPassword(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: NewRecoveryCodesReq, writer: jspb.BinaryWriter): void {
+		const field1 = message.getPassword();
+		if (field1.length > 0) {
+			writer.writeString(1, field1);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): NewRecoveryCodesReq {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new NewRecoveryCodesReq();
+		return NewRecoveryCodesReq.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: NewRecoveryCodesReq, reader: jspb.BinaryReader): NewRecoveryCodesReq {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readString()
+				message.setPassword(field1);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
+export declare namespace NewRecoveryCodesRes {
+	export type AsObject = {
+		recoveryCodes: Array<string>,
+	}
+}
+
+export class NewRecoveryCodesRes extends jspb.Message {
+
+	private static repeatedFields_ = [
+		1,
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, NewRecoveryCodesRes.repeatedFields_, null);
+	}
+
+
+	getRecoveryCodes(): Array<string> {return jspb.Message.getFieldWithDefault(this, 1, [""]);
+	}
+
+	setRecoveryCodes(value: Array<string>): void {
+		(jspb.Message as any).setProto3StringField(this, 1, value);
+	}
+
+	addRecoveryCodes(value: string, index?: number): void {
+		return jspb.Message.addToRepeatedField(this, 1, value, index);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		NewRecoveryCodesRes.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): NewRecoveryCodesRes.AsObject {
+		let f: any;
+		return {
+			recoveryCodes: this.getRecoveryCodes(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: NewRecoveryCodesRes, writer: jspb.BinaryWriter): void {
+		const field1 = message.getRecoveryCodes();
+		if (field1.length > 0) {
+			writer.writeRepeatedString(1, field1);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): NewRecoveryCodesRes {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new NewRecoveryCodesRes();
+		return NewRecoveryCodesRes.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: NewRecoveryCodesRes, reader: jspb.BinaryReader): NewRecoveryCodesRes {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readString()
+				message.addRecoveryCodes(field1);
 				break;
 			default:
 				reader.skipField();
@@ -2252,6 +2426,25 @@ function DisableTwoFactorReqFromObject(obj: DisableTwoFactorReq.AsObject | undef
 	}
 	const message = new DisableTwoFactorReq();
 	message.setPassword(obj.password);
+	return message;
+}
+
+function NewRecoveryCodesReqFromObject(obj: NewRecoveryCodesReq.AsObject | undefined): NewRecoveryCodesReq | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new NewRecoveryCodesReq();
+	message.setPassword(obj.password);
+	return message;
+}
+
+function NewRecoveryCodesResFromObject(obj: NewRecoveryCodesRes.AsObject | undefined): NewRecoveryCodesRes | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new NewRecoveryCodesRes();
+	(obj.recoveryCodes || [])
+		.forEach((item) => message.addRecoveryCodes(item));
 	return message;
 }
 

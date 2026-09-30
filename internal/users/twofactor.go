@@ -184,6 +184,52 @@ func (t *TwoFactor) Check(subject string, given string) bool {
 	return true
 }
 
+// ReplaceRecoveryCodes hands out a fresh set and forgets the old one. It is
+// for somebody who has used most of theirs, or who cannot find the paper any
+// more - both of which used to mean turning the second factor off and on
+// again, with the enrolment and the authenticator app to redo.
+//
+// The password is asked for the same reason Disable asks: a browser somebody
+// left signed in must not be able to print new codes. The authenticator app
+// is left alone - the secret does not change, so nothing has to be scanned
+// again.
+func (t *TwoFactor) ReplaceRecoveryCodes(subject string, password string) ([]string, error) {
+	if t.passwords == nil {
+		return nil, ErrNoPasswordHere
+	}
+
+	user, err := t.storage.GetUser(subject)
+	if err != nil || user == nil {
+		return nil, ErrNoPasswordHere
+	}
+	// Recovery codes belong to the authenticator app. Somebody whose only
+	// second factor is a passkey has none to replace.
+	if !user.TwoFactorEnabled() {
+		return nil, ErrNoTwoFactor
+	}
+
+	if err := t.passwords.Verify(subject, password); err != nil {
+		return nil, err
+	}
+
+	codes, hashes, err := newRecoveryCodes()
+	if err != nil {
+		return nil, err
+	}
+
+	// Everything else about the enrolment is carried over: the secret, when
+	// it was confirmed, and the last step a code was accepted at - dropping
+	// that last one would make a code that just signed somebody in usable
+	// again.
+	state := user.TOTP()
+	state.Recovery = strings.Join(hashes, ",")
+	if err := t.storage.SetUserTOTP(subject, state); err != nil {
+		return nil, fmt.Errorf("failed to store the new recovery codes: %w", err)
+	}
+
+	return codes, nil
+}
+
 // Disable turns the second factor off. It asks for the password: somebody who
 // walked up to an unlocked browser must not be able to take it away.
 func (t *TwoFactor) Disable(subject string, password string) error {

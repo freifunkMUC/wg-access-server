@@ -25,6 +25,7 @@ vi.mock('../Api', () => ({
       startTwoFactor: vi.fn(),
       confirmTwoFactor: vi.fn(),
       disableTwoFactor: vi.fn(),
+      newRecoveryCodes: vi.fn(),
     },
   },
 }));
@@ -43,6 +44,7 @@ import { TwoFactor } from './TwoFactor';
 const start = vi.mocked(grpc.users.startTwoFactor);
 const confirm = vi.mocked(grpc.users.confirmTwoFactor);
 const disable = vi.mocked(grpc.users.disableTwoFactor);
+const newCodes = vi.mocked(grpc.users.newRecoveryCodes);
 const info = vi.mocked(grpc.server.info);
 
 const secret = 'JBSWY3DPEHPK3PXP';
@@ -139,12 +141,61 @@ describe('two-factor authentication', () => {
     await waitFor(() => expect(disable).toHaveBeenCalledWith({ password: 'the-password' }));
   });
 
-  it('says when the recovery codes are running out', () => {
+  it('says when the recovery codes are running out, and offers a fresh set', () => {
     setInfo({ twoFactorEnabled: true, recoveryCodesLeft: 2 });
     render(<TwoFactor />);
 
     expect(screen.getByText(/2 recovery codes left/)).toBeTruthy();
-    expect(screen.getByText(/get a new set/)).toBeTruthy();
+    expect(screen.getByText(/A fresh set of ten replaces them/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'New recovery codes' })).toBeTruthy();
+  });
+
+  // this used to mean turning the second factor off and on again, with the
+  // authenticator app to set up a second time
+  it('replaces the recovery codes and shows the new ones', async () => {
+    newCodes.mockResolvedValue({ recoveryCodes: ['EEEE-FFFF', 'GGGG-HHHH'] });
+    setInfo({ twoFactorEnabled: true, recoveryCodesLeft: 1 });
+    render(<TwoFactor />);
+
+    fireEvent.change(screen.getByLabelText(/^Password/), { target: { value: 'the-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'New recovery codes' }));
+
+    await waitFor(() => expect(newCodes).toHaveBeenCalledWith({ password: 'the-password' }));
+    const shown = await screen.findByTestId('recovery-codes');
+    expect(shown.textContent).toMatch(/EEEE-FFFF/);
+    expect(shown.textContent).toMatch(/GGGG-HHHH/);
+    // the second factor is still on: nothing was turned off to get here
+    expect(screen.getByRole('button', { name: 'Turn it off' })).toBeTruthy();
+  });
+
+  it('says so when the password for new codes is wrong', async () => {
+    newCodes.mockRejectedValue(new Error('that is not your password'));
+    setInfo({ twoFactorEnabled: true, recoveryCodesLeft: 1 });
+    render(<TwoFactor />);
+
+    fireEvent.change(screen.getByLabelText(/^Password/), { target: { value: 'not-it' } });
+    fireEvent.click(screen.getByRole('button', { name: 'New recovery codes' }));
+
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/not your password/));
+    expect(screen.queryByTestId('recovery-codes')).toBeNull();
+  });
+
+  // two password fields sit in this section; the one by "Turn it off" must not
+  // be the one the new-codes button submits
+  it('keeps the two password fields apart', async () => {
+    newCodes.mockResolvedValue({ recoveryCodes: ['EEEE-FFFF'] });
+    setInfo({ twoFactorEnabled: true, recoveryCodesLeft: 7 });
+    render(<TwoFactor />);
+
+    fireEvent.change(screen.getByLabelText(/^Password/), { target: { value: 'for-new-codes' } });
+    fireEvent.change(screen.getByLabelText(/Your password/), { target: { value: 'for-turning-it-off' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'New recovery codes' }));
+    await waitFor(() => expect(newCodes).toHaveBeenCalledWith({ password: 'for-new-codes' }));
+    expect(disable).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Turn it off' }));
+    await waitFor(() => expect(disable).toHaveBeenCalledWith({ password: 'for-turning-it-off' }));
   });
 
   it('says when there are none left at all', () => {

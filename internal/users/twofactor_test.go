@@ -229,6 +229,125 @@ func TestRecoveryCodes(t *testing.T) {
 	}
 }
 
+// Replacing the codes is what somebody does who has used most of theirs. It
+// used to mean turning the second factor off and on again.
+func TestReplacingTheRecoveryCodes(t *testing.T) {
+	tf, _ := twoFactor(t)
+	old := enrol(t, tf, "alice")
+
+	// use one, so that the count going back up is visible
+	if !tf.Check("alice", old[0]) {
+		t.Fatal("a recovery code was refused")
+	}
+
+	fresh, err := tf.ReplaceRecoveryCodes("alice", "the-configured-one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fresh) != recoveryCodes {
+		t.Fatalf("got %d new codes, want %d", len(fresh), recoveryCodes)
+	}
+	if left := tf.RecoveryCodesLeft("alice"); left != recoveryCodes {
+		t.Errorf("%d codes left, want a full set of %d", left, recoveryCodes)
+	}
+
+	// a new one signs in
+	if !tf.Check("alice", fresh[0]) {
+		t.Error("a new recovery code was refused")
+	}
+
+	// ... and every old one is dead, including the ones never used
+	for i, code := range old[1:] {
+		if tf.Check("alice", code) {
+			t.Errorf("old code %d still signs in after they were replaced", i+1)
+		}
+	}
+}
+
+// The authenticator app is not touched: the secret stays, so nothing has to
+// be scanned again, and a code that just signed somebody in stays used up.
+func TestReplacingTheCodesLeavesTheAppAlone(t *testing.T) {
+	tf, s := twoFactor(t)
+	enrol(t, tf, "alice")
+
+	before, err := s.GetUser("alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign in with a code from the app first, so there is a last step to keep
+	code, err := TOTPCode(before.TotpSecret, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !tf.Check("alice", code) {
+		t.Fatal("a code from the app was refused")
+	}
+	used, err := s.GetUser("alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := tf.ReplaceRecoveryCodes("alice", "the-configured-one"); err != nil {
+		t.Fatal(err)
+	}
+
+	after, err := s.GetUser("alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.TotpSecret != before.TotpSecret {
+		t.Error("the shared secret changed, so the app would have to be set up again")
+	}
+	if after.TotpEnabledAt == nil || !after.TotpEnabledAt.Equal(*before.TotpEnabledAt) {
+		t.Errorf("enabled at = %v, want %v", after.TotpEnabledAt, before.TotpEnabledAt)
+	}
+	// the step the code was accepted at has to survive, or that same code
+	// signs somebody in again
+	if after.TotpLastStep != used.TotpLastStep {
+		t.Errorf("last step = %d, want %d - the used code would work again", after.TotpLastStep, used.TotpLastStep)
+	}
+	if tf.Check("alice", code) {
+		t.Error("the code that just signed in works again after replacing the recovery codes")
+	}
+	if !tf.Enabled("alice") {
+		t.Error("the second factor was turned off by replacing the codes")
+	}
+}
+
+// The password is asked for the same reason turning it off asks: a browser
+// somebody left signed in must not be able to print new codes.
+func TestReplacingTheCodesNeedsThePassword(t *testing.T) {
+	tf, _ := twoFactor(t)
+	codes := enrol(t, tf, "alice")
+
+	if _, err := tf.ReplaceRecoveryCodes("alice", "not-the-password"); !errors.Is(err, ErrWrongPassword) {
+		t.Fatalf("err = %v, want ErrWrongPassword", err)
+	}
+	// the old ones still work, so a refused attempt cost nobody their codes
+	if !tf.Check("alice", codes[0]) {
+		t.Error("a wrong password replaced the codes anyway")
+	}
+}
+
+// Recovery codes belong to the authenticator app. Without one there is
+// nothing to replace, and saying so beats handing out codes nothing checks.
+func TestReplacingTheCodesWithoutASecondFactor(t *testing.T) {
+	tf, _ := twoFactor(t)
+
+	if _, err := tf.ReplaceRecoveryCodes("alice", "the-configured-one"); !errors.Is(err, ErrNoTwoFactor) {
+		t.Errorf("err = %v, want ErrNoTwoFactor", err)
+	}
+
+	// an enrolment nobody confirmed is not one either
+	if _, _, err := tf.Start("alice", "alice@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tf.ReplaceRecoveryCodes("alice", "the-configured-one"); !errors.Is(err, ErrNoTwoFactor) {
+		t.Errorf("err = %v, want ErrNoTwoFactor for an unconfirmed enrolment", err)
+	}
+}
+
 // Turning it off asks for the password, or an unlocked browser would be
 // enough to take somebody's second factor away.
 func TestDisablingNeedsThePassword(t *testing.T) {

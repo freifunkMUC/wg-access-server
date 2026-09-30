@@ -24,6 +24,9 @@ service Users {
   rpc StartTwoFactor(StartTwoFactorReq) returns (StartTwoFactorRes) {}
   rpc ConfirmTwoFactor(ConfirmTwoFactorReq) returns (ConfirmTwoFactorRes) {}
   rpc DisableTwoFactor(DisableTwoFactorReq) returns (google.protobuf.Empty) {}
+  // Replaces the recovery codes with a fresh set, for whoever has used most
+  // of theirs or cannot find the paper any more.
+  rpc NewRecoveryCodes(NewRecoveryCodesReq) returns (NewRecoveryCodesRes) {}
   // admin only: take somebody's second factor away when their phone is gone
   rpc ResetTwoFactor(ResetTwoFactorReq) returns (google.protobuf.Empty) {}
 
@@ -92,6 +95,18 @@ message ConfirmTwoFactorRes {
 
 message DisableTwoFactorReq {
   string password = 1;
+}
+
+// The password is asked for the same reason as when turning it off: a browser
+// somebody left signed in must not be able to hand out fresh codes.
+message NewRecoveryCodesReq {
+  string password = 1;
+}
+
+// The new codes, shown once. The old ones stop working the moment these are
+// made.
+message NewRecoveryCodesRes {
+  repeated string recovery_codes = 1;
 }
 
 message ResetTwoFactorReq {

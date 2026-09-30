@@ -339,6 +339,36 @@ func (d *UserService) ResetTwoFactor(ctx context.Context, request *connect.Reque
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
+// NewRecoveryCodes replaces the recovery codes of whoever is asking with a
+// fresh set, and returns them. They are shown once.
+func (d *UserService) NewRecoveryCodes(ctx context.Context, request *connect.Request[proto.NewRecoveryCodesReq]) (*connect.Response[proto.NewRecoveryCodesRes], error) {
+	user, err := d.twoFactorFor(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	left := d.TwoFactor.RecoveryCodesLeft(user.Subject)
+
+	codes, err := d.TwoFactor.ReplaceRecoveryCodes(user.Subject, request.Msg.GetPassword())
+	if err != nil {
+		if errors.Is(err, users.ErrNoTwoFactor) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.New("this account has no authenticator app set up, so it has no recovery codes"))
+		}
+		if errors.Is(err, users.ErrWrongPassword) {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("that is not your password"))
+		}
+		if errors.Is(err, users.ErrNoPasswordHere) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		}
+		return nil, internalError(ctx, err, "failed to replace the recovery codes")
+	}
+
+	audit.Log(ctx, audit.UserRecoveryCodes, logrus.Fields{"codes_left_before": left})
+
+	return connect.NewResponse(&proto.NewRecoveryCodesRes{RecoveryCodes: codes}), nil
+}
+
 // ListPasskeys returns the passkeys of whoever is asking.
 func (d *UserService) ListPasskeys(ctx context.Context, _ *connect.Request[proto.ListPasskeysReq]) (*connect.Response[proto.ListPasskeysRes], error) {
 	user, err := d.passkeysFor(ctx)
