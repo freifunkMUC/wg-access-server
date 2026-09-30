@@ -1234,7 +1234,10 @@ cannot work.</p>
 </div>
 <p>Which host the passkey is bound to comes from <code>vpn.externalHost</code>. Behind a reverse proxy that is the
 name people type, which is what it has to be: the <code>Host</code> header is whatever reached the server. With
-no <code>externalHost</code> configured, the request's host is used instead.</p>
+no <code>externalHost</code> configured, the request's host is used instead, and the server says so at startup:
+a passkey registered under one name is not offered under another, so whoever registers one through a
+second name - or through a proxy that passes a different <code>Host</code> on - ends up with a credential the
+sign-in page will not ask for.</p>
 <h2 id="two-factor-authentication">Two-factor authentication<a class="headerlink" href="#two-factor-authentication" title="Permanent link"> ¶</a></h2>
 <p>Somebody signing in with <code>simple</code> auth can ask for a code from an authenticator app on top of their
 password, under the same key icon. It works anywhere, including over plain HTTP, which is why it is
