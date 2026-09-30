@@ -391,6 +391,13 @@ func (s *InMemoryStorage) DeleteUser(subject string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.users, subject)
+	// the passkeys go with the user: kept, they would be the second factor
+	// of whoever is added under the same name later
+	for id, passkey := range s.passkeys {
+		if passkey.Owner == subject {
+			delete(s.passkeys, id)
+		}
+	}
 	return nil
 }
 

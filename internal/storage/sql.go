@@ -652,7 +652,15 @@ func (s *SQLStorage) Users() ([]*User, error) {
 }
 
 func (s *SQLStorage) DeleteUser(subject string) error {
-	if err := s.db.Where("subject = ?", subject).Delete(&User{}).Error; err != nil {
+	// the passkeys go with the user: kept, they would be the second factor
+	// of whoever is added under the same name later
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("owner = ?", subject).Delete(&Passkey{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("subject = ?", subject).Delete(&User{}).Error
+	})
+	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
 	return nil
