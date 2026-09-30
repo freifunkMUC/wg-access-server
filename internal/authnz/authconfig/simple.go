@@ -81,7 +81,7 @@ func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRu
 		}
 		credentialsOK := false
 
-		if attempted && checkCreds(c.Users, u, p) {
+		if attempted && checkCreds(c.Users, u, p, runtime) {
 			credentialsOK = true
 			throttle.recordSuccess(u)
 			err = runtime.SetSession(w, r, &authsession.AuthSession{

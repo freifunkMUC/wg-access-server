@@ -15,6 +15,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/traces"
+	"github.com/freifunkMUC/wg-access-server/internal/users"
 	"github.com/freifunkMUC/wg-access-server/internal/websessions"
 	"github.com/freifunkMUC/wg-access-server/proto/proto/protoconnect"
 )
@@ -28,7 +29,10 @@ type Services struct {
 	DeviceManager *devices.DeviceManager
 	Tokens        *apitokens.Manager
 	Sessions      *websessions.Manager
-	Wg            wgembed.WireGuardInterface
+	// Passwords is nil when no built-in provider is configured: there is then
+	// no password here to change.
+	Passwords *users.Passwords
+	Wg        wgembed.WireGuardInterface
 }
 
 // Router serves the API through connectrpc. Besides its own protocol,
@@ -46,7 +50,12 @@ func Router(deps *Services) http.Handler {
 			return protoconnect.NewDevicesHandler(&DeviceService{DeviceManager: deps.DeviceManager}, options)
 		},
 		func() (string, http.Handler) {
-			return protoconnect.NewUsersHandler(&UserService{DeviceManager: deps.DeviceManager, Tokens: deps.Tokens, Sessions: deps.Sessions}, options)
+			return protoconnect.NewUsersHandler(&UserService{
+				DeviceManager: deps.DeviceManager,
+				Tokens:        deps.Tokens,
+				Sessions:      deps.Sessions,
+				Passwords:     deps.Passwords,
+			}, options)
 		},
 		func() (string, http.Handler) {
 			return protoconnect.NewTokensHandler(&TokenService{Tokens: deps.Tokens, Enabled: deps.Config.EnableAPITokens}, options)
@@ -55,7 +64,12 @@ func Router(deps *Services) http.Handler {
 			return protoconnect.NewSessionsHandler(&SessionService{Sessions: deps.Sessions}, options)
 		},
 		func() (string, http.Handler) {
-			return protoconnect.NewServerHandler(&ServerService{Config: deps.Config, Wg: deps.Wg, DeviceManager: deps.DeviceManager}, options)
+			return protoconnect.NewServerHandler(&ServerService{
+				Config:         deps.Config,
+				Wg:             deps.Wg,
+				DeviceManager:  deps.DeviceManager,
+				PasswordChange: deps.Passwords != nil,
+			}, options)
 		},
 	} {
 		path, handler := register()

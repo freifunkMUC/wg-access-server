@@ -40,6 +40,8 @@ const (
 	UsersDeleteUserProcedure = "/proto.Users/DeleteUser"
 	// UsersRevokeAccessProcedure is the fully-qualified name of the Users's RevokeAccess RPC.
 	UsersRevokeAccessProcedure = "/proto.Users/RevokeAccess"
+	// UsersChangePasswordProcedure is the fully-qualified name of the Users's ChangePassword RPC.
+	UsersChangePasswordProcedure = "/proto.Users/ChangePassword"
 )
 
 // UsersClient is a client for the proto.Users service.
@@ -50,6 +52,9 @@ type UsersClient interface {
 	// Takes somebody's access away without deleting anything: their devices are
 	// blocked, their API tokens revoked and their sessions ended.
 	RevokeAccess(context.Context, *connect.Request[proto.RevokeAccessReq]) (*connect.Response[proto.RevokeAccessRes], error)
+	// Changes your own password. Only for the built-in sign-in - with an
+	// identity provider the password is theirs, not ours.
+	ChangePassword(context.Context, *connect.Request[proto.ChangePasswordReq]) (*connect.Response[proto.ChangePasswordRes], error)
 }
 
 // NewUsersClient constructs a client for the proto.Users service. By default, it uses the Connect
@@ -81,14 +86,21 @@ func NewUsersClient(httpClient connect.HTTPClient, baseURL string, opts ...conne
 			connect.WithSchema(usersMethods.ByName("RevokeAccess")),
 			connect.WithClientOptions(opts...),
 		),
+		changePassword: connect.NewClient[proto.ChangePasswordReq, proto.ChangePasswordRes](
+			httpClient,
+			baseURL+UsersChangePasswordProcedure,
+			connect.WithSchema(usersMethods.ByName("ChangePassword")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // usersClient implements UsersClient.
 type usersClient struct {
-	listUsers    *connect.Client[proto.ListUsersReq, proto.ListUsersRes]
-	deleteUser   *connect.Client[proto.DeleteUserReq, emptypb.Empty]
-	revokeAccess *connect.Client[proto.RevokeAccessReq, proto.RevokeAccessRes]
+	listUsers      *connect.Client[proto.ListUsersReq, proto.ListUsersRes]
+	deleteUser     *connect.Client[proto.DeleteUserReq, emptypb.Empty]
+	revokeAccess   *connect.Client[proto.RevokeAccessReq, proto.RevokeAccessRes]
+	changePassword *connect.Client[proto.ChangePasswordReq, proto.ChangePasswordRes]
 }
 
 // ListUsers calls proto.Users.ListUsers.
@@ -106,6 +118,11 @@ func (c *usersClient) RevokeAccess(ctx context.Context, req *connect.Request[pro
 	return c.revokeAccess.CallUnary(ctx, req)
 }
 
+// ChangePassword calls proto.Users.ChangePassword.
+func (c *usersClient) ChangePassword(ctx context.Context, req *connect.Request[proto.ChangePasswordReq]) (*connect.Response[proto.ChangePasswordRes], error) {
+	return c.changePassword.CallUnary(ctx, req)
+}
+
 // UsersHandler is an implementation of the proto.Users service.
 type UsersHandler interface {
 	// admin only
@@ -114,6 +131,9 @@ type UsersHandler interface {
 	// Takes somebody's access away without deleting anything: their devices are
 	// blocked, their API tokens revoked and their sessions ended.
 	RevokeAccess(context.Context, *connect.Request[proto.RevokeAccessReq]) (*connect.Response[proto.RevokeAccessRes], error)
+	// Changes your own password. Only for the built-in sign-in - with an
+	// identity provider the password is theirs, not ours.
+	ChangePassword(context.Context, *connect.Request[proto.ChangePasswordReq]) (*connect.Response[proto.ChangePasswordRes], error)
 }
 
 // NewUsersHandler builds an HTTP handler from the service implementation. It returns the path on
@@ -141,6 +161,12 @@ func NewUsersHandler(svc UsersHandler, opts ...connect.HandlerOption) (string, h
 		connect.WithSchema(usersMethods.ByName("RevokeAccess")),
 		connect.WithHandlerOptions(opts...),
 	)
+	usersChangePasswordHandler := connect.NewUnaryHandler(
+		UsersChangePasswordProcedure,
+		svc.ChangePassword,
+		connect.WithSchema(usersMethods.ByName("ChangePassword")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/proto.Users/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UsersListUsersProcedure:
@@ -149,6 +175,8 @@ func NewUsersHandler(svc UsersHandler, opts ...connect.HandlerOption) (string, h
 			usersDeleteUserHandler.ServeHTTP(w, r)
 		case UsersRevokeAccessProcedure:
 			usersRevokeAccessHandler.ServeHTTP(w, r)
+		case UsersChangePasswordProcedure:
+			usersChangePasswordHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -168,4 +196,8 @@ func (UnimplementedUsersHandler) DeleteUser(context.Context, *connect.Request[pr
 
 func (UnimplementedUsersHandler) RevokeAccess(context.Context, *connect.Request[proto.RevokeAccessReq]) (*connect.Response[proto.RevokeAccessRes], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.RevokeAccess is not implemented"))
+}
+
+func (UnimplementedUsersHandler) ChangePassword(context.Context, *connect.Request[proto.ChangePasswordReq]) (*connect.Response[proto.ChangePasswordRes], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.ChangePassword is not implemented"))
 }

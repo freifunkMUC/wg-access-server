@@ -176,6 +176,29 @@ Somebody in no policy, and everybody signing in through basic or simple auth, ke
 The admin page shows which policies somebody ended up in, which is how a rule is checked against
 what the provider actually sends.
 
+## Changing your password
+
+With `basic` or `simple` auth the password comes from the config file, which only an admin can edit.
+Somebody signed in that way can now set their own instead, under the key icon in the navigation:
+
+- The **config file stays the list of who may sign in.** A password is only ever stored for a user it
+  lists, so a stored password can never create an account.
+- What they set is kept as a bcrypt hash in the `users` table, together with the configured entry it
+  was set against. While that entry is unchanged, their password is the one that counts and the
+  configured one stops working.
+- **An admin editing the entry in the config file takes it back**: the stored password was set
+  against an entry that is no longer there, so it is ignored and the configured password counts
+  again. That is how a password is reset - there is no other way in, by design.
+- Changing it **ends every other session** of that person. Whoever knew the old password may be
+  holding one.
+- A password set here has to be at least 10 characters. The configured entries are not held to that:
+  those are an admin's business, and refusing them at sign-in would lock people out.
+
+Their devices are unaffected either way - a tunnel does not use anybody's password.
+
+With an identity provider there is nothing here to change: the password is theirs, and the page says
+so rather than pretending otherwise.
+
 ## Sessions
 
 Signing in creates a session, and the cookie the browser gets carries **nothing but its id**. Who

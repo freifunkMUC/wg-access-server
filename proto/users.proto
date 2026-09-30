@@ -14,6 +14,10 @@ service Users {
   // Takes somebody's access away without deleting anything: their devices are
   // blocked, their API tokens revoked and their sessions ended.
   rpc RevokeAccess(RevokeAccessReq) returns (RevokeAccessRes) {}
+
+  // Changes your own password. Only for the built-in sign-in - with an
+  // identity provider the password is theirs, not ours.
+  rpc ChangePassword(ChangePasswordReq) returns (ChangePasswordRes) {}
 }
 
 message User {
@@ -36,6 +40,17 @@ message ListUsersRes {
 
 message DeleteUserReq {
   string name = 1;
+}
+
+message ChangePasswordReq {
+  string current_password = 1;
+  string new_password = 2;
+}
+
+// Changing the password signs the other browsers out: whoever knew the old one
+// must not keep a session that was made with it.
+message ChangePasswordRes {
+  int32 sessions_ended = 1;
 }
 
 message RevokeAccessReq {

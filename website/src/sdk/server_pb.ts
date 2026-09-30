@@ -135,6 +135,7 @@ export declare namespace InfoRes {
 		clientConfigPersistentKeepalive: number,
 		apiTokensEnabled: boolean,
 		subject: string,
+		passwordChangeEnabled: boolean,
 	}
 }
 
@@ -286,6 +287,13 @@ export class InfoRes extends jspb.Message {
 		(jspb.Message as any).setProto3StringField(this, 20, value);
 	}
 
+	getPasswordChangeEnabled(): boolean {return jspb.Message.getFieldWithDefault(this, 21, false);
+	}
+
+	setPasswordChangeEnabled(value: boolean): void {
+		(jspb.Message as any).setProto3BooleanField(this, 21, value);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		InfoRes.serializeBinaryToWriter(this, writer);
@@ -314,6 +322,7 @@ export class InfoRes extends jspb.Message {
 			clientConfigPersistentKeepalive: this.getClientConfigPersistentKeepalive(),
 			apiTokensEnabled: this.getApiTokensEnabled(),
 			subject: this.getSubject(),
+			passwordChangeEnabled: this.getPasswordChangeEnabled(),
 		};
 	}
 
@@ -393,6 +402,10 @@ export class InfoRes extends jspb.Message {
 		const field20 = message.getSubject();
 		if (field20.length > 0) {
 			writer.writeString(20, field20);
+		}
+		const field21 = message.getPasswordChangeEnabled();
+		if (field21 != false) {
+			writer.writeBool(21, field21);
 		}
 	}
 
@@ -488,6 +501,10 @@ export class InfoRes extends jspb.Message {
 				const field20 = reader.readString()
 				message.setSubject(field20);
 				break;
+			case 21:
+				const field21 = reader.readBool()
+				message.setPasswordChangeEnabled(field21);
+				break;
 			default:
 				reader.skipField();
 				break;
@@ -531,6 +548,7 @@ function InfoResFromObject(obj: InfoRes.AsObject | undefined): InfoRes | undefin
 	message.setClientConfigPersistentKeepalive(obj.clientConfigPersistentKeepalive);
 	message.setApiTokensEnabled(obj.apiTokensEnabled);
 	message.setSubject(obj.subject);
+	message.setPasswordChangeEnabled(obj.passwordChangeEnabled);
 	return message;
 }
 

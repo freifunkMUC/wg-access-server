@@ -37,6 +37,10 @@ const (
 	// DeviceRoutes is an admin changing the networks behind a device.
 	DeviceRoutes = "device.routes"
 	UserDelete   = "user.delete"
+	// UserPassword is somebody changing their own password. Neither the old
+	// nor the new one is recorded, only that it happened and how many
+	// sessions it ended.
+	UserPassword = "user.password"
 	// UserRevoke is an admin taking somebody's access away in one action:
 	// their devices are blocked, their tokens revoked, their sessions ended.
 	UserRevoke = "user.revoke"

@@ -22,6 +22,7 @@ level=info msg=device.delete audit=device.delete actor=admin actor_is_admin=true
 | `device.rotate` | Somebody gave their device a new key                | `device`, `owner`              |
 | `user.delete`   | An admin deleted a user, their devices and tokens  | `target_user`                  |
 | `user.revoke`   | An admin took somebody's access away               | `target_user`, `devices_blocked`, `tokens_deleted`, `sessions_ended` |
+| `user.password` | Somebody changed their own password                | `sessions_ended`               |
 | `session.delete` | Somebody ended a browser session of theirs        | `session`, or `sessions` and `reason`\*\*\* |
 | `api_token.create` | An API token was created                        | `token`, `token_name`, `expires_at` |
 | `api_token.delete` | An API token was revoked                        | `token`, `token_name`, `owner` |
@@ -35,6 +36,9 @@ device grace period.
 \*\*\* `session` names the one session that was ended. "Sign out everywhere else" ends several at
 once and records `sessions` as how many that was, with `reason=all others`; the ids are not worth a
 record each, they are gone.
+
+`user.password` records that the password changed and how many other sessions that ended. Neither
+the old nor the new password is recorded, in any form.
 
 `device.rotate` records that the key changed, not the keys: the new public key says nothing an
 operator needs, and key material does not belong in a log.

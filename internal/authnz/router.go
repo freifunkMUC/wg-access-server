@@ -57,6 +57,15 @@ func WithLoginRecorder(record func(*authsession.Identity)) Option {
 	}
 }
 
+// WithPasswords registers where a password somebody set for themselves is
+// looked up. Only the built-in providers ask; for everybody else the password
+// belongs to their identity provider.
+func WithPasswords(passwords authruntime.Passwords) Option {
+	return func(runtime *authruntime.ProviderRuntime) {
+		runtime.UsePasswords(passwords)
+	}
+}
+
 func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware, browserSessions authsession.Sessions, opts ...Option) (*AuthMiddleware, error) {
 	router := mux.NewRouter()
 	var storeSecret []byte

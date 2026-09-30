@@ -578,11 +578,28 @@ func (s *SQLStorage) BlockForOwner(owner string) ([]*Device, error) {
 func (s *SQLStorage) SaveUser(user *User) error {
 	logrus.Debugf("saving user %s", user.Subject)
 
+	// Named columns rather than UpdateAll: a login writes what the identity
+	// provider said, and must not wipe the password the user set for
+	// themselves - which a login does not carry.
 	if err := s.db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "subject"}},
-		UpdateAll: true,
+		DoUpdates: clause.AssignmentColumns([]string{"provider", "name", "email", "policies", "last_login"}),
 	}).Create(user).Error; err != nil {
 		return fmt.Errorf("failed to write user: %w", err)
+	}
+	return nil
+}
+
+// SetUserPassword writes the password columns of one user, and nothing else.
+func (s *SQLStorage) SetUserPassword(subject string, hash string, from string) error {
+	q := s.db.Model(&User{}).
+		Where("subject = ?", subject).
+		UpdateColumns(map[string]interface{}{"password_hash": hash, "password_from": from})
+	if q.Error != nil {
+		return fmt.Errorf("failed to write the password of user '%s': %w", subject, q.Error)
+	}
+	if q.RowsAffected == 0 {
+		return fmt.Errorf("user '%s' does not exist", subject)
 	}
 	return nil
 }

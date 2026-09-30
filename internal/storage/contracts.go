@@ -94,6 +94,11 @@ type UserStorage interface {
 	// DeleteUser forgets somebody. Their devices and tokens are not touched -
 	// whoever deletes a user deletes those first.
 	DeleteUser(subject string) error
+	// SetUserPassword stores a password somebody set for themselves, as a
+	// bcrypt hash, together with the configured entry that was in effect when
+	// they set it. An empty hash removes it and hands them back to the
+	// configuration. The user has to exist.
+	SetUserPassword(subject string, hash string, from string) error
 }
 
 // User is somebody who has signed in at least once.
@@ -111,6 +116,19 @@ type User struct {
 	// LastLogin is when they last signed in, which is also how old everything
 	// else here is.
 	LastLogin time.Time `json:"last_login"`
+
+	// PasswordHash is a password this user set for themselves, bcrypt
+	// hashed. Only the built-in providers have one; everybody else's password
+	// belongs to their identity provider. Empty means they never set one and
+	// the configured entry is what counts.
+	//
+	// It is never returned to anybody: the API maps users without it.
+	PasswordHash string `json:"-"`
+	// PasswordFrom is the configured entry that was in effect when the
+	// password was set. When the configuration names a different one now, an
+	// admin has changed it, and theirs wins: the stored password is ignored.
+	// Without this an admin could not take a password back.
+	PasswordFrom string `json:"-"`
 }
 
 // PolicyList returns the policies one by one, empty for a user without any.

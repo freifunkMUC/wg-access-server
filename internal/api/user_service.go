@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/sirupsen/logrus"
@@ -10,14 +11,20 @@ import (
 
 	"github.com/freifunkMUC/wg-access-server/internal/apitokens"
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
+	"github.com/freifunkMUC/wg-access-server/internal/users"
 	"github.com/freifunkMUC/wg-access-server/internal/websessions"
 	"github.com/freifunkMUC/wg-access-server/proto/proto"
 )
 
 type UserService struct {
 	DeviceManager *devices.DeviceManager
+	// Passwords changes a password somebody set for themselves. It is nil
+	// when no built-in provider is configured, and then there is nothing to
+	// change here.
+	Passwords *users.Passwords
 	// Tokens is nil in tests that do not care about them.
 	Tokens *apitokens.Manager
 	// Sessions is nil in tests that do not care about them.
@@ -147,6 +154,68 @@ func (d *UserService) RevokeAccess(ctx context.Context, request *connect.Request
 	})
 
 	return connect.NewResponse(res), nil
+}
+
+// minPasswordLength is what a password set here has to be. Long enough to be
+// worth the bcrypt round, short enough that people do not write it down; the
+// configured entries are not checked against it, because those are an admin's
+// business and not ours to refuse at sign-in.
+const minPasswordLength = 10
+
+// ChangePassword replaces the password of whoever is asking. Only the built-in
+// providers have one to change - with an identity provider the password is
+// theirs - and only the person themselves can: an admin who wants somebody out
+// revokes their access, which does not need their password.
+//
+// The other sessions end with it. Whoever knew the old password may have one,
+// and a password change that leaves them signed in changes nothing for them.
+func (d *UserService) ChangePassword(ctx context.Context, request *connect.Request[proto.ChangePasswordReq]) (*connect.Response[proto.ChangePasswordRes], error) {
+	req := request.Msg
+	user, err := authsession.CurrentUser(ctx)
+	if err != nil {
+		return nil, errNotAuthenticated()
+	}
+
+	if d.Passwords == nil || !authconfig.HasPassword(user.Provider) {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("this account's password is not kept here: change it where you sign in"))
+	}
+
+	if len(req.GetNewPassword()) < minPasswordLength {
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			fmt.Errorf("the new password has to be at least %d characters", minPasswordLength))
+	}
+
+	if err := d.Passwords.Change(user.Subject, req.GetCurrentPassword(), req.GetNewPassword()); err != nil {
+		if errors.Is(err, users.ErrWrongPassword) {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("that is not your current password"))
+		}
+		if errors.Is(err, users.ErrNoPasswordHere) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.New("this account is not one the server keeps a password for"))
+		}
+		return nil, internalError(ctx, err, "failed to change the password")
+	}
+
+	// Whoever knew the old password may be holding a session made with it.
+	// The one asking stays: signing somebody out of the page they are on to
+	// tell them their password changed helps nobody.
+	ended := 0
+	if d.Sessions != nil {
+		keep := ""
+		if session, err := d.Sessions.Find(authsession.CurrentSessionID(ctx)); err == nil {
+			keep = session.ID
+		}
+		if ended, err = d.Sessions.EndOthers(user.Subject, keep); err != nil {
+			// The password did change; saying it failed would be worse than
+			// saying that one part of it did not.
+			logrus.Error(fmt.Errorf("failed to end the other sessions after a password change: %w", err))
+		}
+	}
+
+	audit.Log(ctx, audit.UserPassword, logrus.Fields{"sessions_ended": ended})
+
+	return connect.NewResponse(&proto.ChangePasswordRes{SessionsEnded: int32(ended)}), nil
 }
 
 func mapUser(u *devices.User) *proto.User {
