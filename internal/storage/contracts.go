@@ -15,6 +15,7 @@ type Storage interface {
 	TokenStorage
 	UserStorage
 	SessionStorage
+	PasskeyStorage
 	Save(device *Device) error
 	// RecordMetadata applies what one metadata sync observed. Traffic is
 	// added to the stored totals, so several server replicas and restarts
@@ -143,6 +144,12 @@ type User struct {
 	//
 	// It is never returned to anybody: the API maps users without it.
 	PasswordHash string `json:"-"`
+	// WebauthnChallenge is what a passkey registration or sign-in needs
+	// between its two halves, and WebauthnChallengeUntil is when it stops
+	// counting. They are cleared as soon as the second half arrives.
+	WebauthnChallenge      string     `json:"-"`
+	WebauthnChallengeUntil *time.Time `json:"-"`
+
 	// TotpSecret, TotpEnabledAt and TotpRecovery are the second factor; see
 	// TOTPState, which is how they are read and written together. Like the
 	// password they never leave the server.

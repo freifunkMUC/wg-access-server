@@ -90,8 +90,10 @@ type InfoRes struct {
 	TwoFactorEnabled bool `protobuf:"varint,22,opt,name=two_factor_enabled,json=twoFactorEnabled,proto3" json:"two_factor_enabled,omitempty"`
 	// how many recovery codes it has left, so the UI can say when they run low
 	RecoveryCodesLeft int32 `protobuf:"varint,23,opt,name=recovery_codes_left,json=recoveryCodesLeft,proto3" json:"recovery_codes_left,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// how many passkeys this session's account has registered
+	Passkeys      int32 `protobuf:"varint,24,opt,name=passkeys,proto3" json:"passkeys,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InfoRes) Reset() {
@@ -278,12 +280,19 @@ func (x *InfoRes) GetRecoveryCodesLeft() int32 {
 	return 0
 }
 
+func (x *InfoRes) GetPasskeys() int32 {
+	if x != nil {
+		return x.Passkeys
+	}
+	return 0
+}
+
 var File_server_proto protoreflect.FileDescriptor
 
 const file_server_proto_rawDesc = "" +
 	"\n" +
 	"\fserver.proto\x12\x05proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x0fbuildinfo.proto\"\t\n" +
-	"\aInfoReq\"\x86\b\n" +
+	"\aInfoReq\"\xa2\b\n" +
 	"\aInfoRes\x12\x1d\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\tR\tpublicKey\x120\n" +
@@ -312,7 +321,8 @@ const file_server_proto_rawDesc = "" +
 	"\asubject\x18\x14 \x01(\tR\asubject\x126\n" +
 	"\x17password_change_enabled\x18\x15 \x01(\bR\x15passwordChangeEnabled\x12,\n" +
 	"\x12two_factor_enabled\x18\x16 \x01(\bR\x10twoFactorEnabled\x12.\n" +
-	"\x13recovery_codes_left\x18\x17 \x01(\x05R\x11recoveryCodesLeftJ\x04\b\x04\x10\x05R\vhost_vpn_ip22\n" +
+	"\x13recovery_codes_left\x18\x17 \x01(\x05R\x11recoveryCodesLeft\x12\x1a\n" +
+	"\bpasskeys\x18\x18 \x01(\x05R\bpasskeysJ\x04\b\x04\x10\x05R\vhost_vpn_ip22\n" +
 	"\x06Server\x12(\n" +
 	"\x04Info\x12\x0e.proto.InfoReq\x1a\x0e.proto.InfoRes\"\x00B5Z3github.com/freifunkMUC/wg-access-server/proto/protob\x06proto3"
 

@@ -204,10 +204,37 @@ Their devices are unaffected either way - a tunnel does not use anybody's passwo
 With an identity provider there is nothing here to change: the password is theirs, and the page says
 so rather than pretending otherwise.
 
+## Passkeys
+
+A passkey is a credential the browser holds - in a laptop's own authenticator, on a phone, on a
+security key - and it is the better second factor, because it is bound to this site. A page
+pretending to be this one cannot ask for it, and there is nothing a person can be talked into reading
+out over the telephone. Somebody signing in with `simple` auth can register one under the key icon,
+as many as they like: one to carry, one in a drawer.
+
+- It is asked for **after the password**, like a code. Which of the two a person uses is up to them;
+  the sign-in page offers both when both are set up.
+- Removing the last one hands the account back to the password alone, and the question says so.
+- The credential itself never leaves the browser. The server keeps the public half, the name the
+  person gave it, and how often it has been used - the count is what gives a cloned authenticator
+  away.
+
+!!! note
+
+    **Passkeys need HTTPS.** No browser will make or use one on a page served over plain `http://`,
+    localhost aside - that is the WebAuthn specification, not a choice made here. Serve the web UI
+    over TLS, or behind a proxy that does; the page says so rather than offering a button that
+    cannot work.
+
+Which host the passkey is bound to comes from `vpn.externalHost`. Behind a reverse proxy that is the
+name people type, which is what it has to be: the `Host` header is whatever reached the server. With
+no `externalHost` configured, the request's host is used instead.
+
 ## Two-factor authentication
 
 Somebody signing in with `simple` auth can ask for a code from an authenticator app on top of their
-password, under the same key icon. It is TOTP - RFC 6238, six digits, thirty seconds - so every
+password, under the same key icon. It works anywhere, including over plain HTTP, which is why it is
+here beside the passkeys. It is TOTP - RFC 6238, six digits, thirty seconds - so every
 authenticator app does it, and the server checks the step before and after the current one, because
 phones and servers rarely agree on the second.
 

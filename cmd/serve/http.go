@@ -89,28 +89,6 @@ func (s storedPasswords) UserPassword(subject string) (string, string) {
 	return user.PasswordHash, user.PasswordFrom
 }
 
-// storedTwoFactor lets the built-in sign-in ask for a code. It reads the
-// storage on every sign-in rather than holding a copy: a second factor that
-// was turned off a minute ago must not still be asked for, and one that was
-// turned on must be.
-type storedTwoFactor struct {
-	storage storage.Storage
-}
-
-func (t storedTwoFactor) Enabled(subject string) bool {
-	user, err := t.storage.GetUser(subject)
-	if err != nil || user == nil {
-		return false
-	}
-	return user.TwoFactorEnabled()
-}
-
-func (t storedTwoFactor) Check(subject string, code string) bool {
-	// The issuer matters only for the enrolment URI, so it can be anything
-	// here: this only ever checks codes.
-	return users.NewTwoFactor(t.storage, nil, "").Check(subject, code)
-}
-
 func recordLogin(storageBackend storage.Storage, deviceManager *devices.DeviceManager) func(*authsession.Identity) {
 	return func(identity *authsession.Identity) {
 		user := &storage.User{
@@ -141,6 +119,9 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	router.Use(web.RecoveryMiddleware)
 	router.Use(web.SecurityHeadersMiddleware)
 	router.Use(audit.Middleware)
+	// Passkeys are bound to the site the browser is on, which only the HTTP
+	// request knows; the API handlers see it through the context.
+	router.Use(users.Middleware)
 	// Refuses a POST (or PUT, DELETE, ...) a browser sends on behalf of
 	// another site: signing in or out, and the API. Scripts send no such
 	// headers and are not affected.
@@ -159,10 +140,33 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 
 	// Authentication middleware
 	claims := authnz.ClaimsMiddleware(conf)
-	middleware, err := authnz.NewMiddleware(conf.Auth, claims, browserSessions,
+	// What a person can change about their own sign-in: their password, an
+	// authenticator app, passkeys. All three need a built-in provider to
+	// belong to - with an identity provider they are its business.
+	//
+	// The same objects serve the sign-in and the API, so that what one of
+	// them turns on the other asks for, with nothing to keep in step.
+	var passwords *users.Passwords
+	var twoFactor *users.TwoFactor
+	var passkeys *users.Passkeys
+	if conf.Auth.ConfiguredEntries() > 0 {
+		passwords = users.NewPasswords(storageBackend, conf.Auth.ConfiguredEntry, authconfig.PasswordMatches)
+		// The issuer is what an authenticator app lists the account under.
+		twoFactor = users.NewTwoFactor(storageBackend, passwords, twoFactorIssuer(conf))
+		passkeys = users.NewPasskeys(storageBackend,
+			users.RelyingPartyFromHost(conf.ExternalHost, !conf.HttpEnabled))
+		twoFactor.UsePasskeys(passkeys)
+	}
+
+	options := []authnz.Option{
 		authnz.WithLoginRecorder(recordLogin(storageBackend, deviceManager)),
 		authnz.WithPasswords(storedPasswords{storage: storageBackend}),
-		authnz.WithTwoFactor(storedTwoFactor{storage: storageBackend}))
+	}
+	if twoFactor != nil {
+		options = append(options, authnz.WithTwoFactor(twoFactor), authnz.WithPasskeys(passkeys))
+	}
+
+	middleware, err := authnz.NewMiddleware(conf.Auth, claims, browserSessions, options...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up authnz middleware: %w", err)
 	}
@@ -181,17 +185,6 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	site := router.PathPrefix("/").Subrouter()
 	site.Use(authnz.RequireAuthentication)
 
-	// Changing a password needs a built-in provider to change it for: the
-	// configuration says who may sign in, and the storage holds what they
-	// chose. Without one of those providers there is nothing here to change.
-	var passwords *users.Passwords
-	var twoFactor *users.TwoFactor
-	if conf.Auth.ConfiguredEntries() > 0 {
-		passwords = users.NewPasswords(storageBackend, conf.Auth.ConfiguredEntry, authconfig.PasswordMatches)
-		// The issuer is what an authenticator app lists the account under.
-		twoFactor = users.NewTwoFactor(storageBackend, passwords, twoFactorIssuer(conf))
-	}
-
 	apiServices := &api.Services{
 		Config:        conf,
 		DeviceManager: deviceManager,
@@ -199,6 +192,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 		Sessions:      browserSessions,
 		Passwords:     passwords,
 		TwoFactor:     twoFactor,
+		Passkeys:      passkeys,
 		Wg:            wg,
 	}
 

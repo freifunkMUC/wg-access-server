@@ -50,6 +50,14 @@ const (
 	UsersDisableTwoFactorProcedure = "/proto.Users/DisableTwoFactor"
 	// UsersResetTwoFactorProcedure is the fully-qualified name of the Users's ResetTwoFactor RPC.
 	UsersResetTwoFactorProcedure = "/proto.Users/ResetTwoFactor"
+	// UsersListPasskeysProcedure is the fully-qualified name of the Users's ListPasskeys RPC.
+	UsersListPasskeysProcedure = "/proto.Users/ListPasskeys"
+	// UsersBeginPasskeyProcedure is the fully-qualified name of the Users's BeginPasskey RPC.
+	UsersBeginPasskeyProcedure = "/proto.Users/BeginPasskey"
+	// UsersFinishPasskeyProcedure is the fully-qualified name of the Users's FinishPasskey RPC.
+	UsersFinishPasskeyProcedure = "/proto.Users/FinishPasskey"
+	// UsersDeletePasskeyProcedure is the fully-qualified name of the Users's DeletePasskey RPC.
+	UsersDeletePasskeyProcedure = "/proto.Users/DeletePasskey"
 )
 
 // UsersClient is a client for the proto.Users service.
@@ -70,6 +78,12 @@ type UsersClient interface {
 	DisableTwoFactor(context.Context, *connect.Request[proto.DisableTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
 	// admin only: take somebody's second factor away when their phone is gone
 	ResetTwoFactor(context.Context, *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
+	// Passkeys: the other second factor, a credential the browser holds and
+	// that only this site can ask for. Your own only.
+	ListPasskeys(context.Context, *connect.Request[proto.ListPasskeysReq]) (*connect.Response[proto.ListPasskeysRes], error)
+	BeginPasskey(context.Context, *connect.Request[proto.BeginPasskeyReq]) (*connect.Response[proto.BeginPasskeyRes], error)
+	FinishPasskey(context.Context, *connect.Request[proto.FinishPasskeyReq]) (*connect.Response[proto.Passkey], error)
+	DeletePasskey(context.Context, *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewUsersClient constructs a client for the proto.Users service. By default, it uses the Connect
@@ -131,6 +145,30 @@ func NewUsersClient(httpClient connect.HTTPClient, baseURL string, opts ...conne
 			connect.WithSchema(usersMethods.ByName("ResetTwoFactor")),
 			connect.WithClientOptions(opts...),
 		),
+		listPasskeys: connect.NewClient[proto.ListPasskeysReq, proto.ListPasskeysRes](
+			httpClient,
+			baseURL+UsersListPasskeysProcedure,
+			connect.WithSchema(usersMethods.ByName("ListPasskeys")),
+			connect.WithClientOptions(opts...),
+		),
+		beginPasskey: connect.NewClient[proto.BeginPasskeyReq, proto.BeginPasskeyRes](
+			httpClient,
+			baseURL+UsersBeginPasskeyProcedure,
+			connect.WithSchema(usersMethods.ByName("BeginPasskey")),
+			connect.WithClientOptions(opts...),
+		),
+		finishPasskey: connect.NewClient[proto.FinishPasskeyReq, proto.Passkey](
+			httpClient,
+			baseURL+UsersFinishPasskeyProcedure,
+			connect.WithSchema(usersMethods.ByName("FinishPasskey")),
+			connect.WithClientOptions(opts...),
+		),
+		deletePasskey: connect.NewClient[proto.DeletePasskeyReq, emptypb.Empty](
+			httpClient,
+			baseURL+UsersDeletePasskeyProcedure,
+			connect.WithSchema(usersMethods.ByName("DeletePasskey")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -144,6 +182,10 @@ type usersClient struct {
 	confirmTwoFactor *connect.Client[proto.ConfirmTwoFactorReq, proto.ConfirmTwoFactorRes]
 	disableTwoFactor *connect.Client[proto.DisableTwoFactorReq, emptypb.Empty]
 	resetTwoFactor   *connect.Client[proto.ResetTwoFactorReq, emptypb.Empty]
+	listPasskeys     *connect.Client[proto.ListPasskeysReq, proto.ListPasskeysRes]
+	beginPasskey     *connect.Client[proto.BeginPasskeyReq, proto.BeginPasskeyRes]
+	finishPasskey    *connect.Client[proto.FinishPasskeyReq, proto.Passkey]
+	deletePasskey    *connect.Client[proto.DeletePasskeyReq, emptypb.Empty]
 }
 
 // ListUsers calls proto.Users.ListUsers.
@@ -186,6 +228,26 @@ func (c *usersClient) ResetTwoFactor(ctx context.Context, req *connect.Request[p
 	return c.resetTwoFactor.CallUnary(ctx, req)
 }
 
+// ListPasskeys calls proto.Users.ListPasskeys.
+func (c *usersClient) ListPasskeys(ctx context.Context, req *connect.Request[proto.ListPasskeysReq]) (*connect.Response[proto.ListPasskeysRes], error) {
+	return c.listPasskeys.CallUnary(ctx, req)
+}
+
+// BeginPasskey calls proto.Users.BeginPasskey.
+func (c *usersClient) BeginPasskey(ctx context.Context, req *connect.Request[proto.BeginPasskeyReq]) (*connect.Response[proto.BeginPasskeyRes], error) {
+	return c.beginPasskey.CallUnary(ctx, req)
+}
+
+// FinishPasskey calls proto.Users.FinishPasskey.
+func (c *usersClient) FinishPasskey(ctx context.Context, req *connect.Request[proto.FinishPasskeyReq]) (*connect.Response[proto.Passkey], error) {
+	return c.finishPasskey.CallUnary(ctx, req)
+}
+
+// DeletePasskey calls proto.Users.DeletePasskey.
+func (c *usersClient) DeletePasskey(ctx context.Context, req *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error) {
+	return c.deletePasskey.CallUnary(ctx, req)
+}
+
 // UsersHandler is an implementation of the proto.Users service.
 type UsersHandler interface {
 	// admin only
@@ -204,6 +266,12 @@ type UsersHandler interface {
 	DisableTwoFactor(context.Context, *connect.Request[proto.DisableTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
 	// admin only: take somebody's second factor away when their phone is gone
 	ResetTwoFactor(context.Context, *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
+	// Passkeys: the other second factor, a credential the browser holds and
+	// that only this site can ask for. Your own only.
+	ListPasskeys(context.Context, *connect.Request[proto.ListPasskeysReq]) (*connect.Response[proto.ListPasskeysRes], error)
+	BeginPasskey(context.Context, *connect.Request[proto.BeginPasskeyReq]) (*connect.Response[proto.BeginPasskeyRes], error)
+	FinishPasskey(context.Context, *connect.Request[proto.FinishPasskeyReq]) (*connect.Response[proto.Passkey], error)
+	DeletePasskey(context.Context, *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewUsersHandler builds an HTTP handler from the service implementation. It returns the path on
@@ -261,6 +329,30 @@ func NewUsersHandler(svc UsersHandler, opts ...connect.HandlerOption) (string, h
 		connect.WithSchema(usersMethods.ByName("ResetTwoFactor")),
 		connect.WithHandlerOptions(opts...),
 	)
+	usersListPasskeysHandler := connect.NewUnaryHandler(
+		UsersListPasskeysProcedure,
+		svc.ListPasskeys,
+		connect.WithSchema(usersMethods.ByName("ListPasskeys")),
+		connect.WithHandlerOptions(opts...),
+	)
+	usersBeginPasskeyHandler := connect.NewUnaryHandler(
+		UsersBeginPasskeyProcedure,
+		svc.BeginPasskey,
+		connect.WithSchema(usersMethods.ByName("BeginPasskey")),
+		connect.WithHandlerOptions(opts...),
+	)
+	usersFinishPasskeyHandler := connect.NewUnaryHandler(
+		UsersFinishPasskeyProcedure,
+		svc.FinishPasskey,
+		connect.WithSchema(usersMethods.ByName("FinishPasskey")),
+		connect.WithHandlerOptions(opts...),
+	)
+	usersDeletePasskeyHandler := connect.NewUnaryHandler(
+		UsersDeletePasskeyProcedure,
+		svc.DeletePasskey,
+		connect.WithSchema(usersMethods.ByName("DeletePasskey")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/proto.Users/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UsersListUsersProcedure:
@@ -279,6 +371,14 @@ func NewUsersHandler(svc UsersHandler, opts ...connect.HandlerOption) (string, h
 			usersDisableTwoFactorHandler.ServeHTTP(w, r)
 		case UsersResetTwoFactorProcedure:
 			usersResetTwoFactorHandler.ServeHTTP(w, r)
+		case UsersListPasskeysProcedure:
+			usersListPasskeysHandler.ServeHTTP(w, r)
+		case UsersBeginPasskeyProcedure:
+			usersBeginPasskeyHandler.ServeHTTP(w, r)
+		case UsersFinishPasskeyProcedure:
+			usersFinishPasskeyHandler.ServeHTTP(w, r)
+		case UsersDeletePasskeyProcedure:
+			usersDeletePasskeyHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -318,4 +418,20 @@ func (UnimplementedUsersHandler) DisableTwoFactor(context.Context, *connect.Requ
 
 func (UnimplementedUsersHandler) ResetTwoFactor(context.Context, *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.ResetTwoFactor is not implemented"))
+}
+
+func (UnimplementedUsersHandler) ListPasskeys(context.Context, *connect.Request[proto.ListPasskeysReq]) (*connect.Response[proto.ListPasskeysRes], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.ListPasskeys is not implemented"))
+}
+
+func (UnimplementedUsersHandler) BeginPasskey(context.Context, *connect.Request[proto.BeginPasskeyReq]) (*connect.Response[proto.BeginPasskeyRes], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.BeginPasskey is not implemented"))
+}
+
+func (UnimplementedUsersHandler) FinishPasskey(context.Context, *connect.Request[proto.FinishPasskeyReq]) (*connect.Response[proto.Passkey], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.FinishPasskey is not implemented"))
+}
+
+func (UnimplementedUsersHandler) DeletePasskey(context.Context, *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.DeletePasskey is not implemented"))
 }

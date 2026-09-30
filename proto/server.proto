@@ -52,4 +52,6 @@ message InfoRes {
   bool two_factor_enabled = 22;
   // how many recovery codes it has left, so the UI can say when they run low
   int32 recovery_codes_left = 23;
+  // how many passkeys this session's account has registered
+  int32 passkeys = 24;
 }

@@ -28,6 +28,8 @@ type UserService struct {
 	// TwoFactor is the second factor of the built-in sign-in, nil for the
 	// same reason.
 	TwoFactor *users.TwoFactor
+	// Passkeys are the other second factor, nil for the same reason.
+	Passkeys *users.Passkeys
 	// Tokens is nil in tests that do not care about them.
 	Tokens *apitokens.Manager
 	// Sessions is nil in tests that do not care about them.
@@ -335,6 +337,108 @@ func (d *UserService) ResetTwoFactor(ctx context.Context, request *connect.Reque
 	audit.Log(ctx, audit.UserTwoFactorReset, logrus.Fields{"target_user": request.Msg.GetName()})
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
+// ListPasskeys returns the passkeys of whoever is asking.
+func (d *UserService) ListPasskeys(ctx context.Context, _ *connect.Request[proto.ListPasskeysReq]) (*connect.Response[proto.ListPasskeysRes], error) {
+	user, err := d.passkeysFor(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	passkeys, err := d.Passkeys.List(user.Subject)
+	if err != nil {
+		return nil, internalError(ctx, err, "failed to list the passkeys")
+	}
+
+	items := []*proto.Passkey{}
+	for _, passkey := range passkeys {
+		items = append(items, &proto.Passkey{
+			Id:         passkey.ID,
+			Name:       passkey.Name,
+			CreatedAt:  timeToTimestamp(&passkey.CreatedAt),
+			LastUsedAt: timeToTimestamp(passkey.LastUsedAt),
+		})
+	}
+
+	return connect.NewResponse(&proto.ListPasskeysRes{Items: items}), nil
+}
+
+// BeginPasskey hands the browser what it needs to make a credential.
+func (d *UserService) BeginPasskey(ctx context.Context, _ *connect.Request[proto.BeginPasskeyReq]) (*connect.Response[proto.BeginPasskeyRes], error) {
+	user, err := d.passkeysFor(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	options, err := d.Passkeys.BeginRegistration(users.RequestFrom(ctx), user.Subject)
+	if err != nil {
+		return nil, internalError(ctx, err, "failed to start the passkey registration")
+	}
+
+	return connect.NewResponse(&proto.BeginPasskeyRes{Options: string(options)}), nil
+}
+
+// FinishPasskey stores what the browser made.
+func (d *UserService) FinishPasskey(ctx context.Context, request *connect.Request[proto.FinishPasskeyReq]) (*connect.Response[proto.Passkey], error) {
+	user, err := d.passkeysFor(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	passkey, err := d.Passkeys.FinishRegistration(users.RequestFrom(ctx), user.Subject,
+		request.Msg.GetName(), []byte(request.Msg.GetCredential()))
+	if err != nil {
+		if errors.Is(err, users.ErrNoChallenge) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		}
+		// What the browser sent was not accepted - that is the caller's
+		// business, not an internal failure.
+		logrus.Warn(fmt.Errorf("a passkey registration was refused: %w", err))
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("that passkey was not accepted"))
+	}
+
+	audit.Log(ctx, audit.UserPasskeyAdd, logrus.Fields{"passkey": passkey.Name})
+
+	return connect.NewResponse(&proto.Passkey{
+		Id:        passkey.ID,
+		Name:      passkey.Name,
+		CreatedAt: timeToTimestamp(&passkey.CreatedAt),
+	}), nil
+}
+
+// DeletePasskey removes one. Somebody else's is reported as missing, so that
+// ids cannot be probed.
+func (d *UserService) DeletePasskey(ctx context.Context, request *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error) {
+	user, err := d.passkeysFor(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := d.Passkeys.Delete(user.Subject, request.Msg.GetId()); err != nil {
+		if errors.Is(err, users.ErrNoPasskey) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("no such passkey"))
+		}
+		return nil, internalError(ctx, err, "failed to delete the passkey")
+	}
+
+	audit.Log(ctx, audit.UserPasskeyDelete, logrus.Fields{"passkey": request.Msg.GetId()})
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
+// passkeysFor returns who is asking, or the reason they have no passkeys to
+// speak of.
+func (d *UserService) passkeysFor(ctx context.Context) (*authsession.Identity, error) {
+	user, err := authsession.CurrentUser(ctx)
+	if err != nil {
+		return nil, errNotAuthenticated()
+	}
+	if d.Passkeys == nil || !authconfig.HasPassword(user.Provider) {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("this account signs in through an identity provider: its passkeys belong there"))
+	}
+	return user, nil
 }
 
 func mapUser(u *devices.User) *proto.User {

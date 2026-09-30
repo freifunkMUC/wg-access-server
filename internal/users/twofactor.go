@@ -46,16 +46,36 @@ const (
 type TwoFactor struct {
 	storage   storage.UserStorage
 	passwords *Passwords
-	issuer    string
-	now       func() time.Time
+	// passkeys are the other kind of second factor. Somebody with a passkey
+	// is asked for one even without a code from an app.
+	passkeys *Passkeys
+	issuer   string
+	now      func() time.Time
+}
+
+// UsePasskeys says where the passkeys are, so that having one counts as a
+// second factor.
+func (t *TwoFactor) UsePasskeys(passkeys *Passkeys) {
+	t.passkeys = passkeys
 }
 
 func NewTwoFactor(s storage.UserStorage, passwords *Passwords, issuer string) *TwoFactor {
 	return &TwoFactor{storage: s, passwords: passwords, issuer: issuer, now: time.Now}
 }
 
-// Enabled says whether this person is asked for a code when they sign in.
+// Enabled says whether this person is asked for a second factor when they
+// sign in - a code from their app, or a passkey.
 func (t *TwoFactor) Enabled(subject string) bool {
+	if t.passkeys != nil && t.passkeys.Has(subject) {
+		return true
+	}
+	return t.CodesEnabled(subject)
+}
+
+// CodesEnabled is the narrower question: whether they have an authenticator
+// app set up. The UI asks it to know what to offer, and the sign-in asks it
+// to know whether a code field is worth showing.
+func (t *TwoFactor) CodesEnabled(subject string) bool {
 	user, err := t.storage.GetUser(subject)
 	if err != nil || user == nil {
 		return false

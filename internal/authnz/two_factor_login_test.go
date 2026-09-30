@@ -24,6 +24,9 @@ type fakeTwoFactor struct {
 
 func (f *fakeTwoFactor) Enabled(subject string) bool { return f.enabled[subject] }
 
+// the codes are the only second factor this fake has
+func (f *fakeTwoFactor) CodesEnabled(subject string) bool { return f.enabled[subject] }
+
 func (f *fakeTwoFactor) Check(subject string, code string) bool {
 	f.checked++
 	want, ok := f.codes[subject]

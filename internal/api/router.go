@@ -34,7 +34,9 @@ type Services struct {
 	Passwords *users.Passwords
 	// TwoFactor is nil for the same reason.
 	TwoFactor *users.TwoFactor
-	Wg        wgembed.WireGuardInterface
+	// Passkeys is nil for the same reason.
+	Passkeys *users.Passkeys
+	Wg       wgembed.WireGuardInterface
 }
 
 // Router serves the API through connectrpc. Besides its own protocol,
@@ -58,6 +60,7 @@ func Router(deps *Services) http.Handler {
 				Sessions:      deps.Sessions,
 				Passwords:     deps.Passwords,
 				TwoFactor:     deps.TwoFactor,
+				Passkeys:      deps.Passkeys,
 			}, options)
 		},
 		func() (string, http.Handler) {
@@ -73,6 +76,7 @@ func Router(deps *Services) http.Handler {
 				DeviceManager:  deps.DeviceManager,
 				PasswordChange: deps.Passwords != nil,
 				TwoFactor:      deps.TwoFactor,
+				Passkeys:       deps.Passkeys,
 			}, options)
 		},
 	} {

@@ -26,6 +26,13 @@ service Users {
   rpc DisableTwoFactor(DisableTwoFactorReq) returns (google.protobuf.Empty) {}
   // admin only: take somebody's second factor away when their phone is gone
   rpc ResetTwoFactor(ResetTwoFactorReq) returns (google.protobuf.Empty) {}
+
+  // Passkeys: the other second factor, a credential the browser holds and
+  // that only this site can ask for. Your own only.
+  rpc ListPasskeys(ListPasskeysReq) returns (ListPasskeysRes) {}
+  rpc BeginPasskey(BeginPasskeyReq) returns (BeginPasskeyRes) {}
+  rpc FinishPasskey(FinishPasskeyReq) returns (Passkey) {}
+  rpc DeletePasskey(DeletePasskeyReq) returns (google.protobuf.Empty) {}
 }
 
 message User {
@@ -88,6 +95,40 @@ message DisableTwoFactorReq {
 
 message ResetTwoFactorReq {
   string name = 1;
+}
+
+message Passkey {
+  string id = 1;
+  // what the person called it, so they can tell one from another
+  string name = 2;
+  google.protobuf.Timestamp created_at = 3;
+  // unset: it has not been used to sign in yet
+  google.protobuf.Timestamp last_used_at = 4;
+}
+
+message ListPasskeysReq {}
+
+message ListPasskeysRes {
+  repeated Passkey items = 1;
+}
+
+message BeginPasskeyReq {}
+
+// What the browser needs to make a credential, as the JSON the WebAuthn API
+// takes. It is passed through rather than taken apart: it is the browser's
+// business, not this server's.
+message BeginPasskeyRes {
+  string options = 1;
+}
+
+message FinishPasskeyReq {
+  // what the browser made, as JSON
+  string credential = 1;
+  string name = 2;
+}
+
+message DeletePasskeyReq {
+  string id = 1;
 }
 
 message RevokeAccessReq {

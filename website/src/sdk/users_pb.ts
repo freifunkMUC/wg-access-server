@@ -93,6 +93,42 @@ export class Users {
 		googleProtobufEmpty.Empty.deserializeBinary
 	);
 
+	private methodInfoListPasskeys = new grpcWeb.MethodDescriptor<ListPasskeysReq, ListPasskeysRes>(
+		"ListPasskeys",
+		'unary',
+		ListPasskeysReq as unknown as MessageCtor<ListPasskeysReq>,
+		ListPasskeysRes as unknown as MessageCtor<ListPasskeysRes>,
+		(req: ListPasskeysReq) => req.serializeBinary(),
+		ListPasskeysRes.deserializeBinary
+	);
+
+	private methodInfoBeginPasskey = new grpcWeb.MethodDescriptor<BeginPasskeyReq, BeginPasskeyRes>(
+		"BeginPasskey",
+		'unary',
+		BeginPasskeyReq as unknown as MessageCtor<BeginPasskeyReq>,
+		BeginPasskeyRes as unknown as MessageCtor<BeginPasskeyRes>,
+		(req: BeginPasskeyReq) => req.serializeBinary(),
+		BeginPasskeyRes.deserializeBinary
+	);
+
+	private methodInfoFinishPasskey = new grpcWeb.MethodDescriptor<FinishPasskeyReq, Passkey>(
+		"FinishPasskey",
+		'unary',
+		FinishPasskeyReq as unknown as MessageCtor<FinishPasskeyReq>,
+		Passkey as unknown as MessageCtor<Passkey>,
+		(req: FinishPasskeyReq) => req.serializeBinary(),
+		Passkey.deserializeBinary
+	);
+
+	private methodInfoDeletePasskey = new grpcWeb.MethodDescriptor<DeletePasskeyReq, googleProtobufEmpty.Empty>(
+		"DeletePasskey",
+		'unary',
+		DeletePasskeyReq as unknown as MessageCtor<DeletePasskeyReq>,
+		googleProtobufEmpty.Empty as unknown as MessageCtor<googleProtobufEmpty.Empty>,
+		(req: DeletePasskeyReq) => req.serializeBinary(),
+		googleProtobufEmpty.Empty.deserializeBinary
+	);
+
 	constructor(
 		private hostname: string,
 		private defaultMetadata?: () => grpcWeb.Metadata,
@@ -239,6 +275,82 @@ export class Users {
 				message,
 				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
 				this.methodInfoResetTwoFactor,
+				(err: grpcWeb.Error, res: googleProtobufEmpty.Empty) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(res.toObject());
+					}
+				},
+			);
+		});
+	}
+
+	listPasskeys(req: ListPasskeysReq.AsObject, metadata?: grpcWeb.Metadata): Promise<ListPasskeysRes.AsObject> {
+		return new Promise((resolve, reject) => {
+			const message = ListPasskeysReqFromObject(req);
+			this.client_.rpcCall(
+				this.hostname + '/proto.Users/ListPasskeys',
+				message,
+				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
+				this.methodInfoListPasskeys,
+				(err: grpcWeb.Error, res: ListPasskeysRes) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(res.toObject());
+					}
+				},
+			);
+		});
+	}
+
+	beginPasskey(req: BeginPasskeyReq.AsObject, metadata?: grpcWeb.Metadata): Promise<BeginPasskeyRes.AsObject> {
+		return new Promise((resolve, reject) => {
+			const message = BeginPasskeyReqFromObject(req);
+			this.client_.rpcCall(
+				this.hostname + '/proto.Users/BeginPasskey',
+				message,
+				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
+				this.methodInfoBeginPasskey,
+				(err: grpcWeb.Error, res: BeginPasskeyRes) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(res.toObject());
+					}
+				},
+			);
+		});
+	}
+
+	finishPasskey(req: FinishPasskeyReq.AsObject, metadata?: grpcWeb.Metadata): Promise<Passkey.AsObject> {
+		return new Promise((resolve, reject) => {
+			const message = FinishPasskeyReqFromObject(req);
+			this.client_.rpcCall(
+				this.hostname + '/proto.Users/FinishPasskey',
+				message,
+				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
+				this.methodInfoFinishPasskey,
+				(err: grpcWeb.Error, res: Passkey) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(res.toObject());
+					}
+				},
+			);
+		});
+	}
+
+	deletePasskey(req: DeletePasskeyReq.AsObject, metadata?: grpcWeb.Metadata): Promise<googleProtobufEmpty.Empty.AsObject> {
+		return new Promise((resolve, reject) => {
+			const message = DeletePasskeyReqFromObject(req);
+			this.client_.rpcCall(
+				this.hostname + '/proto.Users/DeletePasskey',
+				message,
+				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
+				this.methodInfoDeletePasskey,
 				(err: grpcWeb.Error, res: googleProtobufEmpty.Empty) => {
 					if (err) {
 						reject(err);
@@ -1191,6 +1303,547 @@ export class ResetTwoFactorReq extends jspb.Message {
 	}
 
 }
+export declare namespace Passkey {
+	export type AsObject = {
+		id: string,
+		name: string,
+		createdAt?: googleProtobufTimestamp.Timestamp.AsObject,
+		lastUsedAt?: googleProtobufTimestamp.Timestamp.AsObject,
+	}
+}
+
+export class Passkey extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, Passkey.repeatedFields_, null);
+	}
+
+
+	getId(): string {return jspb.Message.getFieldWithDefault(this, 1, "");
+	}
+
+	setId(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 1, value);
+	}
+
+	getName(): string {return jspb.Message.getFieldWithDefault(this, 2, "");
+	}
+
+	setName(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 2, value);
+	}
+
+	getCreatedAt(): googleProtobufTimestamp.Timestamp {
+		return jspb.Message.getWrapperField(this, googleProtobufTimestamp.Timestamp, 3);
+	}
+
+	setCreatedAt(value?: googleProtobufTimestamp.Timestamp): void {
+		(jspb.Message as any).setWrapperField(this, 3, value);
+	}
+
+	getLastUsedAt(): googleProtobufTimestamp.Timestamp {
+		return jspb.Message.getWrapperField(this, googleProtobufTimestamp.Timestamp, 4);
+	}
+
+	setLastUsedAt(value?: googleProtobufTimestamp.Timestamp): void {
+		(jspb.Message as any).setWrapperField(this, 4, value);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		Passkey.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): Passkey.AsObject {
+		let f: any;
+		return {
+			id: this.getId(),
+			name: this.getName(),
+			createdAt: (f = this.getCreatedAt()) && f.toObject(),
+			lastUsedAt: (f = this.getLastUsedAt()) && f.toObject(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: Passkey, writer: jspb.BinaryWriter): void {
+		const field1 = message.getId();
+		if (field1.length > 0) {
+			writer.writeString(1, field1);
+		}
+		const field2 = message.getName();
+		if (field2.length > 0) {
+			writer.writeString(2, field2);
+		}
+		const field3 = message.getCreatedAt();
+		if (field3 != null) {
+			writer.writeMessage(3, field3, googleProtobufTimestamp.Timestamp.serializeBinaryToWriter);
+		}
+		const field4 = message.getLastUsedAt();
+		if (field4 != null) {
+			writer.writeMessage(4, field4, googleProtobufTimestamp.Timestamp.serializeBinaryToWriter);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): Passkey {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new Passkey();
+		return Passkey.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: Passkey, reader: jspb.BinaryReader): Passkey {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readString()
+				message.setId(field1);
+				break;
+			case 2:
+				const field2 = reader.readString()
+				message.setName(field2);
+				break;
+			case 3:
+				const field3 = new googleProtobufTimestamp.Timestamp();
+				reader.readMessage(field3, googleProtobufTimestamp.Timestamp.deserializeBinaryFromReader);
+				message.setCreatedAt(field3);
+				break;
+			case 4:
+				const field4 = new googleProtobufTimestamp.Timestamp();
+				reader.readMessage(field4, googleProtobufTimestamp.Timestamp.deserializeBinaryFromReader);
+				message.setLastUsedAt(field4);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
+export declare namespace ListPasskeysReq {
+	export type AsObject = {
+	}
+}
+
+export class ListPasskeysReq extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, ListPasskeysReq.repeatedFields_, null);
+	}
+
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		ListPasskeysReq.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): ListPasskeysReq.AsObject {
+		let f: any;
+		return {
+		};
+	}
+
+	static serializeBinaryToWriter(message: ListPasskeysReq, writer: jspb.BinaryWriter): void {
+	}
+
+	static deserializeBinary(bytes: Uint8Array): ListPasskeysReq {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new ListPasskeysReq();
+		return ListPasskeysReq.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: ListPasskeysReq, reader: jspb.BinaryReader): ListPasskeysReq {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
+export declare namespace ListPasskeysRes {
+	export type AsObject = {
+		items: Array<Passkey.AsObject>,
+	}
+}
+
+export class ListPasskeysRes extends jspb.Message {
+
+	private static repeatedFields_ = [
+		1,
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, ListPasskeysRes.repeatedFields_, null);
+	}
+
+
+	getItems(): Array<Passkey> {
+		return jspb.Message.getRepeatedWrapperField(this, Passkey, 1);
+	}
+
+	setItems(value: Array<Passkey>): void {
+		(jspb.Message as any).setRepeatedWrapperField(this, 1, value);
+	}
+
+	addItems(value?: Passkey, index?: number): Passkey {
+		return jspb.Message.addToRepeatedWrapperField(this, 1, value, Passkey, index);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		ListPasskeysRes.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): ListPasskeysRes.AsObject {
+		let f: any;
+		return {
+			items: this.getItems().map((item) => item.toObject()),
+		};
+	}
+
+	static serializeBinaryToWriter(message: ListPasskeysRes, writer: jspb.BinaryWriter): void {
+		const field1 = message.getItems();
+		if (field1.length > 0) {
+			writer.writeRepeatedMessage(1, field1, Passkey.serializeBinaryToWriter);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): ListPasskeysRes {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new ListPasskeysRes();
+		return ListPasskeysRes.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: ListPasskeysRes, reader: jspb.BinaryReader): ListPasskeysRes {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = new Passkey();
+				reader.readMessage(field1, Passkey.deserializeBinaryFromReader);
+				message.addItems(field1);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
+export declare namespace BeginPasskeyReq {
+	export type AsObject = {
+	}
+}
+
+export class BeginPasskeyReq extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, BeginPasskeyReq.repeatedFields_, null);
+	}
+
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		BeginPasskeyReq.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): BeginPasskeyReq.AsObject {
+		let f: any;
+		return {
+		};
+	}
+
+	static serializeBinaryToWriter(message: BeginPasskeyReq, writer: jspb.BinaryWriter): void {
+	}
+
+	static deserializeBinary(bytes: Uint8Array): BeginPasskeyReq {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new BeginPasskeyReq();
+		return BeginPasskeyReq.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: BeginPasskeyReq, reader: jspb.BinaryReader): BeginPasskeyReq {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
+export declare namespace BeginPasskeyRes {
+	export type AsObject = {
+		options: string,
+	}
+}
+
+export class BeginPasskeyRes extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, BeginPasskeyRes.repeatedFields_, null);
+	}
+
+
+	getOptions(): string {return jspb.Message.getFieldWithDefault(this, 1, "");
+	}
+
+	setOptions(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 1, value);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		BeginPasskeyRes.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): BeginPasskeyRes.AsObject {
+		let f: any;
+		return {
+			options: this.getOptions(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: BeginPasskeyRes, writer: jspb.BinaryWriter): void {
+		const field1 = message.getOptions();
+		if (field1.length > 0) {
+			writer.writeString(1, field1);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): BeginPasskeyRes {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new BeginPasskeyRes();
+		return BeginPasskeyRes.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: BeginPasskeyRes, reader: jspb.BinaryReader): BeginPasskeyRes {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readString()
+				message.setOptions(field1);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
+export declare namespace FinishPasskeyReq {
+	export type AsObject = {
+		credential: string,
+		name: string,
+	}
+}
+
+export class FinishPasskeyReq extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, FinishPasskeyReq.repeatedFields_, null);
+	}
+
+
+	getCredential(): string {return jspb.Message.getFieldWithDefault(this, 1, "");
+	}
+
+	setCredential(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 1, value);
+	}
+
+	getName(): string {return jspb.Message.getFieldWithDefault(this, 2, "");
+	}
+
+	setName(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 2, value);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		FinishPasskeyReq.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): FinishPasskeyReq.AsObject {
+		let f: any;
+		return {
+			credential: this.getCredential(),
+			name: this.getName(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: FinishPasskeyReq, writer: jspb.BinaryWriter): void {
+		const field1 = message.getCredential();
+		if (field1.length > 0) {
+			writer.writeString(1, field1);
+		}
+		const field2 = message.getName();
+		if (field2.length > 0) {
+			writer.writeString(2, field2);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): FinishPasskeyReq {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new FinishPasskeyReq();
+		return FinishPasskeyReq.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: FinishPasskeyReq, reader: jspb.BinaryReader): FinishPasskeyReq {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readString()
+				message.setCredential(field1);
+				break;
+			case 2:
+				const field2 = reader.readString()
+				message.setName(field2);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
+export declare namespace DeletePasskeyReq {
+	export type AsObject = {
+		id: string,
+	}
+}
+
+export class DeletePasskeyReq extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, DeletePasskeyReq.repeatedFields_, null);
+	}
+
+
+	getId(): string {return jspb.Message.getFieldWithDefault(this, 1, "");
+	}
+
+	setId(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 1, value);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		DeletePasskeyReq.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): DeletePasskeyReq.AsObject {
+		let f: any;
+		return {
+			id: this.getId(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: DeletePasskeyReq, writer: jspb.BinaryWriter): void {
+		const field1 = message.getId();
+		if (field1.length > 0) {
+			writer.writeString(1, field1);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): DeletePasskeyReq {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new DeletePasskeyReq();
+		return DeletePasskeyReq.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: DeletePasskeyReq, reader: jspb.BinaryReader): DeletePasskeyReq {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readString()
+				message.setId(field1);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
 export declare namespace RevokeAccessReq {
 	export type AsObject = {
 		name: string,
@@ -1492,6 +2145,73 @@ function ResetTwoFactorReqFromObject(obj: ResetTwoFactorReq.AsObject | undefined
 	}
 	const message = new ResetTwoFactorReq();
 	message.setName(obj.name);
+	return message;
+}
+
+function PasskeyFromObject(obj: Passkey.AsObject | undefined): Passkey | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new Passkey();
+	message.setId(obj.id);
+	message.setName(obj.name);
+	message.setCreatedAt(TimestampFromObject(obj.createdAt));
+	message.setLastUsedAt(TimestampFromObject(obj.lastUsedAt));
+	return message;
+}
+
+function ListPasskeysReqFromObject(obj: ListPasskeysReq.AsObject | undefined): ListPasskeysReq | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new ListPasskeysReq();
+	return message;
+}
+
+function ListPasskeysResFromObject(obj: ListPasskeysRes.AsObject | undefined): ListPasskeysRes | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new ListPasskeysRes();
+	(obj.items || [])
+		.map((item) => PasskeyFromObject(item))
+		.forEach((item) => message.addItems(item));
+	return message;
+}
+
+function BeginPasskeyReqFromObject(obj: BeginPasskeyReq.AsObject | undefined): BeginPasskeyReq | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new BeginPasskeyReq();
+	return message;
+}
+
+function BeginPasskeyResFromObject(obj: BeginPasskeyRes.AsObject | undefined): BeginPasskeyRes | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new BeginPasskeyRes();
+	message.setOptions(obj.options);
+	return message;
+}
+
+function FinishPasskeyReqFromObject(obj: FinishPasskeyReq.AsObject | undefined): FinishPasskeyReq | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new FinishPasskeyReq();
+	message.setCredential(obj.credential);
+	message.setName(obj.name);
+	return message;
+}
+
+function DeletePasskeyReqFromObject(obj: DeletePasskeyReq.AsObject | undefined): DeletePasskeyReq | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new DeletePasskeyReq();
+	message.setId(obj.id);
 	return message;
 }
 

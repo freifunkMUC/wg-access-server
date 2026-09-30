@@ -2,6 +2,7 @@ package authruntime
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -39,11 +40,26 @@ type Passwords interface {
 // TwoFactor is the second factor of the built-in sign-in. Nil when nothing
 // keeps one, which is a server where a right password is the whole login.
 type TwoFactor interface {
-	// Enabled says whether this person is asked for a code.
+	// Enabled says whether this person is asked for a second factor at all.
 	Enabled(subject string) bool
+	// CodesEnabled says whether an authenticator app is one of them, so that
+	// a code field is only shown to somebody who can fill it in.
+	CodesEnabled(subject string) bool
 	// Check says whether a code is theirs - from their app, or one of their
 	// recovery codes, which it uses up.
 	Check(subject string, code string) bool
+}
+
+// Passkeys is the other second factor: a credential the browser holds, bound
+// to this site. Nil when nothing keeps one.
+type Passkeys interface {
+	// Has says whether this person can sign in with a passkey.
+	Has(subject string) bool
+	// BeginLogin returns the options the browser needs, as JSON.
+	BeginLogin(r *http.Request, subject string) (json.RawMessage, error)
+	// FinishLogin says whether the browser's answer proves a passkey of
+	// this person.
+	FinishLogin(r *http.Request, subject string, answer []byte) error
 }
 
 type ProviderRuntime struct {
@@ -59,6 +75,8 @@ type ProviderRuntime struct {
 	passwords Passwords
 	// twoFactor is the second factor, nil when nothing keeps one.
 	twoFactor TwoFactor
+	// passkeys are the other second factor, nil for the same reason.
+	passkeys Passkeys
 }
 
 func NewProviderRuntime(store sessions.Store, browserSessions authsession.Sessions) *ProviderRuntime {
@@ -90,9 +108,40 @@ func (p *ProviderRuntime) TwoFactorRequired(subject string) bool {
 	return p.twoFactor != nil && p.twoFactor.Enabled(subject)
 }
 
+// TwoFactorCodes says whether this person has an authenticator app set up.
+func (p *ProviderRuntime) TwoFactorCodes(subject string) bool {
+	return p.twoFactor != nil && p.twoFactor.CodesEnabled(subject)
+}
+
 // CheckTwoFactor says whether the code is theirs.
 func (p *ProviderRuntime) CheckTwoFactor(subject string, code string) bool {
 	return p.twoFactor != nil && p.twoFactor.Check(subject, code)
+}
+
+// UsePasskeys registers where the passkeys are kept.
+func (p *ProviderRuntime) UsePasskeys(passkeys Passkeys) {
+	p.passkeys = passkeys
+}
+
+// HasPasskey says whether this person can sign in with one.
+func (p *ProviderRuntime) HasPasskey(subject string) bool {
+	return p.passkeys != nil && p.passkeys.Has(subject)
+}
+
+// BeginPasskeyLogin returns what the browser needs to answer with a passkey.
+func (p *ProviderRuntime) BeginPasskeyLogin(r *http.Request, subject string) (json.RawMessage, error) {
+	if p.passkeys == nil {
+		return nil, errors.New("this server keeps no passkeys")
+	}
+	return p.passkeys.BeginLogin(r, subject)
+}
+
+// FinishPasskeyLogin says whether the answer proves a passkey of this person.
+func (p *ProviderRuntime) FinishPasskeyLogin(r *http.Request, subject string, answer []byte) error {
+	if p.passkeys == nil {
+		return errors.New("this server keeps no passkeys")
+	}
+	return p.passkeys.FinishLogin(r, subject, answer)
 }
 
 // OnLogin registers what to do when somebody signed in. Every provider ends

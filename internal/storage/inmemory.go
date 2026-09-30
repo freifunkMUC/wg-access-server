@@ -18,6 +18,7 @@ type InMemoryStorage struct {
 	tokens       map[string]*APIToken
 	users        map[string]*User
 	sessions     map[string]*Session
+	passkeys     map[string]*Passkey
 }
 
 func NewMemoryStorage() *InMemoryStorage {
@@ -28,6 +29,7 @@ func NewMemoryStorage() *InMemoryStorage {
 		tokens:           make(map[string]*APIToken),
 		users:            make(map[string]*User),
 		sessions:         make(map[string]*Session),
+		passkeys:         make(map[string]*Passkey),
 	}
 }
 
