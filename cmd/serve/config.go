@@ -128,6 +128,14 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		}
 	}
 
+	// A passkey is bound to a host name, and with nothing configured that
+	// name comes from the Host header of whichever request registered it.
+	// Behind a proxy the header is not this server's to decide, so say so
+	// while there is still time to set the name people actually type.
+	if cmd.AppConfig.ExternalHost == "" && cmd.AppConfig.Auth.ConfiguredEntries() > 0 {
+		logrus.Warn("vpn.externalHost is not set: a passkey is then bound to whatever host the registering request carried, and one registered under a different name will not be offered again. Set it to the name people type to reach this server")
+	}
+
 	// we'll generate a private key when using memory://
 	// storage only.
 	if cmd.AppConfig.WireGuard.PrivateKey == "" {
