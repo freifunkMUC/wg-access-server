@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/netip"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/goccy/go-yaml"
@@ -17,6 +18,71 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/network"
 	"github.com/freifunkMUC/wg-access-server/internal/resolvconf"
 )
+
+// unknownField picks the field name out of the decoder's error. The error
+// itself quotes the offending line of the file, so it must not be logged: a
+// misspelled 'adminPassword' would put the password in the log.
+var unknownField = regexp.MustCompile(`unknown field "([^"]+)"`)
+
+// warnAboutUnknownKeys reports keys the configuration does not have a home
+// for. They are dropped without a word otherwise, so a setting under the
+// wrong heading - externalHost under 'wireguard:', where it does not belong -
+// reads as configured and does nothing.
+//
+// A warning, never a refusal to start: a file written for a newer version, or
+// carrying a key that has since been removed, must not keep a server down.
+func warnAboutUnknownKeys(document []byte) {
+	var probe config.AppConfig
+	err := yaml.UnmarshalWithOptions(document, &probe, yaml.DisallowUnknownField())
+	if err == nil {
+		return
+	}
+
+	// Only the name, never the error text, and never the value beside it.
+	if found := unknownField.FindStringSubmatch(err.Error()); found != nil {
+		logrus.Warnf("the config file sets '%s', which this version does not know - it is being ignored. A setting under the wrong heading looks like this too", found[1])
+		return
+	}
+
+	// Some other complaint about the document. The decode below reports it
+	// properly if it matters, so say only that this check found something.
+	logrus.Warn("the config file could not be checked for unknown settings")
+}
+
+// fileOverridesEnv pairs a config file key with the environment variable that
+// sets the same thing, for the settings where the file quietly winning is
+// expensive: an admin account that turns out not to exist, or a database that
+// is not the one that was meant.
+//
+// The precedence is deliberate - the file is read last, and the comment on
+// ReadConfig has always said so - but nothing said it at the moment it
+// happened, and being locked out of the web UI is a poor way to find out.
+var fileOverridesEnv = []struct{ key, envar string }{
+	{"adminUsername", "WG_ADMIN_USERNAME"},
+	{"adminPassword", "WG_ADMIN_PASSWORD"},
+	{"storage", "WG_STORAGE"},
+	{"externalHost", "WG_EXTERNAL_HOST"},
+	{"port", "WG_PORT"},
+}
+
+// warnAboutOverriddenEnv reports the keys the config file sets that were also
+// given in the environment. document is the file as it parsed, before it is
+// decoded into the configuration.
+func warnAboutOverriddenEnv(document any) {
+	keys, ok := document.(map[string]any)
+	if !ok {
+		return
+	}
+	for _, both := range fileOverridesEnv {
+		if _, inFile := keys[both.key]; !inFile {
+			continue
+		}
+		if _, inEnv := os.LookupEnv(both.envar); !inEnv {
+			continue
+		}
+		logrus.Warnf("%s is set, but the config file also sets '%s'. The config file is read last and wins, so %s has no effect - remove one of the two", both.envar, both.key, both.envar)
+	}
+}
 
 // ReadConfig reads the config file from disk if specified and overrides any env vars or cmdline options
 func (cmd *servecmd) ReadConfig() *config.AppConfig {
@@ -34,6 +100,8 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 			logrus.Fatal(fmt.Errorf("failed to bind configuration file: %w", err))
 		}
 		if configured != nil {
+			warnAboutOverriddenEnv(configured)
+			warnAboutUnknownKeys(b)
 			if err := yaml.Unmarshal(b, &cmd.AppConfig); err != nil {
 				logrus.Fatal(fmt.Errorf("failed to bind configuration file: %w", err))
 			}
