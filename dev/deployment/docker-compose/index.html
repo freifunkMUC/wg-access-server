@@ -861,6 +861,10 @@ Encrypt's challenge and redirects everything else to HTTPS.</p>
 <span class="w">      </span><span class="nt">WG_ADMIN_PASSWORD</span><span class="p">:</span><span class="w"> </span><span class="s">"${WG_ADMIN_PASSWORD:?set</span><span class="nv"> </span><span class="s">WG_ADMIN_PASSWORD,</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">password</span><span class="nv"> </span><span class="s">of</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">admin</span><span class="nv"> </span><span class="s">account}"</span>
 <span class="w">      </span><span class="nt">WG_WIREGUARD_PRIVATE_KEY</span><span class="p">:</span><span class="w"> </span><span class="s">"${WG_WIREGUARD_PRIVATE_KEY:?set</span><span class="nv"> </span><span class="s">WG_WIREGUARD_PRIVATE_KEY,</span><span class="nv"> </span><span class="s">e.g.</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">output</span><span class="nv"> </span><span class="s">of</span><span class="nv"> </span><span class="s">wg</span><span class="nv"> </span><span class="s">genkey}"</span>
 <span class="w">      </span><span class="nt">WG_HTTPS_ENABLED</span><span class="p">:</span><span class="w"> </span><span class="s">"false"</span><span class="w"> </span><span class="c1"># Traefik terminates TLS</span>
+<span class="w">      </span><span class="c1"># Believe Traefik's X-Forwarded-For, so that the logs, the audit trail</span>
+<span class="w">      </span><span class="c1"># and everybody's own list of sessions name the client rather than</span>
+<span class="w">      </span><span class="c1"># Traefik. Use the network Traefik reaches this container on.</span>
+<span class="w">      </span><span class="nt">WG_TRUSTED_PROXIES</span><span class="p">:</span><span class="w"> </span><span class="s">"172.16.0.0/12"</span>
 <span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"51820:51820/udp"</span>
 <span class="w">    </span><span class="nt">devices</span><span class="p">:</span>
@@ -896,6 +900,14 @@ Encrypt's challenge and redirects everything else to HTTPS.</p>
 <span class="w">  </span><span class="nt">wg-access-server-data</span><span class="p">:</span>
 </code></pre></div>
 <p>Replace <code>vpn.example.com</code> and the email address with yours; the name must point to the server.</p>
+<p><code>WG_TRUSTED_PROXIES</code> is worth setting for any proxy, not only Traefik. Without it every request
+appears to come from the proxy, so the sign-in log, the audit trail and the list of sessions people
+see of their own all name one address for everybody - which makes them useless for the question they
+exist to answer. With it, <code>X-Forwarded-For</code> is believed, but only on requests that really arrive from
+one of the networks named: a client that can reach the server directly cannot choose the address it
+is logged under. Use the network the proxy speaks to this container on - <code>docker network inspect</code>
+prints it - rather than a wider one than needed. The login throttle is keyed by username either way,
+so no header can skip it.</p>
 <h2 id="behind-traefik-with-a-self-signed-certificate">Behind Traefik, with a self-signed certificate<a class="headerlink" href="#behind-traefik-with-a-self-signed-certificate" title="Permanent link"> ¶</a></h2>
 <p>The same without Let's Encrypt, for a test or a network where the certificate is not needed:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">services</span><span class="p">:</span>

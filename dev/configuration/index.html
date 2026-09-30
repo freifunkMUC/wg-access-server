@@ -932,6 +932,14 @@ values would otherwise quietly win.</p>
 <td>A storage backend connection string. See <a href="../storage/">storage docs</a></td>
 </tr>
 <tr>
+<td><code>WG_TRUSTED_PROXIES</code></td>
+<td><code>--trusted-proxies</code></td>
+<td><code>trustedProxies</code></td>
+<td></td>
+<td></td>
+<td>Networks (CIDR or a bare address, comma separated) that requests reach this server through. Only for a request from one of them is <code>X-Forwarded-For</code> believed, and the client's own address is then what the logs, the audit trail and the session list report. Empty: the address a request connected from is used, which behind a reverse proxy is the proxy</td>
+</tr>
+<tr>
 <td><code>WG_ENABLE_METADATA</code></td>
 <td><code>--enable-metadata</code></td>
 <td><code>enableMetadata</code></td>
