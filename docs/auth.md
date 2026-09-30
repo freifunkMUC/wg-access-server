@@ -191,6 +191,11 @@ Somebody signed in that way can now set their own instead, under the key icon in
   again. That is how a password is reset - there is no other way in, by design.
 - Changing it **ends every other session** of that person. Whoever knew the old password may be
   holding one.
+- It is stored as **bcrypt**, which salts every hash itself: the salt is part of the stored string,
+  so the same password set by two people does not look the same, and one precomputed set of hashes
+  cannot be tried against the whole table. The configured entries are whatever an admin wrote -
+  `htpasswd` also writes unsalted SHA-1 (`{SHA}`), which is why `htpasswd -nB` (bcrypt) is the one
+  to use there.
 - A password set here has to be at least 10 characters. The configured entries are not held to that:
   those are an admin's business, and refusing them at sign-in would lock people out.
 
