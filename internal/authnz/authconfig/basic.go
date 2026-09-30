@@ -57,7 +57,7 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime, th
 		}
 		credentialsOK := false
 
-		if ok := checkCreds(c.Users, u, p); ok {
+		if ok := checkCreds(c.Users, u, p, runtime); ok {
 			credentialsOK = true
 			throttle.recordSuccess(u)
 			err := runtime.SetSession(w, r, &authsession.AuthSession{
@@ -107,18 +107,45 @@ var dummyHash = func() string {
 	return string(hash)
 }()
 
-func checkCreds(users []string, username string, password string) bool {
+// checkCreds says whether the password is right for a user the configuration
+// lists. The configuration decides who may sign in at all; a password the user
+// set for themselves decides what their password is - unless an admin has
+// changed the configured entry since, in which case theirs wins and the stored
+// one is ignored. Without that an admin could hand out a password and never
+// take it back.
+func checkCreds(users []string, username string, password string, stored *ProviderRuntime) bool {
 	for _, user := range users {
-		if u, p, ok := parsehtpassword(user); ok {
-			if u == username {
-				return checkhtpasswd(p, password)
+		if u, configured, ok := parsehtpassword(user); ok {
+			if u != username {
+				continue
 			}
+			if hash, from := passwordOf(stored, username); hash != "" && from == configured {
+				return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+			}
+			return checkhtpasswd(configured, password)
 		}
 	}
 
 	// no such user: spend the same time a real password check would
 	checkhtpasswd(dummyHash, password)
 	return false
+}
+
+// ProviderRuntime is named here rather than imported into every caller.
+type ProviderRuntime = authruntime.ProviderRuntime
+
+func passwordOf(runtime *ProviderRuntime, subject string) (string, string) {
+	if runtime == nil {
+		return "", ""
+	}
+	return runtime.Password(subject)
+}
+
+// PasswordMatches says whether a password matches a configured entry, in
+// whichever htpasswd format it is written. It is how the sign-in checks a
+// password, and the one place that decides it.
+func PasswordMatches(entry string, password string) bool {
+	return checkhtpasswd(entry, password)
 }
 
 // parsehtpassword splits an "username:hash" entry. An entry without a colon

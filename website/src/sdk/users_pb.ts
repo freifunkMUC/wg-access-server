@@ -48,6 +48,15 @@ export class Users {
 		RevokeAccessRes.deserializeBinary
 	);
 
+	private methodInfoChangePassword = new grpcWeb.MethodDescriptor<ChangePasswordReq, ChangePasswordRes>(
+		"ChangePassword",
+		'unary',
+		ChangePasswordReq as unknown as MessageCtor<ChangePasswordReq>,
+		ChangePasswordRes as unknown as MessageCtor<ChangePasswordRes>,
+		(req: ChangePasswordReq) => req.serializeBinary(),
+		ChangePasswordRes.deserializeBinary
+	);
+
 	constructor(
 		private hostname: string,
 		private defaultMetadata?: () => grpcWeb.Metadata,
@@ -100,6 +109,25 @@ export class Users {
 				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
 				this.methodInfoRevokeAccess,
 				(err: grpcWeb.Error, res: RevokeAccessRes) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(res.toObject());
+					}
+				},
+			);
+		});
+	}
+
+	changePassword(req: ChangePasswordReq.AsObject, metadata?: grpcWeb.Metadata): Promise<ChangePasswordRes.AsObject> {
+		return new Promise((resolve, reject) => {
+			const message = ChangePasswordReqFromObject(req);
+			this.client_.rpcCall(
+				this.hostname + '/proto.Users/ChangePassword',
+				message,
+				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
+				this.methodInfoChangePassword,
+				(err: grpcWeb.Error, res: ChangePasswordRes) => {
 					if (err) {
 						reject(err);
 					} else {
@@ -445,6 +473,165 @@ export class DeleteUserReq extends jspb.Message {
 	}
 
 }
+export declare namespace ChangePasswordReq {
+	export type AsObject = {
+		currentPassword: string,
+		newPassword: string,
+	}
+}
+
+export class ChangePasswordReq extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, ChangePasswordReq.repeatedFields_, null);
+	}
+
+
+	getCurrentPassword(): string {return jspb.Message.getFieldWithDefault(this, 1, "");
+	}
+
+	setCurrentPassword(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 1, value);
+	}
+
+	getNewPassword(): string {return jspb.Message.getFieldWithDefault(this, 2, "");
+	}
+
+	setNewPassword(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 2, value);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		ChangePasswordReq.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): ChangePasswordReq.AsObject {
+		let f: any;
+		return {
+			currentPassword: this.getCurrentPassword(),
+			newPassword: this.getNewPassword(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: ChangePasswordReq, writer: jspb.BinaryWriter): void {
+		const field1 = message.getCurrentPassword();
+		if (field1.length > 0) {
+			writer.writeString(1, field1);
+		}
+		const field2 = message.getNewPassword();
+		if (field2.length > 0) {
+			writer.writeString(2, field2);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): ChangePasswordReq {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new ChangePasswordReq();
+		return ChangePasswordReq.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: ChangePasswordReq, reader: jspb.BinaryReader): ChangePasswordReq {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readString()
+				message.setCurrentPassword(field1);
+				break;
+			case 2:
+				const field2 = reader.readString()
+				message.setNewPassword(field2);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
+export declare namespace ChangePasswordRes {
+	export type AsObject = {
+		sessionsEnded: number,
+	}
+}
+
+export class ChangePasswordRes extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, ChangePasswordRes.repeatedFields_, null);
+	}
+
+
+	getSessionsEnded(): number {return jspb.Message.getFieldWithDefault(this, 1, 0);
+	}
+
+	setSessionsEnded(value: number): void {
+		(jspb.Message as any).setProto3IntField(this, 1, value);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		ChangePasswordRes.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): ChangePasswordRes.AsObject {
+		let f: any;
+		return {
+			sessionsEnded: this.getSessionsEnded(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: ChangePasswordRes, writer: jspb.BinaryWriter): void {
+		const field1 = message.getSessionsEnded();
+		if (field1 != 0) {
+			writer.writeInt32(1, field1);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): ChangePasswordRes {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new ChangePasswordRes();
+		return ChangePasswordRes.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: ChangePasswordRes, reader: jspb.BinaryReader): ChangePasswordRes {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readInt32()
+				message.setSessionsEnded(field1);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
 export declare namespace RevokeAccessReq {
 	export type AsObject = {
 		name: string,
@@ -671,6 +858,25 @@ function DeleteUserReqFromObject(obj: DeleteUserReq.AsObject | undefined): Delet
 	}
 	const message = new DeleteUserReq();
 	message.setName(obj.name);
+	return message;
+}
+
+function ChangePasswordReqFromObject(obj: ChangePasswordReq.AsObject | undefined): ChangePasswordReq | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new ChangePasswordReq();
+	message.setCurrentPassword(obj.currentPassword);
+	message.setNewPassword(obj.newPassword);
+	return message;
+}
+
+function ChangePasswordResFromObject(obj: ChangePasswordRes.AsObject | undefined): ChangePasswordRes | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new ChangePasswordRes();
+	message.setSessionsEnded(obj.sessionsEnded);
 	return message;
 }
 

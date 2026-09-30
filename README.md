@@ -19,6 +19,7 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 
 - Sign-in with OpenID Connect, GitLab, GitHub or a list of users of your own ([auth](https://www.freie-netze.org/wg-access-server/auth/))
 - [API tokens](https://www.freie-netze.org/wg-access-server/auth/#api-tokens) for scripts, using the same API as the web UI
+- Users of the built-in sign-in can change their own password ([changing your password](https://www.freie-netze.org/wg-access-server/auth/#changing-your-password))
 - Devices can be renamed; admins see and manage the devices of all users
 - Admins can block a device or give it an expiry date, for temporary access, one device or many at once ([device access](#device-access))
 - Admins can take somebody's access away in one action, without deleting anything ([revoking access](#taking-somebodys-access-away))

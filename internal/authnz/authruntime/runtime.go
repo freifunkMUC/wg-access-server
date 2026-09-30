@@ -26,6 +26,16 @@ type ProviderBranding struct {
 	Icon       string `yaml:"icon"`
 }
 
+// Passwords is where a password somebody set for themselves is looked up.
+// Only the built-in providers have one; for everybody else the password
+// belongs to their identity provider.
+type Passwords interface {
+	// UserPassword returns the stored bcrypt hash and the configured entry
+	// that was in effect when it was set. Both empty means the user has set
+	// no password of their own - which is the normal case.
+	UserPassword(subject string) (hash string, from string)
+}
+
 type ProviderRuntime struct {
 	store sessions.Store
 	// browserSessions keeps who signed in; the cookie carries only an id.
@@ -34,10 +44,28 @@ type ProviderRuntime struct {
 	otherProviders bool
 	// recordLogin is told who signed in, once a provider has established it.
 	recordLogin func(*authsession.Identity)
+	// passwords is where a user's own password is looked up, nil when
+	// nothing stores one.
+	passwords Passwords
 }
 
 func NewProviderRuntime(store sessions.Store, browserSessions authsession.Sessions) *ProviderRuntime {
 	return &ProviderRuntime{store: store, browserSessions: browserSessions}
+}
+
+// UsePasswords registers where a password somebody set for themselves is
+// looked up.
+func (p *ProviderRuntime) UsePasswords(passwords Passwords) {
+	p.passwords = passwords
+}
+
+// Password returns the stored password of a user and the configured entry it
+// was set against. Without a store, nobody has one.
+func (p *ProviderRuntime) Password(subject string) (hash string, from string) {
+	if p.passwords == nil {
+		return "", ""
+	}
+	return p.passwords.UserPassword(subject)
 }
 
 // OnLogin registers what to do when somebody signed in. Every provider ends

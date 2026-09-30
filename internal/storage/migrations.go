@@ -84,6 +84,15 @@ var migrations = []migration{
 			return db.AutoMigrate(&sessionV1{})
 		},
 	},
+	{
+		// A password somebody set for themselves, for the built-in providers.
+		// Empty for everybody after the upgrade, which is what the
+		// configuration said all along.
+		id: "0008_user_password",
+		apply: func(db *gorm.DB) error {
+			return db.AutoMigrate(&userV3{})
+		},
+	},
 }
 
 type migration struct {
@@ -275,6 +284,22 @@ type userV2 struct {
 }
 
 func (userV2) TableName() string {
+	return "users"
+}
+
+// userV3 is the users table as 0008_user_password left it.
+type userV3 struct {
+	Subject      string `gorm:"type:varchar(100);primaryKey"`
+	Provider     string
+	Name         string
+	Email        string
+	Policies     string
+	LastLogin    time.Time
+	PasswordHash string
+	PasswordFrom string
+}
+
+func (userV3) TableName() string {
 	return "users"
 }
 

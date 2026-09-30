@@ -10,6 +10,7 @@ import { YourDevices } from './pages/YourDevices';
 import { AllDevices } from './pages/admin/AllDevices';
 import { ApiTokens } from './pages/ApiTokens';
 import { Sessions } from './pages/Sessions';
+import { Password } from './pages/Password';
 import { ThemeProvider } from '@mui/material/styles';
 import { appTheme } from './Theme';
 import { Loading } from './components/Loading';
@@ -40,6 +41,7 @@ export const App = observer(function App() {
         <Route path="/" element={<YourDevices />} />
         {AppState.info.isAdmin && <Route path="/admin/all-devices" element={<AllDevices />} />}
         <Route path="/sessions" element={<Sessions />} />
+        {AppState.info.passwordChangeEnabled && <Route path="/password" element={<Password />} />}
         {AppState.info.apiTokensEnabled && <Route path="/tokens" element={<ApiTokens />} />}
       </Routes>
     );

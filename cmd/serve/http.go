@@ -20,11 +20,13 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/apitokens"
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/metrics"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
+	"github.com/freifunkMUC/wg-access-server/internal/users"
 	"github.com/freifunkMUC/wg-access-server/internal/web"
 	"github.com/freifunkMUC/wg-access-server/internal/websessions"
 )
@@ -62,6 +64,21 @@ func policiesOf(identity *authsession.Identity) []string {
 // recordLogin remembers somebody who signed in. A failure is logged and no
 // more: the sign-in itself worked, and refusing it because of a write that is
 // only needed later would be the worse outcome.
+// storedPasswords lets the built-in providers check a password a user set for
+// themselves. A user who never signed in, or a storage that cannot be read,
+// simply has none - the configured entry then decides, as it did before.
+type storedPasswords struct {
+	storage storage.Storage
+}
+
+func (s storedPasswords) UserPassword(subject string) (string, string) {
+	user, err := s.storage.GetUser(subject)
+	if err != nil || user == nil {
+		return "", ""
+	}
+	return user.PasswordHash, user.PasswordFrom
+}
+
 func recordLogin(storageBackend storage.Storage, deviceManager *devices.DeviceManager) func(*authsession.Identity) {
 	return func(identity *authsession.Identity) {
 		user := &storage.User{
@@ -111,7 +128,8 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	// Authentication middleware
 	claims := authnz.ClaimsMiddleware(conf)
 	middleware, err := authnz.NewMiddleware(conf.Auth, claims, browserSessions,
-		authnz.WithLoginRecorder(recordLogin(storageBackend, deviceManager)))
+		authnz.WithLoginRecorder(recordLogin(storageBackend, deviceManager)),
+		authnz.WithPasswords(storedPasswords{storage: storageBackend}))
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up authnz middleware: %w", err)
 	}
@@ -130,11 +148,20 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	site := router.PathPrefix("/").Subrouter()
 	site.Use(authnz.RequireAuthentication)
 
+	// Changing a password needs a built-in provider to change it for: the
+	// configuration says who may sign in, and the storage holds what they
+	// chose. Without one of those providers there is nothing here to change.
+	var passwords *users.Passwords
+	if conf.Auth.ConfiguredEntries() > 0 {
+		passwords = users.NewPasswords(storageBackend, conf.Auth.ConfiguredEntry, authconfig.PasswordMatches)
+	}
+
 	apiServices := &api.Services{
 		Config:        conf,
 		DeviceManager: deviceManager,
 		Tokens:        tokens,
 		Sessions:      browserSessions,
+		Passwords:     passwords,
 		Wg:            wg,
 	}
 

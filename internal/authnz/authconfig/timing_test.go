@@ -21,11 +21,11 @@ func TestUnknownUserCostsAboutAsMuchAsAWrongPassword(t *testing.T) {
 
 	measure := func(username string) time.Duration {
 		// one warm-up, then take the best of three to keep scheduling noise out
-		checkCreds(users, username, "wrong password")
+		checkCreds(users, username, "wrong password", nil)
 		best := time.Hour
 		for i := 0; i < 3; i++ {
 			start := time.Now()
-			checkCreds(users, username, "wrong password")
+			checkCreds(users, username, "wrong password", nil)
 			if elapsed := time.Since(start); elapsed < best {
 				best = elapsed
 			}

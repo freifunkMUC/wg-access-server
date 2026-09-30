@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -317,7 +318,26 @@ func (s *InMemoryStorage) SaveUser(user *User) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	stored := *user
+	// a login carries no password, and must not wipe the one the user set
+	if previous, ok := s.users[user.Subject]; ok && stored.PasswordHash == "" {
+		stored.PasswordHash = previous.PasswordHash
+		stored.PasswordFrom = previous.PasswordFrom
+	}
 	s.users[user.Subject] = &stored
+	return nil
+}
+
+func (s *InMemoryStorage) SetUserPassword(subject string, hash string, from string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	user, ok := s.users[subject]
+	if !ok {
+		return fmt.Errorf("user '%s' does not exist", subject)
+	}
+	changed := *user
+	changed.PasswordHash = hash
+	changed.PasswordFrom = from
+	s.users[subject] = &changed
 	return nil
 }
 

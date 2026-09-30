@@ -9,6 +9,7 @@ import (
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 
 	"github.com/freifunkMUC/wg-access-server/buildinfo"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
@@ -24,6 +25,10 @@ type ServerService struct {
 	// what it is told to would otherwise never send anything to a site
 	// behind another device.
 	DeviceManager *devices.DeviceManager
+	// PasswordChange is whether the server keeps passwords at all - it does
+	// when a built-in provider is configured. Whether this session's own
+	// password is one of them is decided per request.
+	PasswordChange bool
 }
 
 func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoReq]) (*connect.Response[proto.InfoRes], error) {
@@ -73,6 +78,7 @@ func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoR
 		Mtu:                             int32(s.Config.WireGuard.MTU),
 		ApiTokensEnabled:                s.Config.EnableAPITokens,
 		Subject:                         user.Subject,
+		PasswordChangeEnabled:           s.PasswordChange && authconfig.HasPassword(user.Provider),
 	}), nil
 }
 

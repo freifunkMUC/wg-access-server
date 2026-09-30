@@ -82,6 +82,60 @@ func (c *AuthConfig) PolicyNames() map[string][]string {
 	return names
 }
 
+// HasPassword says whether a provider keeps its passwords here. Only the
+// built-in ones do; with an identity provider the password is theirs.
+func HasPassword(provider string) bool {
+	return provider == BasicAuthProvider || provider == SimpleAuthProvider
+}
+
+// ConfiguredEntry returns the htpasswd entry the configuration holds for
+// somebody, across every built-in provider it names, and whether it names them
+// at all. Two providers listing the same username is a configuration nobody
+// should write; the first entry found wins, as it does at sign-in.
+func (c *AuthConfig) ConfiguredEntry(subject string) (string, bool) {
+	lists := [][]string{}
+	add := func(config *ProviderConfig) {
+		if config.Basic != nil {
+			lists = append(lists, config.Basic.Users)
+		}
+		if config.Simple != nil {
+			lists = append(lists, config.Simple.Users)
+		}
+	}
+	add(&c.ProviderConfig)
+	for _, provider := range c.Multiple {
+		add(provider)
+	}
+
+	for _, users := range lists {
+		for _, user := range users {
+			if name, entry, ok := parsehtpassword(user); ok && name == subject {
+				return entry, true
+			}
+		}
+	}
+	return "", false
+}
+
+// ConfiguredEntries is how many users the built-in providers list. None means
+// nobody signs in with a password this server keeps.
+func (c *AuthConfig) ConfiguredEntries() int {
+	count := 0
+	add := func(config *ProviderConfig) {
+		if config.Basic != nil {
+			count += len(config.Basic.Users)
+		}
+		if config.Simple != nil {
+			count += len(config.Simple.Users)
+		}
+	}
+	add(&c.ProviderConfig)
+	for _, provider := range c.Multiple {
+		add(provider)
+	}
+	return count
+}
+
 func (c *AuthConfig) DesiresSignInPage() bool {
 	// Basic auth is the only that truly needs the sign-in button
 	if c.Basic != nil {

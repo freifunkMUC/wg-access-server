@@ -16,6 +16,7 @@ import LoginIcon from '@mui/icons-material/Login';
 import DevicesIcon from '@mui/icons-material/Devices';
 import KeyIcon from '@mui/icons-material/Key';
 import ShieldIcon from '@mui/icons-material/Shield';
+import PasswordIcon from '@mui/icons-material/Password';
 import { useMediaQuery } from '@mui/material';
 
 // Stile mit `styled` definieren
@@ -51,6 +52,14 @@ export default function Navigation() {
         </Title>
 
         <DarkModeToggle />
+
+        {AppState.info?.passwordChangeEnabled && (
+          <Link to="/password" color="inherit" component={NavLink}>
+            <IconButton sx={{ ml: 1 }} color="inherit" title="Change your password">
+              <PasswordIcon />
+            </IconButton>
+          </Link>
+        )}
 
         <Link to="/sessions" color="inherit" component={NavLink}>
           <IconButton sx={{ ml: 1 }} color="inherit" title="Where you are signed in">

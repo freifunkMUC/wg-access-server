@@ -59,13 +59,13 @@ func TestParseHtpassword(t *testing.T) {
 func TestCheckCredsMalformedEntry(t *testing.T) {
 	users := []string{"malformed-entry-without-a-colon", "alice:" + testHash(t, testPassword)}
 
-	if !checkCreds(users, "alice", testPassword) {
+	if !checkCreds(users, "alice", testPassword, nil) {
 		t.Error("a valid user after a malformed entry must still be able to log in")
 	}
-	if checkCreds(users, "malformed-entry-without-a-colon", "") {
+	if checkCreds(users, "malformed-entry-without-a-colon", "", nil) {
 		t.Error("a malformed entry must never authenticate anyone")
 	}
-	if checkCreds(users, "alice", "wrong password") {
+	if checkCreds(users, "alice", "wrong password", nil) {
 		t.Error("a wrong password must not authenticate")
 	}
 }
