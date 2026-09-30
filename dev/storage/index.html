@@ -1100,7 +1100,8 @@ wg-access-server applies whatever is missing and logs each one (<code>Applying d
 </ul>
 <p>Take a backup before upgrading, as with any database.</p>
 <h2 id="migration-between-backends">Migration Between Backends<a class="headerlink" href="#migration-between-backends" title="Permanent link"> ¶</a></h2>
-<p>You can migrate your registered devices and API tokens between backends using the
+<p>You can migrate your registered devices, API tokens and users - with the passwords they set for
+themselves, their second factors and their passkeys - between backends using the
 <code>wg-access-server migrate &lt;src&gt; &lt;dest&gt;</code> command. Stop the server first: devices added while the
 migration runs are left behind.</p>
 <p>The migrate command was added in <code>v0.3.0</code> and is provided on a <em>best effort</em> level. As an open source
