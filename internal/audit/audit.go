@@ -29,6 +29,11 @@ const (
 	// DeviceExpire is the server taking the access of a device away because
 	// its expiry date has passed.
 	DeviceExpire = "device.expire"
+	// DeviceRotate is somebody replacing the key material of their device.
+	// The keys themselves are not recorded: the public one says nothing an
+	// operator needs, and writing key material into a log is a habit worth
+	// not having.
+	DeviceRotate = "device.rotate"
 	// DeviceRoutes is an admin changing the networks behind a device.
 	DeviceRoutes = "device.routes"
 	UserDelete   = "user.delete"

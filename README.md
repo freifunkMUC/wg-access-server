@@ -22,6 +22,7 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 - Devices can be renamed; admins see and manage the devices of all users
 - Admins can block a device or give it an expiry date, for temporary access ([device access](#device-access))
 - Admins can take somebody's access away in one action, without deleting anything ([revoking access](#taking-somebodys-access-away))
+- A device can be given a new key without being deleted, keeping its name and address ([new key](#giving-a-device-a-new-key))
 - Networks behind a device, for site-to-site links and subnet routers ([routed networks](#networks-behind-a-device))
 - An optional limit on how many devices a user may create
 - WireGuard client configurations as a file or a QR code
@@ -133,6 +134,25 @@ waiting for the next restart. Blocking takes effect right away, on every replica
 Both are recorded in the [audit log](https://www.freie-netze.org/wg-access-server/audit/), and
 `wg_access_server_devices_blocked` counts the devices in that state wherever the device
 [metrics](#metrics) are enabled.
+
+## Giving a device a new key
+
+A WireGuard device is its key: whoever has the private half is the device, wherever they are. If it
+may have got out - a laptop handed on, a configuration file mailed to the wrong person, a phone
+backup nobody can account for - the key icon on the device gives it a **new key pair**, and the
+browser hands back the configuration that goes with it.
+
+The device keeps everything else: its name, its address, the networks behind it, its expiry. Nothing
+else has to be changed around it, and the old key stops reaching the VPN the moment the new one is
+stored - on every replica, not only the one that took the request.
+
+Your own devices only. The private half of the new key is made in the browser and never sent
+anywhere, so this is the person using the device, not an admin acting on it. An admin who wants
+somebody's device off the VPN blocks it or deletes it - see [device access](#device-access) and
+[revoking access](#taking-somebodys-access-away).
+
+Until the new configuration is installed, the device does not connect. That is the point, and the
+question the UI asks says so.
 
 ## Taking somebody's access away
 

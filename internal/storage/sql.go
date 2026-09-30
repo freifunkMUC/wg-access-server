@@ -474,6 +474,33 @@ func (s *SQLStorage) Delete(device *Device) error {
 	return nil
 }
 
+// SetKeys writes the key columns of one device. Like SetAccess it goes through
+// UpdateColumns and emits the event itself; the unique index on the public key
+// is what refuses a key another device already uses.
+func (s *SQLStorage) SetKeys(device *Device, publicKey string, presharedKey string) (*Device, error) {
+	logrus.Debugf("setting the keys of device %s", key(device))
+
+	q := s.db.Model(&Device{}).
+		Where("owner = ? AND name = ?", device.Owner, device.Name).
+		UpdateColumns(map[string]interface{}{"public_key": publicKey, "preshared_key": presharedKey})
+	if q.Error != nil {
+		return nil, fmt.Errorf("failed to change the keys of the device: %w", q.Error)
+	}
+	if q.RowsAffected == 0 {
+		return nil, fmt.Errorf("device '%s' of user '%s' no longer exists", device.Name, device.Owner)
+	}
+
+	changed := *device
+	changed.PublicKey = publicKey
+	changed.PresharedKey = presharedKey
+
+	// Postgres learns about this from the update trigger; the other backends
+	// are told here, and every replica then replaces the peer.
+	s.EmitUpdate(&changed)
+
+	return &changed, nil
+}
+
 // DeleteForOwner removes every device of one user in a single transaction.
 // The events follow the commit: reporting a device as gone and then rolling
 // the delete back would leave the WireGuard peers and the DNS zone describing

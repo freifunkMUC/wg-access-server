@@ -7,6 +7,13 @@ import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import KeyIcon from '@mui/icons-material/Key';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import { box_keyPair, randomBytes } from 'tweetnacl-ts';
 import numeral from 'numeral';
 import { deviceAccess, lastSeen } from '../Util';
 import { AppState } from '../AppState';
@@ -18,6 +25,8 @@ import { confirm, prompt } from './Present';
 import { toast } from './Toast';
 import { errorMessage } from '../Util';
 import { Chip, IconButton, Skeleton, Stack, Typography } from '@mui/material';
+import { clientConfig } from './AddDevice';
+import { GetConnected } from './GetConnected';
 
 interface Props {
   device: Device.AsObject;
@@ -25,7 +34,54 @@ interface Props {
   onChange: () => void;
 }
 
+// base64 of what the browser generated: the private half never leaves it.
+function encode(bytes: Uint8Array): string {
+  return window.btoa(String.fromCharCode(...Array.from(bytes)));
+}
+
 export const DeviceListItem = observer(function DeviceListItem({ device, onChange }: Props) {
+  const [newConfig, setNewConfig] = React.useState<string>();
+
+  // rotateKey gives the device a new key pair and hands back the
+  // configuration that goes with it. The device keeps its name, its address
+  // and everything else - only the key that reaches the VPN is a different
+  // one, which is what makes this the answer to a private key somebody else
+  // may have.
+  const rotateKey = async () => {
+    if (
+      !(await confirm(
+        `Give "${device.name}" a new key? It stops connecting until you install the new configuration ` +
+          'on it - and the one it uses now stops working at once, wherever it is.',
+      ))
+    ) {
+      return;
+    }
+
+    const keypair = box_keyPair();
+    const publicKey = encode(new Uint8Array(keypair.publicKey));
+    const privateKey = encode(new Uint8Array(keypair.secretKey));
+    // a device that had a pre-shared key gets a new one; one that had none
+    // does not suddenly need one
+    const presharedKey = device.presharedKey ? encode(randomBytes(32)) : '';
+
+    try {
+      const rotated = await grpc.devices.rotateDeviceKey({ name: device.name, publicKey, presharedKey });
+      setNewConfig(
+        clientConfig({
+          info: AppState.info!,
+          privateKey,
+          address: rotated.address,
+          presharedKey,
+          persistentKeepalive: AppState.info?.clientConfigPersistentKeepalive || 0,
+        }),
+      );
+      toast({ text: `"${device.name}" has a new key`, intent: 'success' });
+      onChange();
+    } catch (error) {
+      toast({ text: 'Failed to change the key: ' + errorMessage(error), intent: 'error' });
+    }
+  };
+
   const removeDevice = async () => {
     if (await confirm('Are you sure you want to delete ' + device.name + '?')) {
       try {
@@ -78,6 +134,9 @@ export const DeviceListItem = observer(function DeviceListItem({ device, onChang
           <IconButton onClick={renameDevice} title="Rename device">
             <EditIcon />
           </IconButton>
+          <IconButton onClick={rotateKey} title="Give the device a new key">
+            <KeyIcon />
+          </IconButton>
           <IconButton sx={{ '&:hover': { color: 'red' } }} onClick={removeDevice} title="Delete device">
             <DeleteIcon />
           </IconButton>
@@ -100,6 +159,25 @@ export const DeviceListItem = observer(function DeviceListItem({ device, onChang
           device.presharedKey ? <PopoverDisplay label="Show">{device.presharedKey}</PopoverDisplay> : 'None',
         ] as Row,
       ]}
+      dialog={
+        newConfig && (
+          <Dialog maxWidth="xl" open onClose={() => setNewConfig(undefined)}>
+            <DialogTitle>The new configuration for &quot;{device.name}&quot;</DialogTitle>
+            <DialogContent>
+              <Typography component="p" style={{ paddingBottom: 8 }}>
+                Install this on the device. Its old configuration no longer connects, and this one is not stored here -
+                if you lose it, give the device another key.
+              </Typography>
+              <GetConnected configFile={newConfig} showMobile={true} />
+            </DialogContent>
+            <DialogActions>
+              <Button color="secondary" variant="outlined" onClick={() => setNewConfig(undefined)}>
+                Done
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )
+      }
     />
   );
 });
@@ -114,6 +192,8 @@ interface CardProps {
   avatar: React.ReactNode;
   action: React.ReactNode;
   rows: Row[];
+  // shown beside the card, for what a device's actions have to open
+  dialog?: React.ReactNode;
 }
 
 // DeviceCard is the layout of a device, drawn for a real one as well as for
@@ -134,6 +214,7 @@ function DeviceCard(props: CardProps) {
           </tbody>
         </table>
       </CardContent>
+      {props.dialog}
     </Card>
   );
 }

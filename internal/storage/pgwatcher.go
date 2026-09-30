@@ -80,11 +80,16 @@ func NewPgWatcher(db *sql.DB, connectionString string, table string, usersTable 
 }
 
 // attachUpdateTrigger reports the updates that matter: a device that was
-// renamed, one whose access changed, and one whose routes changed. "AFTER UPDATE OF ..." fires only when
-// a statement assigns one of those columns, so the metadata sync - which
-// writes the traffic counters and the handshake time - stays silent. The
-// trigger reuses the function and the channel pg-events set up, so the events
-// arrive through the same listener.
+// renamed, one whose access changed, one whose routes changed, and one that
+// was given new key material - the last of those decides which peer reaches
+// the VPN, so a replica that misses it keeps the replaced key working.
+// "AFTER UPDATE OF ..." fires only when a statement assigns one of those
+// columns, so the metadata sync - which writes the traffic counters and the
+// handshake time - stays silent. The trigger reuses the function and the
+// channel pg-events set up, so the events arrive through the same listener.
+//
+// It is dropped and created again on every start, so an installation upgraded
+// from a version whose trigger named fewer columns gets the new one.
 func attachUpdateTrigger(db *sql.DB, table string) error {
 	trigger := table + updateTriggerSuffix
 
@@ -94,7 +99,8 @@ func attachUpdateTrigger(db *sql.DB, table string) error {
 		}
 	}
 	statement := fmt.Sprintf(
-		"CREATE TRIGGER %s AFTER UPDATE OF name, disabled, expires_at, routes ON %s FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event('norow')",
+		"CREATE TRIGGER %s AFTER UPDATE OF name, disabled, expires_at, routes, public_key, preshared_key "+
+			"ON %s FOR EACH ROW EXECUTE PROCEDURE pgevents_notify_event('norow')",
 		trigger, table)
 	if _, err := db.Exec(statement); err != nil {
 		return fmt.Errorf("failed to create the update trigger on %s: %w", table, err)
@@ -110,11 +116,10 @@ func attachUpdateTrigger(db *sql.DB, table string) error {
 // device without a peer until the next resynchronization.
 func (w *PgWatcher) OnAdd(cb Callback) {
 	w.OnEvent(func(event *pgevents.TableEvent) {
-		// we only emit the "add" event on an insert because wg-access-server
-		// doesn't allow anyone to modify their public key or allowed IPs.
-		// a future change to wg-access-server may require listening to "updates"
-		// if either of those properties become mutable - and adding UPDATE back to
-		// the trigger in NewPgWatcher.
+		// Only an insert is an "add": a new device. A device whose key
+		// changed is an update, and the peer of the key it had is taken away
+		// by the synchronization that follows - which is the one place that
+		// knows a peer no device claims any more.
 		if event.Action == "INSERT" && !event.Truncated {
 			w.emit(cb, event)
 		}
