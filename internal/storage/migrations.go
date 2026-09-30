@@ -122,6 +122,27 @@ var migrations = []migration{
 			return db.AutoMigrate(&userV6{})
 		},
 	},
+	{
+		// The session id is a UUID string - 36 characters, not 32. The
+		// column 0007 created was too narrow for the id the server writes,
+		// so Postgres and MySQL refused every session and nobody could sign
+		// in at all. SQLite does not enforce the length and was unaffected.
+		id: "0012_session_id_length",
+		apply: func(db *gorm.DB) error {
+			// AlterColumn rather than AutoMigrate: with the type spelled out
+			// in the tag, AutoMigrate compares "varchar" to "varchar", sees
+			// no difference and leaves the width alone - it ran green here
+			// while the column stayed at 32.
+			//
+			// SQLite is skipped: it never enforced the width, so there is
+			// nothing to widen, and altering a column type there means
+			// rebuilding the table.
+			if db.Name() == "sqlite" {
+				return nil
+			}
+			return db.Migrator().AlterColumn(&sessionV2{}, "ID")
+		},
+	},
 }
 
 type migration struct {
@@ -422,5 +443,26 @@ type sessionV1 struct {
 }
 
 func (sessionV1) TableName() string {
+	return "sessions"
+}
+
+// sessionV2 widens the id to what a UUID string needs. Nothing else changes,
+// and the rows that are there are kept: on SQLite they already hold 36
+// characters, because it never enforced the old limit.
+type sessionV2 struct {
+	// not null is spelled out: without it the generated ALTER would also try
+	// to make the column nullable, which Postgres refuses on a primary key.
+	ID         string `gorm:"type:varchar(36);primaryKey;not null"`
+	Owner      string `gorm:"type:varchar(100);index:idx_sessions_owner"`
+	Hash       string `gorm:"type:varchar(64);uniqueIndex:uix_sessions_hash"`
+	Identity   string `gorm:"type:text"`
+	UserAgent  string `gorm:"type:varchar(255)"`
+	RemoteAddr string `gorm:"type:varchar(64)"`
+	CreatedAt  time.Time
+	ExpiresAt  time.Time
+	LastSeenAt time.Time
+}
+
+func (sessionV2) TableName() string {
 	return "sessions"
 }

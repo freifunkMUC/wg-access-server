@@ -118,7 +118,7 @@ func TestMigrationsMatchTheModels(t *testing.T) {
 			s := openStorage(t, uri)
 
 			log := &statementLog{Interface: gormlogger.Discard}
-			if err := s.db.Session(&gorm.Session{Logger: log}).AutoMigrate(&Device{}, &APIToken{}); err != nil {
+			if err := s.db.Session(&gorm.Session{Logger: log}).AutoMigrate(&Device{}, &APIToken{}, &Session{}, &User{}, &Passkey{}); err != nil {
 				t.Fatal(err)
 			}
 			for _, statement := range log.statements {

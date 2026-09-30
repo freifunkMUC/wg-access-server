@@ -21,7 +21,10 @@ var ErrSessionNotFound = errors.New("session not found")
 // Only the hash of the id in the cookie is stored: whoever reads the database
 // learns which sessions exist, not how to use them.
 type Session struct {
-	ID    string `gorm:"type:varchar(32);primaryKey"`
+	// ID is a UUID string, which is 36 characters - the four dashes are
+	// part of it. The column was varchar(32) until 0012 and rejected every
+	// session on Postgres and MySQL.
+	ID    string `gorm:"type:varchar(36);primaryKey"`
 	Owner string `gorm:"type:varchar(100);index:idx_sessions_owner"`
 	// Hash is the SHA-256 of the id in the cookie, hex encoded. A session is
 	// looked up by it on every request.

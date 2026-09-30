@@ -103,10 +103,9 @@ func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRu
 		if attempted {
 			throttle.wait(u)
 		}
-		credentialsOK := false
-
+		// Every way out of a right password returns, so reaching past this
+		// block means the credentials were not right.
 		if attempted && checkCreds(c.Users, u, p, runtime) {
-			credentialsOK = true
 			throttle.recordSuccess(u)
 
 			// A right password is the whole login only for somebody without
@@ -121,9 +120,18 @@ func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRu
 				runtime.Done(w, r)
 				return
 			}
+			// The password was right, so a failure here is not a
+			// credentials problem and must not be reported as one. Falling
+			// through to "invalid username or password" is what disguised a
+			// session column that was too narrow to hold any session: every
+			// sign-in looked like a typo. The second-factor paths below
+			// already answer this way.
+			logrus.Error(fmt.Errorf("failed to start the session after the password: %w", err))
+			http.Error(w, "Could not sign in", http.StatusInternalServerError)
+			return
 		}
 
-		if attempted && !credentialsOK {
+		if attempted {
 			throttle.recordFailure(u)
 			logrus.Warnf("Failed login attempt for user '%s' (simple auth, remote address: %s)", u, r.RemoteAddr)
 		}
