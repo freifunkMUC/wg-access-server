@@ -72,6 +72,43 @@ func TestChangingThePassword(t *testing.T) {
 	}
 }
 
+// bcrypt puts a random salt in every hash - it is the 22 characters after the
+// cost in "$2a$10$..." - so the same password stored twice looks different and
+// one precomputed set of hashes cannot be tried against a whole stolen table.
+// Nothing here has to salt anything itself, and nothing here may stop doing it.
+func TestTheStoredPasswordIsSalted(t *testing.T) {
+	configured := entry(t, "the-configured-one")
+
+	hashes := make([]string, 2)
+	for i := range hashes {
+		p, s := passwords(t, configured)
+		if err := p.Change("alice", "the-configured-one", "the-very-same-password"); err != nil {
+			t.Fatal(err)
+		}
+		user, err := s.GetUser("alice")
+		if err != nil {
+			t.Fatal(err)
+		}
+		hashes[i] = user.PasswordHash
+
+		if cost, err := bcrypt.Cost([]byte(user.PasswordHash)); err != nil {
+			t.Errorf("the stored password is not a bcrypt hash: %v", err)
+		} else if cost < bcrypt.DefaultCost {
+			t.Errorf("cost = %d, want at least %d", cost, bcrypt.DefaultCost)
+		}
+	}
+
+	if hashes[0] == hashes[1] {
+		t.Error("the same password stored twice gave the same hash: it is not salted")
+	}
+	// ... and both are still that password
+	for _, hash := range hashes {
+		if bcrypt.CompareHashAndPassword([]byte(hash), []byte("the-very-same-password")) != nil {
+			t.Error("a stored hash does not match the password it was made from")
+		}
+	}
+}
+
 func TestChangingNeedsTheCurrentPassword(t *testing.T) {
 	p, s := passwords(t, entry(t, "the-configured-one"))
 
