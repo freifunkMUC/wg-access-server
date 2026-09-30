@@ -205,6 +205,10 @@ Somebody signed in that way can now set their own instead, under the key icon in
   to use there.
 - A password set here has to be at least 10 characters. The configured entries are not held to that:
   those are an admin's business, and refusing them at sign-in would lock people out.
+- **Five wrong passwords** - here, when turning the second factor off or when replacing the recovery
+  codes - stop the password from being checked for 15 minutes after the last wrong one. A stolen
+  session must not be a way to guess the password. Only somebody signed in as the person can use
+  them up, and signing in is not affected.
 
 Their devices are unaffected either way - a tunnel does not use anybody's password.
 

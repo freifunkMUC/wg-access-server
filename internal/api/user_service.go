@@ -192,6 +192,9 @@ func (d *UserService) ChangePassword(ctx context.Context, request *connect.Reque
 	}
 
 	if err := d.Passwords.Change(user.Subject, req.GetCurrentPassword(), req.GetNewPassword()); err != nil {
+		if errors.Is(err, users.ErrTooManyAttempts) {
+			return nil, errTooManyWrongPasswords()
+		}
 		if errors.Is(err, users.ErrWrongPassword) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("that is not your current password"))
 		}
@@ -303,6 +306,9 @@ func (d *UserService) DisableTwoFactor(ctx context.Context, request *connect.Req
 	}
 
 	if err := d.TwoFactor.Disable(user.Subject, request.Msg.GetPassword()); err != nil {
+		if errors.Is(err, users.ErrTooManyAttempts) {
+			return nil, errTooManyWrongPasswords()
+		}
 		if errors.Is(err, users.ErrWrongPassword) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("that is not your password"))
 		}
@@ -357,6 +363,9 @@ func (d *UserService) NewRecoveryCodes(ctx context.Context, request *connect.Req
 		if errors.Is(err, users.ErrNoTwoFactor) {
 			return nil, connect.NewError(connect.CodeFailedPrecondition,
 				errors.New("this account has no authenticator app set up, so it has no recovery codes"))
+		}
+		if errors.Is(err, users.ErrTooManyAttempts) {
+			return nil, errTooManyWrongPasswords()
 		}
 		if errors.Is(err, users.ErrWrongPassword) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("that is not your password"))
@@ -504,6 +513,13 @@ func (d *UserService) passkeysFor(ctx context.Context) (*authsession.Identity, e
 		return nil, errNoSecondFactorHere()
 	}
 	return user, nil
+}
+
+// errTooManyWrongPasswords answers a password that was not checked, because
+// too many wrong ones came before it.
+func errTooManyWrongPasswords() error {
+	return connect.NewError(connect.CodeResourceExhausted,
+		errors.New("too many wrong passwords: wait a few minutes before you try again"))
 }
 
 // errNoSecondFactorHere refuses a second factor to somebody signed in with
