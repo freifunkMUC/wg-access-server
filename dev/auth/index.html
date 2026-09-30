@@ -1257,6 +1257,11 @@ phones and servers rarely agree on the second.</p>
   their hashes are kept, so nothing here can show them again - and they are hashed with SHA-256
   rather than bcrypt, because they are long random strings and ten slow hashes per attempt would be
   a way to hold the server up.</li>
+<li><strong>A fresh set can be asked for at any time</strong>, under the same key icon, and it asks for the
+  password for the same reason turning it off does. The old codes stop working the moment the new
+  ones are made. The authenticator app is not touched - the shared secret stays, so nothing has to
+  be scanned again, and a code that has just signed somebody in stays used up. It is recorded as
+  <code>user.recovery_codes</code>, with how many were left beforehand and never the codes themselves.</li>
 <li><strong>Turning it off asks for the password</strong>, so that a browser left signed in is not enough to take
   it away.</li>
 <li><strong>An admin can remove it</strong> for somebody whose phone is gone, from the user list under <em>admin</em>.

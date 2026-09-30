@@ -808,9 +808,19 @@ which is what you filter on:</p>
 <td><code>target_user</code></td>
 </tr>
 <tr>
+<td><code>user.recovery_codes</code></td>
+<td>Somebody replaced their own recovery codes</td>
+<td><code>codes_left_before</code></td>
+</tr>
+<tr>
 <td><code>user.passkey_add</code></td>
 <td>Somebody registered a passkey of their own</td>
 <td><code>passkey</code> (its name)</td>
+</tr>
+<tr>
+<td><code>user.passkey_rename</code></td>
+<td>Somebody renamed a passkey of their own</td>
+<td><code>passkey</code> (its new name)</td>
 </tr>
 <tr>
 <td><code>user.passkey_delete</code></td>
@@ -841,8 +851,9 @@ device grace period.</p>
 <p>*** <code>session</code> names the one session that was ended. "Sign out everywhere else" ends several at
 once and records <code>sessions</code> as how many that was, with <code>reason=all others</code>; the ids are not worth a
 record each, they are gone.</p>
-<p><code>user.two_factor</code> and <code>user.two_factor_reset</code> record that it happened, never the secret, a code or
-a recovery code.</p>
+<p><code>user.two_factor</code>, <code>user.two_factor_reset</code> and <code>user.recovery_codes</code> record that it happened, never
+the secret, a code or a recovery code. <code>codes_left_before</code> is how many unused codes there were when
+the set was replaced, which is what says whether somebody was running out or had lost the paper.</p>
 <p><code>user.password</code> records that the password changed and how many other sessions that ended. Neither
 the old nor the new password is recorded, in any form.</p>
 <p><code>device.rotate</code> records that the key changed, not the keys: the new public key says nothing an
