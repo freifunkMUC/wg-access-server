@@ -78,3 +78,15 @@ func TestBasicAuthRefusesAccountsWithASecondFactor(t *testing.T) {
 		t.Fatalf("bob was not signed in: %d %v", rr.Code, rr.Header())
 	}
 }
+
+// Credentials in the URL end up in proxy logs and the browser history, and a
+// link carrying them signs whoever follows it in to somebody else's account.
+func TestBasicAuthIgnoresCredentialsInTheURL(t *testing.T) {
+	handler := basicAuthHandler(t, fakeTwoFactor{})
+
+	rr := httptest.NewRecorder()
+	handler(rr, httptest.NewRequest(http.MethodGet, "/signin/0?username=bob&password=s3cret", nil))
+	if signedIn(rr) {
+		t.Fatal("credentials in the URL signed in")
+	}
+}
