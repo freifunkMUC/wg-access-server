@@ -45,6 +45,28 @@ func NewPasswords(s storage.UserStorage, configured Configured, matches Matches)
 	return &Passwords{storage: s, configured: configured, matches: matches}
 }
 
+// Verify says whether this is the password of that user, by the same rule the
+// sign-in uses. It is how an action guards itself against somebody who walked
+// up to a browser that is already signed in.
+func (p *Passwords) Verify(subject string, password string) error {
+	entry, listed := p.configured(subject)
+	if !listed {
+		return ErrNoPasswordHere
+	}
+
+	stored, from := p.stored(subject)
+	ok := false
+	if stored != "" && from == entry {
+		ok = bcrypt.CompareHashAndPassword([]byte(stored), []byte(password)) == nil
+	} else {
+		ok = p.matches(entry, password)
+	}
+	if !ok {
+		return ErrWrongPassword
+	}
+	return nil
+}
+
 // Change replaces the password of one user, after checking the one they have.
 func (p *Passwords) Change(subject string, current string, next string) error {
 	entry, listed := p.configured(subject)
@@ -52,18 +74,10 @@ func (p *Passwords) Change(subject string, current string, next string) error {
 		return ErrNoPasswordHere
 	}
 
-	stored, from := p.stored(subject)
-
 	// The same rule the sign-in uses: their own password counts while the
 	// configured entry it was set against is still the one in the config.
-	ok := false
-	if stored != "" && from == entry {
-		ok = bcrypt.CompareHashAndPassword([]byte(stored), []byte(current)) == nil
-	} else {
-		ok = p.matches(entry, current)
-	}
-	if !ok {
-		return ErrWrongPassword
+	if err := p.Verify(subject, current); err != nil {
+		return err
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(next), bcrypt.DefaultCost)

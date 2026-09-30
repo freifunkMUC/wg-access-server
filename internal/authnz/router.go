@@ -66,6 +66,14 @@ func WithPasswords(passwords authruntime.Passwords) Option {
 	}
 }
 
+// WithTwoFactor registers where the second factor of the built-in sign-in is
+// kept. Without it a right password is the whole login, as it was before.
+func WithTwoFactor(twoFactor authruntime.TwoFactor) Option {
+	return func(runtime *authruntime.ProviderRuntime) {
+		runtime.UseTwoFactor(twoFactor)
+	}
+}
+
 func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware, browserSessions authsession.Sessions, opts ...Option) (*AuthMiddleware, error) {
 	router := mux.NewRouter()
 	var storeSecret []byte

@@ -9,6 +9,7 @@ import { grpc } from '../Api';
 import { AppState } from '../AppState';
 import { toast } from '../components/Toast';
 import { errorMessage } from '../Util';
+import { TwoFactor } from './TwoFactor';
 
 // what the server refuses anything shorter than; saying so before the request
 // is nicer than being told afterwards
@@ -22,7 +23,11 @@ export const Password = observer(function Password() {
   const [working, setWorking] = useState(false);
 
   if (!AppState.info?.passwordChangeEnabled) {
-    return <Alert severity="info">Your password is not kept by this server - change it where you sign in.</Alert>;
+    return (
+      <Alert severity="info">
+        Your sign-in is not kept by this server - change your password and set up a second factor where you sign in.
+      </Alert>
+    );
   }
 
   const tooShort = next.length > 0 && next.length < minPasswordLength;
@@ -55,9 +60,9 @@ export const Password = observer(function Password() {
   };
 
   return (
-    <Box sx={{ maxWidth: 480, mx: 'auto' }}>
+    <Box sx={{ maxWidth: 520, mx: 'auto' }}>
       <Typography variant="h5" sx={{ mb: 2 }}>
-        Change your password
+        Your password
       </Typography>
 
       <Typography variant="body2" sx={{ mb: 2 }}>
@@ -109,6 +114,8 @@ export const Password = observer(function Password() {
           Change password
         </Button>
       </form>
+
+      <TwoFactor />
     </Box>
   );
 });

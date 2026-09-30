@@ -136,6 +136,8 @@ export declare namespace InfoRes {
 		apiTokensEnabled: boolean,
 		subject: string,
 		passwordChangeEnabled: boolean,
+		twoFactorEnabled: boolean,
+		recoveryCodesLeft: number,
 	}
 }
 
@@ -294,6 +296,20 @@ export class InfoRes extends jspb.Message {
 		(jspb.Message as any).setProto3BooleanField(this, 21, value);
 	}
 
+	getTwoFactorEnabled(): boolean {return jspb.Message.getFieldWithDefault(this, 22, false);
+	}
+
+	setTwoFactorEnabled(value: boolean): void {
+		(jspb.Message as any).setProto3BooleanField(this, 22, value);
+	}
+
+	getRecoveryCodesLeft(): number {return jspb.Message.getFieldWithDefault(this, 23, 0);
+	}
+
+	setRecoveryCodesLeft(value: number): void {
+		(jspb.Message as any).setProto3IntField(this, 23, value);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		InfoRes.serializeBinaryToWriter(this, writer);
@@ -323,6 +339,8 @@ export class InfoRes extends jspb.Message {
 			apiTokensEnabled: this.getApiTokensEnabled(),
 			subject: this.getSubject(),
 			passwordChangeEnabled: this.getPasswordChangeEnabled(),
+			twoFactorEnabled: this.getTwoFactorEnabled(),
+			recoveryCodesLeft: this.getRecoveryCodesLeft(),
 		};
 	}
 
@@ -406,6 +424,14 @@ export class InfoRes extends jspb.Message {
 		const field21 = message.getPasswordChangeEnabled();
 		if (field21 != false) {
 			writer.writeBool(21, field21);
+		}
+		const field22 = message.getTwoFactorEnabled();
+		if (field22 != false) {
+			writer.writeBool(22, field22);
+		}
+		const field23 = message.getRecoveryCodesLeft();
+		if (field23 != 0) {
+			writer.writeInt32(23, field23);
 		}
 	}
 
@@ -505,6 +531,14 @@ export class InfoRes extends jspb.Message {
 				const field21 = reader.readBool()
 				message.setPasswordChangeEnabled(field21);
 				break;
+			case 22:
+				const field22 = reader.readBool()
+				message.setTwoFactorEnabled(field22);
+				break;
+			case 23:
+				const field23 = reader.readInt32()
+				message.setRecoveryCodesLeft(field23);
+				break;
 			default:
 				reader.skipField();
 				break;
@@ -549,6 +583,8 @@ function InfoResFromObject(obj: InfoRes.AsObject | undefined): InfoRes | undefin
 	message.setApiTokensEnabled(obj.apiTokensEnabled);
 	message.setSubject(obj.subject);
 	message.setPasswordChangeEnabled(obj.passwordChangeEnabled);
+	message.setTwoFactorEnabled(obj.twoFactorEnabled);
+	message.setRecoveryCodesLeft(obj.recoveryCodesLeft);
 	return message;
 }
 

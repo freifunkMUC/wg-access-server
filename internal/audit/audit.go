@@ -41,6 +41,11 @@ const (
 	// nor the new one is recorded, only that it happened and how many
 	// sessions it ended.
 	UserPassword = "user.password"
+	// UserTwoFactor is somebody turning their own second factor on or off.
+	UserTwoFactor = "user.two_factor"
+	// UserTwoFactorReset is an admin taking somebody's second factor away,
+	// for a person whose phone is gone.
+	UserTwoFactorReset = "user.two_factor_reset"
 	// UserRevoke is an admin taking somebody's access away in one action:
 	// their devices are blocked, their tokens revoked, their sessions ended.
 	UserRevoke = "user.revoke"

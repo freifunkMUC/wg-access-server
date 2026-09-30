@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
@@ -26,6 +27,25 @@ type AuthSession struct {
 	// APIToken is the id of the API token a request authenticated with,
 	// empty for a browser session. It is never part of the session cookie.
 	APIToken string `json:"-"`
+	// Pending is a password that was right, waiting for the second factor.
+	// It is not a login: nothing reads an identity out of it, so every other
+	// request is as unauthenticated as before.
+	Pending *PendingLogin
+}
+
+// PendingLogin is the half of a sign-in that is done: the password was right,
+// the code has not been given yet. It lives in the cookie, which is signed by
+// the session store, and it expires on its own so that a browser left on the
+// code page does not stay half signed in.
+type PendingLogin struct {
+	Subject  string
+	Provider string
+	Until    time.Time
+}
+
+// Valid says whether this pending login is still one.
+func (p *PendingLogin) Valid(now time.Time) bool {
+	return p != nil && p.Subject != "" && now.Before(p.Until)
 }
 
 // Sessions is where the identity of a browser session is kept while the

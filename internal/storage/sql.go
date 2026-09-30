@@ -590,6 +590,24 @@ func (s *SQLStorage) SaveUser(user *User) error {
 	return nil
 }
 
+// SetUserTOTP writes the two-factor columns of one user, and nothing else.
+func (s *SQLStorage) SetUserTOTP(subject string, state TOTPState) error {
+	q := s.db.Model(&User{}).
+		Where("subject = ?", subject).
+		UpdateColumns(map[string]interface{}{
+			"totp_secret":     state.Secret,
+			"totp_enabled_at": state.EnabledAt,
+			"totp_recovery":   state.Recovery,
+		})
+	if q.Error != nil {
+		return fmt.Errorf("failed to write the second factor of user '%s': %w", subject, q.Error)
+	}
+	if q.RowsAffected == 0 {
+		return fmt.Errorf("user '%s' does not exist", subject)
+	}
+	return nil
+}
+
 // SetUserPassword writes the password columns of one user, and nothing else.
 func (s *SQLStorage) SetUserPassword(subject string, hash string, from string) error {
 	q := s.db.Model(&User{}).

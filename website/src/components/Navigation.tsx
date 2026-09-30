@@ -55,7 +55,7 @@ export default function Navigation() {
 
         {AppState.info?.passwordChangeEnabled && (
           <Link to="/password" color="inherit" component={NavLink}>
-            <IconButton sx={{ ml: 1 }} color="inherit" title="Change your password">
+            <IconButton sx={{ ml: 1 }} color="inherit" title="Your password and two-factor">
               <PasswordIcon />
             </IconButton>
           </Link>

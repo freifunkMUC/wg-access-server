@@ -42,6 +42,14 @@ const (
 	UsersRevokeAccessProcedure = "/proto.Users/RevokeAccess"
 	// UsersChangePasswordProcedure is the fully-qualified name of the Users's ChangePassword RPC.
 	UsersChangePasswordProcedure = "/proto.Users/ChangePassword"
+	// UsersStartTwoFactorProcedure is the fully-qualified name of the Users's StartTwoFactor RPC.
+	UsersStartTwoFactorProcedure = "/proto.Users/StartTwoFactor"
+	// UsersConfirmTwoFactorProcedure is the fully-qualified name of the Users's ConfirmTwoFactor RPC.
+	UsersConfirmTwoFactorProcedure = "/proto.Users/ConfirmTwoFactor"
+	// UsersDisableTwoFactorProcedure is the fully-qualified name of the Users's DisableTwoFactor RPC.
+	UsersDisableTwoFactorProcedure = "/proto.Users/DisableTwoFactor"
+	// UsersResetTwoFactorProcedure is the fully-qualified name of the Users's ResetTwoFactor RPC.
+	UsersResetTwoFactorProcedure = "/proto.Users/ResetTwoFactor"
 )
 
 // UsersClient is a client for the proto.Users service.
@@ -55,6 +63,13 @@ type UsersClient interface {
 	// Changes your own password. Only for the built-in sign-in - with an
 	// identity provider the password is theirs, not ours.
 	ChangePassword(context.Context, *connect.Request[proto.ChangePasswordReq]) (*connect.Response[proto.ChangePasswordRes], error)
+	// The second factor of the built-in sign-in: an authenticator app, and the
+	// recovery codes for when the phone is gone. Your own only.
+	StartTwoFactor(context.Context, *connect.Request[proto.StartTwoFactorReq]) (*connect.Response[proto.StartTwoFactorRes], error)
+	ConfirmTwoFactor(context.Context, *connect.Request[proto.ConfirmTwoFactorReq]) (*connect.Response[proto.ConfirmTwoFactorRes], error)
+	DisableTwoFactor(context.Context, *connect.Request[proto.DisableTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
+	// admin only: take somebody's second factor away when their phone is gone
+	ResetTwoFactor(context.Context, *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewUsersClient constructs a client for the proto.Users service. By default, it uses the Connect
@@ -92,15 +107,43 @@ func NewUsersClient(httpClient connect.HTTPClient, baseURL string, opts ...conne
 			connect.WithSchema(usersMethods.ByName("ChangePassword")),
 			connect.WithClientOptions(opts...),
 		),
+		startTwoFactor: connect.NewClient[proto.StartTwoFactorReq, proto.StartTwoFactorRes](
+			httpClient,
+			baseURL+UsersStartTwoFactorProcedure,
+			connect.WithSchema(usersMethods.ByName("StartTwoFactor")),
+			connect.WithClientOptions(opts...),
+		),
+		confirmTwoFactor: connect.NewClient[proto.ConfirmTwoFactorReq, proto.ConfirmTwoFactorRes](
+			httpClient,
+			baseURL+UsersConfirmTwoFactorProcedure,
+			connect.WithSchema(usersMethods.ByName("ConfirmTwoFactor")),
+			connect.WithClientOptions(opts...),
+		),
+		disableTwoFactor: connect.NewClient[proto.DisableTwoFactorReq, emptypb.Empty](
+			httpClient,
+			baseURL+UsersDisableTwoFactorProcedure,
+			connect.WithSchema(usersMethods.ByName("DisableTwoFactor")),
+			connect.WithClientOptions(opts...),
+		),
+		resetTwoFactor: connect.NewClient[proto.ResetTwoFactorReq, emptypb.Empty](
+			httpClient,
+			baseURL+UsersResetTwoFactorProcedure,
+			connect.WithSchema(usersMethods.ByName("ResetTwoFactor")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // usersClient implements UsersClient.
 type usersClient struct {
-	listUsers      *connect.Client[proto.ListUsersReq, proto.ListUsersRes]
-	deleteUser     *connect.Client[proto.DeleteUserReq, emptypb.Empty]
-	revokeAccess   *connect.Client[proto.RevokeAccessReq, proto.RevokeAccessRes]
-	changePassword *connect.Client[proto.ChangePasswordReq, proto.ChangePasswordRes]
+	listUsers        *connect.Client[proto.ListUsersReq, proto.ListUsersRes]
+	deleteUser       *connect.Client[proto.DeleteUserReq, emptypb.Empty]
+	revokeAccess     *connect.Client[proto.RevokeAccessReq, proto.RevokeAccessRes]
+	changePassword   *connect.Client[proto.ChangePasswordReq, proto.ChangePasswordRes]
+	startTwoFactor   *connect.Client[proto.StartTwoFactorReq, proto.StartTwoFactorRes]
+	confirmTwoFactor *connect.Client[proto.ConfirmTwoFactorReq, proto.ConfirmTwoFactorRes]
+	disableTwoFactor *connect.Client[proto.DisableTwoFactorReq, emptypb.Empty]
+	resetTwoFactor   *connect.Client[proto.ResetTwoFactorReq, emptypb.Empty]
 }
 
 // ListUsers calls proto.Users.ListUsers.
@@ -123,6 +166,26 @@ func (c *usersClient) ChangePassword(ctx context.Context, req *connect.Request[p
 	return c.changePassword.CallUnary(ctx, req)
 }
 
+// StartTwoFactor calls proto.Users.StartTwoFactor.
+func (c *usersClient) StartTwoFactor(ctx context.Context, req *connect.Request[proto.StartTwoFactorReq]) (*connect.Response[proto.StartTwoFactorRes], error) {
+	return c.startTwoFactor.CallUnary(ctx, req)
+}
+
+// ConfirmTwoFactor calls proto.Users.ConfirmTwoFactor.
+func (c *usersClient) ConfirmTwoFactor(ctx context.Context, req *connect.Request[proto.ConfirmTwoFactorReq]) (*connect.Response[proto.ConfirmTwoFactorRes], error) {
+	return c.confirmTwoFactor.CallUnary(ctx, req)
+}
+
+// DisableTwoFactor calls proto.Users.DisableTwoFactor.
+func (c *usersClient) DisableTwoFactor(ctx context.Context, req *connect.Request[proto.DisableTwoFactorReq]) (*connect.Response[emptypb.Empty], error) {
+	return c.disableTwoFactor.CallUnary(ctx, req)
+}
+
+// ResetTwoFactor calls proto.Users.ResetTwoFactor.
+func (c *usersClient) ResetTwoFactor(ctx context.Context, req *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error) {
+	return c.resetTwoFactor.CallUnary(ctx, req)
+}
+
 // UsersHandler is an implementation of the proto.Users service.
 type UsersHandler interface {
 	// admin only
@@ -134,6 +197,13 @@ type UsersHandler interface {
 	// Changes your own password. Only for the built-in sign-in - with an
 	// identity provider the password is theirs, not ours.
 	ChangePassword(context.Context, *connect.Request[proto.ChangePasswordReq]) (*connect.Response[proto.ChangePasswordRes], error)
+	// The second factor of the built-in sign-in: an authenticator app, and the
+	// recovery codes for when the phone is gone. Your own only.
+	StartTwoFactor(context.Context, *connect.Request[proto.StartTwoFactorReq]) (*connect.Response[proto.StartTwoFactorRes], error)
+	ConfirmTwoFactor(context.Context, *connect.Request[proto.ConfirmTwoFactorReq]) (*connect.Response[proto.ConfirmTwoFactorRes], error)
+	DisableTwoFactor(context.Context, *connect.Request[proto.DisableTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
+	// admin only: take somebody's second factor away when their phone is gone
+	ResetTwoFactor(context.Context, *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewUsersHandler builds an HTTP handler from the service implementation. It returns the path on
@@ -167,6 +237,30 @@ func NewUsersHandler(svc UsersHandler, opts ...connect.HandlerOption) (string, h
 		connect.WithSchema(usersMethods.ByName("ChangePassword")),
 		connect.WithHandlerOptions(opts...),
 	)
+	usersStartTwoFactorHandler := connect.NewUnaryHandler(
+		UsersStartTwoFactorProcedure,
+		svc.StartTwoFactor,
+		connect.WithSchema(usersMethods.ByName("StartTwoFactor")),
+		connect.WithHandlerOptions(opts...),
+	)
+	usersConfirmTwoFactorHandler := connect.NewUnaryHandler(
+		UsersConfirmTwoFactorProcedure,
+		svc.ConfirmTwoFactor,
+		connect.WithSchema(usersMethods.ByName("ConfirmTwoFactor")),
+		connect.WithHandlerOptions(opts...),
+	)
+	usersDisableTwoFactorHandler := connect.NewUnaryHandler(
+		UsersDisableTwoFactorProcedure,
+		svc.DisableTwoFactor,
+		connect.WithSchema(usersMethods.ByName("DisableTwoFactor")),
+		connect.WithHandlerOptions(opts...),
+	)
+	usersResetTwoFactorHandler := connect.NewUnaryHandler(
+		UsersResetTwoFactorProcedure,
+		svc.ResetTwoFactor,
+		connect.WithSchema(usersMethods.ByName("ResetTwoFactor")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/proto.Users/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UsersListUsersProcedure:
@@ -177,6 +271,14 @@ func NewUsersHandler(svc UsersHandler, opts ...connect.HandlerOption) (string, h
 			usersRevokeAccessHandler.ServeHTTP(w, r)
 		case UsersChangePasswordProcedure:
 			usersChangePasswordHandler.ServeHTTP(w, r)
+		case UsersStartTwoFactorProcedure:
+			usersStartTwoFactorHandler.ServeHTTP(w, r)
+		case UsersConfirmTwoFactorProcedure:
+			usersConfirmTwoFactorHandler.ServeHTTP(w, r)
+		case UsersDisableTwoFactorProcedure:
+			usersDisableTwoFactorHandler.ServeHTTP(w, r)
+		case UsersResetTwoFactorProcedure:
+			usersResetTwoFactorHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -200,4 +302,20 @@ func (UnimplementedUsersHandler) RevokeAccess(context.Context, *connect.Request[
 
 func (UnimplementedUsersHandler) ChangePassword(context.Context, *connect.Request[proto.ChangePasswordReq]) (*connect.Response[proto.ChangePasswordRes], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.ChangePassword is not implemented"))
+}
+
+func (UnimplementedUsersHandler) StartTwoFactor(context.Context, *connect.Request[proto.StartTwoFactorReq]) (*connect.Response[proto.StartTwoFactorRes], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.StartTwoFactor is not implemented"))
+}
+
+func (UnimplementedUsersHandler) ConfirmTwoFactor(context.Context, *connect.Request[proto.ConfirmTwoFactorReq]) (*connect.Response[proto.ConfirmTwoFactorRes], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.ConfirmTwoFactor is not implemented"))
+}
+
+func (UnimplementedUsersHandler) DisableTwoFactor(context.Context, *connect.Request[proto.DisableTwoFactorReq]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.DisableTwoFactor is not implemented"))
+}
+
+func (UnimplementedUsersHandler) ResetTwoFactor(context.Context, *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.ResetTwoFactor is not implemented"))
 }

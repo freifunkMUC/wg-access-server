@@ -142,7 +142,7 @@ describe('filterUsers', () => {
   const users = [
     makeUser({ name: 'alice', displayName: 'Alice Example', policies: ['staff'] }),
     makeUser({ name: 'bob', displayName: 'Bob Roe', policies: ['contractors'] }),
-    makeUser({ name: 'carol', displayName: 'Carol', policies: [] }),
+    makeUser({ name: 'carol', displayName: 'Carol', policies: [], twoFactor: false }),
   ];
   const names = (result: User.AsObject[]) => result.map((u) => u.name);
 

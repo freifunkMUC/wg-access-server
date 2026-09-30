@@ -3,6 +3,15 @@
 <section class="form">
 	<h2>Sign in</h2>
 
+	{{- if .AskForCode}}
+	<form action="{{.PostURL}}" method="POST">
+		<p>Enter the code from your authenticator app, or one of your recovery codes.</p>
+		<label for="code">Code</label>
+		<input type="text" name="code" id="code" autocomplete="one-time-code" inputmode="text"
+			spellcheck="false" autocapitalize="off" autofocus required>
+		<button id="submit" type="submit">Sign in</button>
+	</form>
+	{{- else}}
 	<form action="{{.PostURL}}" method="POST">
 		<label for="username">Username</label>
 		<input type="text" name="username" id="username" autocomplete="username" autofocus required>
@@ -10,6 +19,7 @@
 		<input type="password" name="password" id="password" autocomplete="current-password" required>
 		<button id="submit" type="submit">Sign in</button>
 	</form>
+	{{- end}}
 	{{- with .ErrorMessage}}
 	<div class="error" role="alert">{{.}}</div>
 	{{- end}}

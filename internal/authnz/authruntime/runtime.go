@@ -36,6 +36,16 @@ type Passwords interface {
 	UserPassword(subject string) (hash string, from string)
 }
 
+// TwoFactor is the second factor of the built-in sign-in. Nil when nothing
+// keeps one, which is a server where a right password is the whole login.
+type TwoFactor interface {
+	// Enabled says whether this person is asked for a code.
+	Enabled(subject string) bool
+	// Check says whether a code is theirs - from their app, or one of their
+	// recovery codes, which it uses up.
+	Check(subject string, code string) bool
+}
+
 type ProviderRuntime struct {
 	store sessions.Store
 	// browserSessions keeps who signed in; the cookie carries only an id.
@@ -47,6 +57,8 @@ type ProviderRuntime struct {
 	// passwords is where a user's own password is looked up, nil when
 	// nothing stores one.
 	passwords Passwords
+	// twoFactor is the second factor, nil when nothing keeps one.
+	twoFactor TwoFactor
 }
 
 func NewProviderRuntime(store sessions.Store, browserSessions authsession.Sessions) *ProviderRuntime {
@@ -66,6 +78,21 @@ func (p *ProviderRuntime) Password(subject string) (hash string, from string) {
 		return "", ""
 	}
 	return p.passwords.UserPassword(subject)
+}
+
+// UseTwoFactor registers where the second factor is kept.
+func (p *ProviderRuntime) UseTwoFactor(twoFactor TwoFactor) {
+	p.twoFactor = twoFactor
+}
+
+// TwoFactorRequired says whether this person has to give a code as well.
+func (p *ProviderRuntime) TwoFactorRequired(subject string) bool {
+	return p.twoFactor != nil && p.twoFactor.Enabled(subject)
+}
+
+// CheckTwoFactor says whether the code is theirs.
+func (p *ProviderRuntime) CheckTwoFactor(subject string, code string) bool {
+	return p.twoFactor != nil && p.twoFactor.Check(subject, code)
 }
 
 // OnLogin registers what to do when somebody signed in. Every provider ends

@@ -170,7 +170,7 @@ describe('revoking somebody"s access', () => {
   // halfway through, so it is not offered - the server refuses it as well
   it('does not offer to revoke your own access', async () => {
     listUsers.mockResolvedValue({
-      items: [alice, { name: 'admin', displayName: 'The Admin', policies: [] } as User.AsObject],
+      items: [alice, { name: 'admin', displayName: 'The Admin', policies: [], twoFactor: false } as User.AsObject],
     });
     render(<AllDevices />);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Revoke access' })).toBeTruthy());
