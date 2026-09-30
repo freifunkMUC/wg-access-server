@@ -392,6 +392,9 @@ func (d *UserService) FinishPasskey(ctx context.Context, request *connect.Reques
 		if errors.Is(err, users.ErrNoChallenge) {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 		}
+		if errors.Is(err, users.ErrPasskeyExists) {
+			return nil, connect.NewError(connect.CodeAlreadyExists, err)
+		}
 		// What the browser sent was not accepted - that is the caller's
 		// business, not an internal failure.
 		logrus.Warn(fmt.Errorf("a passkey registration was refused: %w", err))

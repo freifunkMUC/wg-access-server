@@ -113,6 +113,15 @@ var migrations = []migration{
 			return db.AutoMigrate(&userV5{})
 		},
 	},
+	{
+		// The step a code was last accepted at, so that the same code does
+		// not sign in twice. Zero for everybody after the upgrade, which
+		// accepts the next code and remembers it from then on.
+		id: "0011_totp_last_step",
+		apply: func(db *gorm.DB) error {
+			return db.AutoMigrate(&userV6{})
+		},
+	},
 }
 
 type migration struct {
@@ -360,6 +369,28 @@ type userV5 struct {
 }
 
 func (userV5) TableName() string {
+	return "users"
+}
+
+// userV6 is the users table as 0011_totp_last_step left it.
+type userV6 struct {
+	Subject                string `gorm:"type:varchar(100);primaryKey"`
+	Provider               string
+	Name                   string
+	Email                  string
+	Policies               string
+	LastLogin              time.Time
+	PasswordHash           string
+	PasswordFrom           string
+	TotpSecret             string
+	TotpEnabledAt          *time.Time
+	TotpRecovery           string
+	TotpLastStep           int64
+	WebauthnChallenge      string
+	WebauthnChallengeUntil *time.Time
+}
+
+func (userV6) TableName() string {
 	return "users"
 }
 

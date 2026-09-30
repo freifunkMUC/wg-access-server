@@ -6,10 +6,17 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // ErrPasskeyNotFound is a credential id nobody has.
 var ErrPasskeyNotFound = errors.New("passkey not found")
+
+// ErrPasskeyExists is a credential id somebody already has - possibly
+// somebody else. An authenticator picks its own credential ids, so whoever is
+// registering picks what is written here: without this, registering a
+// credential id that another user holds would take their passkey from them.
+var ErrPasskeyExists = errors.New("passkey already registered")
 
 // Passkey is one credential somebody registered: a security key, a phone, a
 // laptop's own authenticator. A person can have several, which is the point -
@@ -35,9 +42,14 @@ type Passkey struct {
 // PasskeyStorage keeps the credentials and the challenge of a registration or
 // a sign-in that is in flight.
 type PasskeyStorage interface {
-	// SavePasskey stores a new credential, or the same one again with a
-	// changed sign count after a sign-in.
-	SavePasskey(passkey *Passkey) error
+	// AddPasskey stores a credential nobody has registered yet. A credential
+	// id that exists - for this user or any other - is refused rather than
+	// replaced.
+	AddPasskey(passkey *Passkey) error
+	// UpdatePasskey writes a credential back after a sign-in, with its new
+	// sign count and the time it was used. It only ever writes a credential
+	// of the owner named on it.
+	UpdatePasskey(passkey *Passkey) error
 	// ListPasskeys returns the credentials of one user, newest first.
 	ListPasskeys(owner string) ([]*Passkey, error)
 	// GetPasskey returns one credential by its id.
@@ -50,9 +62,24 @@ type PasskeyStorage interface {
 	SetWebauthnChallenge(subject string, data string, until *time.Time) error
 }
 
-func (s *InMemoryStorage) SavePasskey(passkey *Passkey) error {
+func (s *InMemoryStorage) AddPasskey(passkey *Passkey) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if _, taken := s.passkeys[passkey.ID]; taken {
+		return ErrPasskeyExists
+	}
+	stored := *passkey
+	s.passkeys[passkey.ID] = &stored
+	return nil
+}
+
+func (s *InMemoryStorage) UpdatePasskey(passkey *Passkey) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	existing, ok := s.passkeys[passkey.ID]
+	if !ok || existing.Owner != passkey.Owner {
+		return ErrPasskeyNotFound
+	}
 	stored := *passkey
 	s.passkeys[passkey.ID] = &stored
 	return nil
@@ -108,9 +135,31 @@ func (s *InMemoryStorage) SetWebauthnChallenge(subject string, data string, unti
 	return nil
 }
 
-func (s *SQLStorage) SavePasskey(passkey *Passkey) error {
-	if err := s.db.Save(passkey).Error; err != nil {
-		return fmt.Errorf("failed to write the passkey: %w", err)
+func (s *SQLStorage) AddPasskey(passkey *Passkey) error {
+	// Do nothing on a conflict and look at what was written: an insert that
+	// changed no row means the credential id is taken. Checking first and
+	// then inserting would leave a gap between the two.
+	q := s.db.Clauses(clause.OnConflict{DoNothing: true}).Create(passkey)
+	if q.Error != nil {
+		return fmt.Errorf("failed to write the passkey: %w", q.Error)
+	}
+	if q.RowsAffected == 0 {
+		return ErrPasskeyExists
+	}
+	return nil
+}
+
+func (s *SQLStorage) UpdatePasskey(passkey *Passkey) error {
+	// The owner is part of the condition, not of what is written: this is
+	// how a credential is written back, never how it changes hands.
+	q := s.db.Model(&Passkey{}).
+		Where("id = ? AND owner = ?", passkey.ID, passkey.Owner).
+		UpdateColumns(map[string]interface{}{"name": passkey.Name, "data": passkey.Data, "last_used_at": passkey.LastUsedAt})
+	if q.Error != nil {
+		return fmt.Errorf("failed to write the passkey: %w", q.Error)
+	}
+	if q.RowsAffected == 0 {
+		return ErrPasskeyNotFound
 	}
 	return nil
 }

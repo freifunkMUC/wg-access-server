@@ -96,6 +96,50 @@ func TestEnrollingAndSigningInWithACode(t *testing.T) {
 	}
 }
 
+// A code is good for three time steps, which is a window an attacker who
+// caught one can use as well. RFC 6238 asks that a code signs somebody in
+// once, and only once.
+func TestACodeSignsInOnlyOnce(t *testing.T) {
+	tf, _ := twoFactor(t)
+	secret, _, err := tf.Start("alice", "alice@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, err := TOTPCode(secret, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tf.Confirm("alice", code); err != nil {
+		t.Fatal(err)
+	}
+
+	if !tf.Check("alice", code) {
+		t.Fatal("the code from the app was refused")
+	}
+	if tf.Check("alice", code) {
+		t.Error("the same code signed in a second time")
+	}
+
+	// ... and the step before it, which the clock skew window would
+	// otherwise still take
+	earlier, err := TOTPCode(secret, time.Now().Add(-30*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if earlier != code && tf.Check("alice", earlier) {
+		t.Error("the code for the step before the one just used was accepted")
+	}
+
+	// the next one works, or nobody could ever sign in again
+	next, err := TOTPCode(secret, time.Now().Add(30*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next != code && !tf.Check("alice", next) {
+		t.Error("the next code was refused")
+	}
+}
+
 func TestConfirmingNeedsTheRightCode(t *testing.T) {
 	tf, _ := twoFactor(t)
 	if _, _, err := tf.Start("alice", "alice@example.com"); err != nil {

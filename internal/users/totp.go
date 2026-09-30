@@ -67,20 +67,30 @@ func TOTPCode(secret string, at time.Time) (string, error) {
 
 // CheckTOTP says whether a code is the one for now, or for the step just
 // before or after it - phones and servers rarely agree on the second.
+func CheckTOTP(secret string, given string, now time.Time) bool {
+	_, ok := CheckTOTPStep(secret, given, now)
+	return ok
+}
+
+// CheckTOTPStep is CheckTOTP, and says which time step the code was for. The
+// caller remembers it: a code is good for three steps, so without refusing
+// everything up to the last accepted one, the same code signs in again for as
+// long as its window lasts. RFC 6238 asks for exactly this.
 //
 // The comparison is constant time, and the code is compared as a string, so a
 // code with leading zeros is not quietly turned into a smaller number.
-func CheckTOTP(secret string, given string, now time.Time) bool {
+func CheckTOTPStep(secret string, given string, now time.Time) (int64, bool) {
 	given = strings.TrimSpace(given)
 	if len(given) != totpDigits {
-		return false
+		return 0, false
 	}
 	key, err := totpEncoding.DecodeString(strings.ToUpper(strings.TrimSpace(secret)))
 	if err != nil {
-		return false
+		return 0, false
 	}
 
 	step := uint64(now.Unix()) / uint64(totpStep.Seconds())
+	matched := int64(0)
 	ok := false
 	for i := -totpWindow; i <= totpWindow; i++ {
 		counter := step + uint64(i) //nolint:gosec // wraps only for times before 1970
@@ -88,9 +98,10 @@ func CheckTOTP(secret string, given string, now time.Time) bool {
 		// about which one matched
 		if subtle.ConstantTimeCompare([]byte(code(key, counter, totpDigits)), []byte(given)) == 1 {
 			ok = true
+			matched = int64(counter) //nolint:gosec // same
 		}
 	}
-	return ok
+	return matched, ok
 }
 
 // code is the HOTP truncation of RFC 4226, which TOTP counts steps for.

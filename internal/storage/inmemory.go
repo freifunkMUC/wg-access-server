@@ -348,6 +348,7 @@ func (s *InMemoryStorage) SetUserTOTP(subject string, state TOTPState) error {
 	changed.TotpSecret = state.Secret
 	changed.TotpEnabledAt = state.EnabledAt
 	changed.TotpRecovery = state.Recovery
+	changed.TotpLastStep = state.LastStep
 	s.users[subject] = &changed
 	return nil
 }
