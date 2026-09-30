@@ -197,8 +197,9 @@ func (m *Manager) Delete(user *authsession.Identity, id string) (*storage.APITok
 	return token, nil
 }
 
-// DeleteForOwner revokes every token of one user.
-func (m *Manager) DeleteForOwner(owner string) error {
+// DeleteForOwner revokes every token of one user and returns how many that
+// was.
+func (m *Manager) DeleteForOwner(owner string) (int, error) {
 	return m.storage.DeleteTokensForOwner(owner)
 }
 

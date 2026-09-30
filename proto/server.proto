@@ -41,4 +41,8 @@ message InfoRes {
   int32 mtu = 17;
   int32 client_config_persistent_keepalive = 18;
   bool api_tokens_enabled = 19;
+  // who is signed in, as their devices name their owner. The UI tells their
+  // own row from the others with it - an admin must not be offered an action
+  // that would take their own access away mid-click.
+  string subject = 20;
 }

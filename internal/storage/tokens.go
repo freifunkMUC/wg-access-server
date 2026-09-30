@@ -52,8 +52,9 @@ type TokenStorage interface {
 	// TouchToken records that a token was used.
 	TouchToken(id string, at time.Time) error
 	DeleteToken(id string) error
-	// DeleteTokensForOwner revokes every token of one user.
-	DeleteTokensForOwner(owner string) error
+	// DeleteTokensForOwner revokes every token of one user and returns how
+	// many that was.
+	DeleteTokensForOwner(owner string) (int, error)
 }
 
 func (s *InMemoryStorage) SaveToken(token *APIToken) error {
@@ -125,15 +126,17 @@ func (s *InMemoryStorage) DeleteToken(id string) error {
 	return nil
 }
 
-func (s *InMemoryStorage) DeleteTokensForOwner(owner string) error {
+func (s *InMemoryStorage) DeleteTokensForOwner(owner string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	deleted := 0
 	for id, token := range s.tokens {
 		if token.Owner == owner {
 			delete(s.tokens, id)
+			deleted++
 		}
 	}
-	return nil
+	return deleted, nil
 }
 
 func (s *SQLStorage) SaveToken(token *APIToken) error {
@@ -193,9 +196,10 @@ func (s *SQLStorage) DeleteToken(id string) error {
 	return nil
 }
 
-func (s *SQLStorage) DeleteTokensForOwner(owner string) error {
-	if err := s.db.Where("owner = ?", owner).Delete(&APIToken{}).Error; err != nil {
-		return fmt.Errorf("failed to delete the api tokens of the user: %w", err)
+func (s *SQLStorage) DeleteTokensForOwner(owner string) (int, error) {
+	q := s.db.Where("owner = ?", owner).Delete(&APIToken{})
+	if q.Error != nil {
+		return 0, fmt.Errorf("failed to delete the api tokens of the user: %w", q.Error)
 	}
-	return nil
+	return int(q.RowsAffected), nil
 }

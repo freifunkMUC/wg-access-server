@@ -32,6 +32,9 @@ const (
 	// DeviceRoutes is an admin changing the networks behind a device.
 	DeviceRoutes = "device.routes"
 	UserDelete   = "user.delete"
+	// UserRevoke is an admin taking somebody's access away in one action:
+	// their devices are blocked, their tokens revoked, their sessions ended.
+	UserRevoke = "user.revoke"
 	// SessionDelete is somebody ending a browser session of their own.
 	SessionDelete = "session.delete"
 	TokenCreate   = "api_token.create"

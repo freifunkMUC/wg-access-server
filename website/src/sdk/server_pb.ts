@@ -134,6 +134,7 @@ export declare namespace InfoRes {
 		mtu: number,
 		clientConfigPersistentKeepalive: number,
 		apiTokensEnabled: boolean,
+		subject: string,
 	}
 }
 
@@ -278,6 +279,13 @@ export class InfoRes extends jspb.Message {
 		(jspb.Message as any).setProto3BooleanField(this, 19, value);
 	}
 
+	getSubject(): string {return jspb.Message.getFieldWithDefault(this, 20, "");
+	}
+
+	setSubject(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 20, value);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		InfoRes.serializeBinaryToWriter(this, writer);
@@ -305,6 +313,7 @@ export class InfoRes extends jspb.Message {
 			mtu: this.getMtu(),
 			clientConfigPersistentKeepalive: this.getClientConfigPersistentKeepalive(),
 			apiTokensEnabled: this.getApiTokensEnabled(),
+			subject: this.getSubject(),
 		};
 	}
 
@@ -380,6 +389,10 @@ export class InfoRes extends jspb.Message {
 		const field19 = message.getApiTokensEnabled();
 		if (field19 != false) {
 			writer.writeBool(19, field19);
+		}
+		const field20 = message.getSubject();
+		if (field20.length > 0) {
+			writer.writeString(20, field20);
 		}
 	}
 
@@ -471,6 +484,10 @@ export class InfoRes extends jspb.Message {
 				const field19 = reader.readBool()
 				message.setApiTokensEnabled(field19);
 				break;
+			case 20:
+				const field20 = reader.readString()
+				message.setSubject(field20);
+				break;
 			default:
 				reader.skipField();
 				break;
@@ -513,6 +530,7 @@ function InfoResFromObject(obj: InfoRes.AsObject | undefined): InfoRes | undefin
 	message.setMtu(obj.mtu);
 	message.setClientConfigPersistentKeepalive(obj.clientConfigPersistentKeepalive);
 	message.setApiTokensEnabled(obj.apiTokensEnabled);
+	message.setSubject(obj.subject);
 	return message;
 }
 

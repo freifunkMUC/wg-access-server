@@ -32,7 +32,7 @@ func TestSessionStorage(t *testing.T) {
 			t.Cleanup(func() { _ = s.Close() })
 
 			owner := "sessions-test-" + name
-			t.Cleanup(func() { _ = s.DeleteSessionsForOwner(owner) })
+			t.Cleanup(func() { _, _ = s.DeleteSessionsForOwner(owner) })
 
 			created := time.Now().UTC().Truncate(time.Second)
 			session := &Session{
@@ -83,7 +83,7 @@ func TestSessionStorage(t *testing.T) {
 			if err := s.SaveSession(&other); err != nil {
 				t.Fatal(err)
 			}
-			t.Cleanup(func() { _ = s.DeleteSessionsForOwner(other.Owner) })
+			t.Cleanup(func() { _, _ = s.DeleteSessionsForOwner(other.Owner) })
 
 			listed, err := s.ListSessions(owner)
 			if err != nil {
@@ -100,8 +100,14 @@ func TestSessionStorage(t *testing.T) {
 				t.Error("the session still exists after being deleted")
 			}
 
-			if err := s.DeleteSessionsForOwner(owner); err != nil {
+			// one session of this owner is already gone, so this reports the
+			// one that is left - not everything that ever was
+			ended, err := s.DeleteSessionsForOwner(owner)
+			if err != nil {
 				t.Fatal(err)
+			}
+			if ended != 1 {
+				t.Errorf("ended %d sessions, want the one that was left", ended)
 			}
 			if listed, err = s.ListSessions(owner); err != nil {
 				t.Fatal(err)

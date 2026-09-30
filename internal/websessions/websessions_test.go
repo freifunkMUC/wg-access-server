@@ -100,8 +100,12 @@ func TestEndAllForOwner(t *testing.T) {
 	second := signIn(t, m, "alice")
 	other := signIn(t, m, "bob")
 
-	if err := m.EndAllForOwner("alice"); err != nil {
+	ended, err := m.EndAllForOwner("alice")
+	if err != nil {
 		t.Fatal(err)
+	}
+	if ended != 2 {
+		t.Errorf("ended %d sessions, want both of alice's", ended)
 	}
 	for _, id := range []string{first, second} {
 		if _, err := m.Identity(id); err == nil {

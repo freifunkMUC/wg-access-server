@@ -250,6 +250,33 @@ func (s *InMemoryStorage) deleteForOwner(owner string) []*Device {
 	return deleted
 }
 
+// BlockForOwner blocks every device of one user that is not blocked already,
+// the way DeleteForOwner removes them.
+func (s *InMemoryStorage) BlockForOwner(owner string) ([]*Device, error) {
+	blocked := s.blockForOwner(owner)
+	for _, device := range blocked {
+		s.EmitUpdate(device)
+	}
+	return blocked, nil
+}
+
+func (s *InMemoryStorage) blockForOwner(owner string) []*Device {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var blocked []*Device
+	for storedKey, device := range s.db {
+		if device.Owner != owner || device.Disabled {
+			continue
+		}
+		changed := *device
+		changed.Disabled = true
+		s.db[storedKey] = &changed
+		blocked = append(blocked, &changed)
+	}
+	return blocked
+}
+
 func (s *InMemoryStorage) SaveUser(user *User) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -39,6 +39,15 @@ export class Users {
 		googleProtobufEmpty.Empty.deserializeBinary
 	);
 
+	private methodInfoRevokeAccess = new grpcWeb.MethodDescriptor<RevokeAccessReq, RevokeAccessRes>(
+		"RevokeAccess",
+		'unary',
+		RevokeAccessReq as unknown as MessageCtor<RevokeAccessReq>,
+		RevokeAccessRes as unknown as MessageCtor<RevokeAccessRes>,
+		(req: RevokeAccessReq) => req.serializeBinary(),
+		RevokeAccessRes.deserializeBinary
+	);
+
 	constructor(
 		private hostname: string,
 		private defaultMetadata?: () => grpcWeb.Metadata,
@@ -72,6 +81,25 @@ export class Users {
 				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
 				this.methodInfoDeleteUser,
 				(err: grpcWeb.Error, res: googleProtobufEmpty.Empty) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(res.toObject());
+					}
+				},
+			);
+		});
+	}
+
+	revokeAccess(req: RevokeAccessReq.AsObject, metadata?: grpcWeb.Metadata): Promise<RevokeAccessRes.AsObject> {
+		return new Promise((resolve, reject) => {
+			const message = RevokeAccessReqFromObject(req);
+			this.client_.rpcCall(
+				this.hostname + '/proto.Users/RevokeAccess',
+				message,
+				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
+				this.methodInfoRevokeAccess,
+				(err: grpcWeb.Error, res: RevokeAccessRes) => {
 					if (err) {
 						reject(err);
 					} else {
@@ -417,6 +445,182 @@ export class DeleteUserReq extends jspb.Message {
 	}
 
 }
+export declare namespace RevokeAccessReq {
+	export type AsObject = {
+		name: string,
+	}
+}
+
+export class RevokeAccessReq extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, RevokeAccessReq.repeatedFields_, null);
+	}
+
+
+	getName(): string {return jspb.Message.getFieldWithDefault(this, 1, "");
+	}
+
+	setName(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 1, value);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		RevokeAccessReq.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): RevokeAccessReq.AsObject {
+		let f: any;
+		return {
+			name: this.getName(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: RevokeAccessReq, writer: jspb.BinaryWriter): void {
+		const field1 = message.getName();
+		if (field1.length > 0) {
+			writer.writeString(1, field1);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): RevokeAccessReq {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new RevokeAccessReq();
+		return RevokeAccessReq.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: RevokeAccessReq, reader: jspb.BinaryReader): RevokeAccessReq {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readString()
+				message.setName(field1);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
+export declare namespace RevokeAccessRes {
+	export type AsObject = {
+		devicesBlocked: number,
+		tokensDeleted: number,
+		sessionsEnded: number,
+	}
+}
+
+export class RevokeAccessRes extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, RevokeAccessRes.repeatedFields_, null);
+	}
+
+
+	getDevicesBlocked(): number {return jspb.Message.getFieldWithDefault(this, 1, 0);
+	}
+
+	setDevicesBlocked(value: number): void {
+		(jspb.Message as any).setProto3IntField(this, 1, value);
+	}
+
+	getTokensDeleted(): number {return jspb.Message.getFieldWithDefault(this, 2, 0);
+	}
+
+	setTokensDeleted(value: number): void {
+		(jspb.Message as any).setProto3IntField(this, 2, value);
+	}
+
+	getSessionsEnded(): number {return jspb.Message.getFieldWithDefault(this, 3, 0);
+	}
+
+	setSessionsEnded(value: number): void {
+		(jspb.Message as any).setProto3IntField(this, 3, value);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		RevokeAccessRes.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): RevokeAccessRes.AsObject {
+		let f: any;
+		return {
+			devicesBlocked: this.getDevicesBlocked(),
+			tokensDeleted: this.getTokensDeleted(),
+			sessionsEnded: this.getSessionsEnded(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: RevokeAccessRes, writer: jspb.BinaryWriter): void {
+		const field1 = message.getDevicesBlocked();
+		if (field1 != 0) {
+			writer.writeInt32(1, field1);
+		}
+		const field2 = message.getTokensDeleted();
+		if (field2 != 0) {
+			writer.writeInt32(2, field2);
+		}
+		const field3 = message.getSessionsEnded();
+		if (field3 != 0) {
+			writer.writeInt32(3, field3);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): RevokeAccessRes {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new RevokeAccessRes();
+		return RevokeAccessRes.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: RevokeAccessRes, reader: jspb.BinaryReader): RevokeAccessRes {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readInt32()
+				message.setDevicesBlocked(field1);
+				break;
+			case 2:
+				const field2 = reader.readInt32()
+				message.setTokensDeleted(field2);
+				break;
+			case 3:
+				const field3 = reader.readInt32()
+				message.setSessionsEnded(field3);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
 
 
 function UserFromObject(obj: User.AsObject | undefined): User | undefined {
@@ -467,6 +671,26 @@ function DeleteUserReqFromObject(obj: DeleteUserReq.AsObject | undefined): Delet
 	}
 	const message = new DeleteUserReq();
 	message.setName(obj.name);
+	return message;
+}
+
+function RevokeAccessReqFromObject(obj: RevokeAccessReq.AsObject | undefined): RevokeAccessReq | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new RevokeAccessReq();
+	message.setName(obj.name);
+	return message;
+}
+
+function RevokeAccessResFromObject(obj: RevokeAccessRes.AsObject | undefined): RevokeAccessRes | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new RevokeAccessRes();
+	message.setDevicesBlocked(obj.devicesBlocked);
+	message.setTokensDeleted(obj.tokensDeleted);
+	message.setSessionsEnded(obj.sessionsEnded);
 	return message;
 }
 

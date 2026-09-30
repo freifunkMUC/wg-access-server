@@ -11,6 +11,9 @@ service Users {
   // admin only
   rpc ListUsers(ListUsersReq) returns (ListUsersRes) {}
   rpc DeleteUser (DeleteUserReq) returns (google.protobuf.Empty) {}
+  // Takes somebody's access away without deleting anything: their devices are
+  // blocked, their API tokens revoked and their sessions ended.
+  rpc RevokeAccess(RevokeAccessReq) returns (RevokeAccessRes) {}
 }
 
 message User {
@@ -33,4 +36,16 @@ message ListUsersRes {
 
 message DeleteUserReq {
   string name = 1;
+}
+
+message RevokeAccessReq {
+  string name = 1;
+}
+
+// What the revocation took away. A user who was already blocked everywhere
+// gives three zeros - it is not an error to revoke twice.
+message RevokeAccessRes {
+  int32 devices_blocked = 1;
+  int32 tokens_deleted = 2;
+  int32 sessions_ended = 3;
 }

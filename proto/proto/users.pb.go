@@ -218,6 +218,112 @@ func (x *DeleteUserReq) GetName() string {
 	return ""
 }
 
+type RevokeAccessReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeAccessReq) Reset() {
+	*x = RevokeAccessReq{}
+	mi := &file_users_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeAccessReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeAccessReq) ProtoMessage() {}
+
+func (x *RevokeAccessReq) ProtoReflect() protoreflect.Message {
+	mi := &file_users_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeAccessReq.ProtoReflect.Descriptor instead.
+func (*RevokeAccessReq) Descriptor() ([]byte, []int) {
+	return file_users_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *RevokeAccessReq) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// What the revocation took away. A user who was already blocked everywhere
+// gives three zeros - it is not an error to revoke twice.
+type RevokeAccessRes struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	DevicesBlocked int32                  `protobuf:"varint,1,opt,name=devices_blocked,json=devicesBlocked,proto3" json:"devices_blocked,omitempty"`
+	TokensDeleted  int32                  `protobuf:"varint,2,opt,name=tokens_deleted,json=tokensDeleted,proto3" json:"tokens_deleted,omitempty"`
+	SessionsEnded  int32                  `protobuf:"varint,3,opt,name=sessions_ended,json=sessionsEnded,proto3" json:"sessions_ended,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RevokeAccessRes) Reset() {
+	*x = RevokeAccessRes{}
+	mi := &file_users_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeAccessRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeAccessRes) ProtoMessage() {}
+
+func (x *RevokeAccessRes) ProtoReflect() protoreflect.Message {
+	mi := &file_users_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeAccessRes.ProtoReflect.Descriptor instead.
+func (*RevokeAccessRes) Descriptor() ([]byte, []int) {
+	return file_users_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *RevokeAccessRes) GetDevicesBlocked() int32 {
+	if x != nil {
+		return x.DevicesBlocked
+	}
+	return 0
+}
+
+func (x *RevokeAccessRes) GetTokensDeleted() int32 {
+	if x != nil {
+		return x.TokensDeleted
+	}
+	return 0
+}
+
+func (x *RevokeAccessRes) GetSessionsEnded() int32 {
+	if x != nil {
+		return x.SessionsEnded
+	}
+	return 0
+}
+
 var File_users_proto protoreflect.FileDescriptor
 
 const file_users_proto_rawDesc = "" +
@@ -233,11 +339,18 @@ const file_users_proto_rawDesc = "" +
 	"\fListUsersRes\x12!\n" +
 	"\x05items\x18\x01 \x03(\v2\v.proto.UserR\x05items\"#\n" +
 	"\rDeleteUserReq\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name2~\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"%\n" +
+	"\x0fRevokeAccessReq\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"\x88\x01\n" +
+	"\x0fRevokeAccessRes\x12'\n" +
+	"\x0fdevices_blocked\x18\x01 \x01(\x05R\x0edevicesBlocked\x12%\n" +
+	"\x0etokens_deleted\x18\x02 \x01(\x05R\rtokensDeleted\x12%\n" +
+	"\x0esessions_ended\x18\x03 \x01(\x05R\rsessionsEnded2\xc0\x01\n" +
 	"\x05Users\x127\n" +
 	"\tListUsers\x12\x13.proto.ListUsersReq\x1a\x13.proto.ListUsersRes\"\x00\x12<\n" +
 	"\n" +
-	"DeleteUser\x12\x14.proto.DeleteUserReq\x1a\x16.google.protobuf.Empty\"\x00B5Z3github.com/freifunkMUC/wg-access-server/proto/protob\x06proto3"
+	"DeleteUser\x12\x14.proto.DeleteUserReq\x1a\x16.google.protobuf.Empty\"\x00\x12@\n" +
+	"\fRevokeAccess\x12\x16.proto.RevokeAccessReq\x1a\x16.proto.RevokeAccessRes\"\x00B5Z3github.com/freifunkMUC/wg-access-server/proto/protob\x06proto3"
 
 var (
 	file_users_proto_rawDescOnce sync.Once
@@ -251,24 +364,28 @@ func file_users_proto_rawDescGZIP() []byte {
 	return file_users_proto_rawDescData
 }
 
-var file_users_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_users_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_users_proto_goTypes = []any{
 	(*User)(nil),                  // 0: proto.User
 	(*ListUsersReq)(nil),          // 1: proto.ListUsersReq
 	(*ListUsersRes)(nil),          // 2: proto.ListUsersRes
 	(*DeleteUserReq)(nil),         // 3: proto.DeleteUserReq
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 5: google.protobuf.Empty
+	(*RevokeAccessReq)(nil),       // 4: proto.RevokeAccessReq
+	(*RevokeAccessRes)(nil),       // 5: proto.RevokeAccessRes
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 7: google.protobuf.Empty
 }
 var file_users_proto_depIdxs = []int32{
-	4, // 0: proto.User.last_login:type_name -> google.protobuf.Timestamp
+	6, // 0: proto.User.last_login:type_name -> google.protobuf.Timestamp
 	0, // 1: proto.ListUsersRes.items:type_name -> proto.User
 	1, // 2: proto.Users.ListUsers:input_type -> proto.ListUsersReq
 	3, // 3: proto.Users.DeleteUser:input_type -> proto.DeleteUserReq
-	2, // 4: proto.Users.ListUsers:output_type -> proto.ListUsersRes
-	5, // 5: proto.Users.DeleteUser:output_type -> google.protobuf.Empty
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
+	4, // 4: proto.Users.RevokeAccess:input_type -> proto.RevokeAccessReq
+	2, // 5: proto.Users.ListUsers:output_type -> proto.ListUsersRes
+	7, // 6: proto.Users.DeleteUser:output_type -> google.protobuf.Empty
+	5, // 7: proto.Users.RevokeAccess:output_type -> proto.RevokeAccessRes
+	5, // [5:8] is the sub-list for method output_type
+	2, // [2:5] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name
@@ -285,7 +402,7 @@ func file_users_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_users_proto_rawDesc), len(file_users_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

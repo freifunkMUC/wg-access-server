@@ -775,6 +775,21 @@ func (d *DeviceManager) DeleteDevicesForUser(user string) error {
 	return nil
 }
 
+// BlockDevicesForUser stops every device of a user from connecting, without
+// deleting any of them, and returns how many were still able to connect. The
+// keys and addresses stay: this is how an admin takes access away from
+// somebody who may get it back, and their client configurations keep working
+// the moment the block is lifted.
+func (d *DeviceManager) BlockDevicesForUser(user string) (int, error) {
+	blocked, err := d.storage.BlockForOwner(user)
+	if err != nil {
+		return 0, fmt.Errorf("failed to block the devices of user '%s': %w", user, err)
+	}
+
+	logrus.Infof("Blocked %d devices of user '%s'", len(blocked), user)
+	return len(blocked), nil
+}
+
 func (d *DeviceManager) Ping() error {
 	if err := d.storage.Ping(); err != nil {
 		return fmt.Errorf("failed to ping storage: %w", err)
