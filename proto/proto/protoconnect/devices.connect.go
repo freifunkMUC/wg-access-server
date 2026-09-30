@@ -42,6 +42,8 @@ const (
 	DevicesDeleteDeviceProcedure = "/proto.Devices/DeleteDevice"
 	// DevicesRenameDeviceProcedure is the fully-qualified name of the Devices's RenameDevice RPC.
 	DevicesRenameDeviceProcedure = "/proto.Devices/RenameDevice"
+	// DevicesRotateDeviceKeyProcedure is the fully-qualified name of the Devices's RotateDeviceKey RPC.
+	DevicesRotateDeviceKeyProcedure = "/proto.Devices/RotateDeviceKey"
 	// DevicesListAllDevicesProcedure is the fully-qualified name of the Devices's ListAllDevices RPC.
 	DevicesListAllDevicesProcedure = "/proto.Devices/ListAllDevices"
 	// DevicesSetDeviceAccessProcedure is the fully-qualified name of the Devices's SetDeviceAccess RPC.
@@ -56,6 +58,11 @@ type DevicesClient interface {
 	ListDevices(context.Context, *connect.Request[proto.ListDevicesReq]) (*connect.Response[proto.ListDevicesRes], error)
 	DeleteDevice(context.Context, *connect.Request[proto.DeleteDeviceReq]) (*connect.Response[emptypb.Empty], error)
 	RenameDevice(context.Context, *connect.Request[proto.RenameDeviceReq]) (*connect.Response[proto.Device], error)
+	// RotateDeviceKey replaces the key material of one of your own devices,
+	// keeping its name, address and everything else. Your own only, and
+	// deliberately so: whoever rotates a key holds the private half, and that
+	// is the person using the device, not an admin.
+	RotateDeviceKey(context.Context, *connect.Request[proto.RotateDeviceKeyReq]) (*connect.Response[proto.Device], error)
 	// admin only
 	ListAllDevices(context.Context, *connect.Request[proto.ListAllDevicesReq]) (*connect.Response[proto.ListAllDevicesRes], error)
 	// SetDeviceAccess blocks a device from connecting, or gives it an expiry
@@ -103,6 +110,12 @@ func NewDevicesClient(httpClient connect.HTTPClient, baseURL string, opts ...con
 			connect.WithSchema(devicesMethods.ByName("RenameDevice")),
 			connect.WithClientOptions(opts...),
 		),
+		rotateDeviceKey: connect.NewClient[proto.RotateDeviceKeyReq, proto.Device](
+			httpClient,
+			baseURL+DevicesRotateDeviceKeyProcedure,
+			connect.WithSchema(devicesMethods.ByName("RotateDeviceKey")),
+			connect.WithClientOptions(opts...),
+		),
 		listAllDevices: connect.NewClient[proto.ListAllDevicesReq, proto.ListAllDevicesRes](
 			httpClient,
 			baseURL+DevicesListAllDevicesProcedure,
@@ -130,6 +143,7 @@ type devicesClient struct {
 	listDevices     *connect.Client[proto.ListDevicesReq, proto.ListDevicesRes]
 	deleteDevice    *connect.Client[proto.DeleteDeviceReq, emptypb.Empty]
 	renameDevice    *connect.Client[proto.RenameDeviceReq, proto.Device]
+	rotateDeviceKey *connect.Client[proto.RotateDeviceKeyReq, proto.Device]
 	listAllDevices  *connect.Client[proto.ListAllDevicesReq, proto.ListAllDevicesRes]
 	setDeviceAccess *connect.Client[proto.SetDeviceAccessReq, proto.Device]
 	setDeviceRoutes *connect.Client[proto.SetDeviceRoutesReq, proto.Device]
@@ -155,6 +169,11 @@ func (c *devicesClient) RenameDevice(ctx context.Context, req *connect.Request[p
 	return c.renameDevice.CallUnary(ctx, req)
 }
 
+// RotateDeviceKey calls proto.Devices.RotateDeviceKey.
+func (c *devicesClient) RotateDeviceKey(ctx context.Context, req *connect.Request[proto.RotateDeviceKeyReq]) (*connect.Response[proto.Device], error) {
+	return c.rotateDeviceKey.CallUnary(ctx, req)
+}
+
 // ListAllDevices calls proto.Devices.ListAllDevices.
 func (c *devicesClient) ListAllDevices(ctx context.Context, req *connect.Request[proto.ListAllDevicesReq]) (*connect.Response[proto.ListAllDevicesRes], error) {
 	return c.listAllDevices.CallUnary(ctx, req)
@@ -176,6 +195,11 @@ type DevicesHandler interface {
 	ListDevices(context.Context, *connect.Request[proto.ListDevicesReq]) (*connect.Response[proto.ListDevicesRes], error)
 	DeleteDevice(context.Context, *connect.Request[proto.DeleteDeviceReq]) (*connect.Response[emptypb.Empty], error)
 	RenameDevice(context.Context, *connect.Request[proto.RenameDeviceReq]) (*connect.Response[proto.Device], error)
+	// RotateDeviceKey replaces the key material of one of your own devices,
+	// keeping its name, address and everything else. Your own only, and
+	// deliberately so: whoever rotates a key holds the private half, and that
+	// is the person using the device, not an admin.
+	RotateDeviceKey(context.Context, *connect.Request[proto.RotateDeviceKeyReq]) (*connect.Response[proto.Device], error)
 	// admin only
 	ListAllDevices(context.Context, *connect.Request[proto.ListAllDevicesReq]) (*connect.Response[proto.ListAllDevicesRes], error)
 	// SetDeviceAccess blocks a device from connecting, or gives it an expiry
@@ -219,6 +243,12 @@ func NewDevicesHandler(svc DevicesHandler, opts ...connect.HandlerOption) (strin
 		connect.WithSchema(devicesMethods.ByName("RenameDevice")),
 		connect.WithHandlerOptions(opts...),
 	)
+	devicesRotateDeviceKeyHandler := connect.NewUnaryHandler(
+		DevicesRotateDeviceKeyProcedure,
+		svc.RotateDeviceKey,
+		connect.WithSchema(devicesMethods.ByName("RotateDeviceKey")),
+		connect.WithHandlerOptions(opts...),
+	)
 	devicesListAllDevicesHandler := connect.NewUnaryHandler(
 		DevicesListAllDevicesProcedure,
 		svc.ListAllDevices,
@@ -247,6 +277,8 @@ func NewDevicesHandler(svc DevicesHandler, opts ...connect.HandlerOption) (strin
 			devicesDeleteDeviceHandler.ServeHTTP(w, r)
 		case DevicesRenameDeviceProcedure:
 			devicesRenameDeviceHandler.ServeHTTP(w, r)
+		case DevicesRotateDeviceKeyProcedure:
+			devicesRotateDeviceKeyHandler.ServeHTTP(w, r)
 		case DevicesListAllDevicesProcedure:
 			devicesListAllDevicesHandler.ServeHTTP(w, r)
 		case DevicesSetDeviceAccessProcedure:
@@ -276,6 +308,10 @@ func (UnimplementedDevicesHandler) DeleteDevice(context.Context, *connect.Reques
 
 func (UnimplementedDevicesHandler) RenameDevice(context.Context, *connect.Request[proto.RenameDeviceReq]) (*connect.Response[proto.Device], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Devices.RenameDevice is not implemented"))
+}
+
+func (UnimplementedDevicesHandler) RotateDeviceKey(context.Context, *connect.Request[proto.RotateDeviceKeyReq]) (*connect.Response[proto.Device], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Devices.RotateDeviceKey is not implemented"))
 }
 
 func (UnimplementedDevicesHandler) ListAllDevices(context.Context, *connect.Request[proto.ListAllDevicesReq]) (*connect.Response[proto.ListAllDevicesRes], error) {

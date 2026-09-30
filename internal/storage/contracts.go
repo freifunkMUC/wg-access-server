@@ -45,6 +45,13 @@ type Storage interface {
 	// as it is now. Like SetAccess it emits an update event, which is how
 	// every replica learns to route them to the device's peer.
 	SetRoutes(device *Device, routes string) (*Device, error)
+	// SetKeys stores new key material for a device: its name, address and
+	// routes stay, so everything built around it keeps pointing at the same
+	// device while the key that reaches the tunnel is a different one. A
+	// public key another device already uses is refused - two devices
+	// sharing one would share a peer. Like SetAccess it emits an update
+	// event, which is how every replica replaces the peer.
+	SetKeys(device *Device, publicKey string, presharedKey string) (*Device, error)
 	List(owner string) ([]*Device, error)
 	// Addresses returns the address field of every device. Picking an address
 	// for a new device only needs to know which ones are taken, and reading

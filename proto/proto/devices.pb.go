@@ -286,6 +286,67 @@ func (x *AddDeviceReq) GetManualIpv6Address() string {
 	return ""
 }
 
+type RotateDeviceKeyReq struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Name      string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	PublicKey string                 `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	// the new pre-shared key, or empty for a device that uses none
+	PresharedKey  string `protobuf:"bytes,3,opt,name=preshared_key,json=presharedKey,proto3" json:"preshared_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateDeviceKeyReq) Reset() {
+	*x = RotateDeviceKeyReq{}
+	mi := &file_devices_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateDeviceKeyReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateDeviceKeyReq) ProtoMessage() {}
+
+func (x *RotateDeviceKeyReq) ProtoReflect() protoreflect.Message {
+	mi := &file_devices_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateDeviceKeyReq.ProtoReflect.Descriptor instead.
+func (*RotateDeviceKeyReq) Descriptor() ([]byte, []int) {
+	return file_devices_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RotateDeviceKeyReq) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *RotateDeviceKeyReq) GetPublicKey() string {
+	if x != nil {
+		return x.PublicKey
+	}
+	return ""
+}
+
+func (x *RotateDeviceKeyReq) GetPresharedKey() string {
+	if x != nil {
+		return x.PresharedKey
+	}
+	return ""
+}
+
 type RenameDeviceReq struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Name    string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -298,7 +359,7 @@ type RenameDeviceReq struct {
 
 func (x *RenameDeviceReq) Reset() {
 	*x = RenameDeviceReq{}
-	mi := &file_devices_proto_msgTypes[2]
+	mi := &file_devices_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -310,7 +371,7 @@ func (x *RenameDeviceReq) String() string {
 func (*RenameDeviceReq) ProtoMessage() {}
 
 func (x *RenameDeviceReq) ProtoReflect() protoreflect.Message {
-	mi := &file_devices_proto_msgTypes[2]
+	mi := &file_devices_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -323,7 +384,7 @@ func (x *RenameDeviceReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameDeviceReq.ProtoReflect.Descriptor instead.
 func (*RenameDeviceReq) Descriptor() ([]byte, []int) {
-	return file_devices_proto_rawDescGZIP(), []int{2}
+	return file_devices_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *RenameDeviceReq) GetName() string {
@@ -355,7 +416,7 @@ type ListDevicesReq struct {
 
 func (x *ListDevicesReq) Reset() {
 	*x = ListDevicesReq{}
-	mi := &file_devices_proto_msgTypes[3]
+	mi := &file_devices_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -367,7 +428,7 @@ func (x *ListDevicesReq) String() string {
 func (*ListDevicesReq) ProtoMessage() {}
 
 func (x *ListDevicesReq) ProtoReflect() protoreflect.Message {
-	mi := &file_devices_proto_msgTypes[3]
+	mi := &file_devices_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -380,7 +441,7 @@ func (x *ListDevicesReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDevicesReq.ProtoReflect.Descriptor instead.
 func (*ListDevicesReq) Descriptor() ([]byte, []int) {
-	return file_devices_proto_rawDescGZIP(), []int{3}
+	return file_devices_proto_rawDescGZIP(), []int{4}
 }
 
 type ListDevicesRes struct {
@@ -392,7 +453,7 @@ type ListDevicesRes struct {
 
 func (x *ListDevicesRes) Reset() {
 	*x = ListDevicesRes{}
-	mi := &file_devices_proto_msgTypes[4]
+	mi := &file_devices_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -404,7 +465,7 @@ func (x *ListDevicesRes) String() string {
 func (*ListDevicesRes) ProtoMessage() {}
 
 func (x *ListDevicesRes) ProtoReflect() protoreflect.Message {
-	mi := &file_devices_proto_msgTypes[4]
+	mi := &file_devices_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -417,7 +478,7 @@ func (x *ListDevicesRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDevicesRes.ProtoReflect.Descriptor instead.
 func (*ListDevicesRes) Descriptor() ([]byte, []int) {
-	return file_devices_proto_rawDescGZIP(), []int{4}
+	return file_devices_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListDevicesRes) GetItems() []*Device {
@@ -440,7 +501,7 @@ type DeleteDeviceReq struct {
 
 func (x *DeleteDeviceReq) Reset() {
 	*x = DeleteDeviceReq{}
-	mi := &file_devices_proto_msgTypes[5]
+	mi := &file_devices_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -452,7 +513,7 @@ func (x *DeleteDeviceReq) String() string {
 func (*DeleteDeviceReq) ProtoMessage() {}
 
 func (x *DeleteDeviceReq) ProtoReflect() protoreflect.Message {
-	mi := &file_devices_proto_msgTypes[5]
+	mi := &file_devices_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -465,7 +526,7 @@ func (x *DeleteDeviceReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteDeviceReq.ProtoReflect.Descriptor instead.
 func (*DeleteDeviceReq) Descriptor() ([]byte, []int) {
-	return file_devices_proto_rawDescGZIP(), []int{5}
+	return file_devices_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DeleteDeviceReq) GetName() string {
@@ -490,7 +551,7 @@ type ListAllDevicesReq struct {
 
 func (x *ListAllDevicesReq) Reset() {
 	*x = ListAllDevicesReq{}
-	mi := &file_devices_proto_msgTypes[6]
+	mi := &file_devices_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -502,7 +563,7 @@ func (x *ListAllDevicesReq) String() string {
 func (*ListAllDevicesReq) ProtoMessage() {}
 
 func (x *ListAllDevicesReq) ProtoReflect() protoreflect.Message {
-	mi := &file_devices_proto_msgTypes[6]
+	mi := &file_devices_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -515,7 +576,7 @@ func (x *ListAllDevicesReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAllDevicesReq.ProtoReflect.Descriptor instead.
 func (*ListAllDevicesReq) Descriptor() ([]byte, []int) {
-	return file_devices_proto_rawDescGZIP(), []int{6}
+	return file_devices_proto_rawDescGZIP(), []int{7}
 }
 
 type ListAllDevicesRes struct {
@@ -527,7 +588,7 @@ type ListAllDevicesRes struct {
 
 func (x *ListAllDevicesRes) Reset() {
 	*x = ListAllDevicesRes{}
-	mi := &file_devices_proto_msgTypes[7]
+	mi := &file_devices_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -539,7 +600,7 @@ func (x *ListAllDevicesRes) String() string {
 func (*ListAllDevicesRes) ProtoMessage() {}
 
 func (x *ListAllDevicesRes) ProtoReflect() protoreflect.Message {
-	mi := &file_devices_proto_msgTypes[7]
+	mi := &file_devices_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -552,7 +613,7 @@ func (x *ListAllDevicesRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAllDevicesRes.ProtoReflect.Descriptor instead.
 func (*ListAllDevicesRes) Descriptor() ([]byte, []int) {
-	return file_devices_proto_rawDescGZIP(), []int{7}
+	return file_devices_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListAllDevicesRes) GetItems() []*Device {
@@ -576,7 +637,7 @@ type SetDeviceRoutesReq struct {
 
 func (x *SetDeviceRoutesReq) Reset() {
 	*x = SetDeviceRoutesReq{}
-	mi := &file_devices_proto_msgTypes[8]
+	mi := &file_devices_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -588,7 +649,7 @@ func (x *SetDeviceRoutesReq) String() string {
 func (*SetDeviceRoutesReq) ProtoMessage() {}
 
 func (x *SetDeviceRoutesReq) ProtoReflect() protoreflect.Message {
-	mi := &file_devices_proto_msgTypes[8]
+	mi := &file_devices_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -601,7 +662,7 @@ func (x *SetDeviceRoutesReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDeviceRoutesReq.ProtoReflect.Descriptor instead.
 func (*SetDeviceRoutesReq) Descriptor() ([]byte, []int) {
-	return file_devices_proto_rawDescGZIP(), []int{8}
+	return file_devices_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SetDeviceRoutesReq) GetName() string {
@@ -647,7 +708,7 @@ type SetDeviceAccessReq struct {
 
 func (x *SetDeviceAccessReq) Reset() {
 	*x = SetDeviceAccessReq{}
-	mi := &file_devices_proto_msgTypes[9]
+	mi := &file_devices_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -659,7 +720,7 @@ func (x *SetDeviceAccessReq) String() string {
 func (*SetDeviceAccessReq) ProtoMessage() {}
 
 func (x *SetDeviceAccessReq) ProtoReflect() protoreflect.Message {
-	mi := &file_devices_proto_msgTypes[9]
+	mi := &file_devices_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -672,7 +733,7 @@ func (x *SetDeviceAccessReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDeviceAccessReq.ProtoReflect.Descriptor instead.
 func (*SetDeviceAccessReq) Descriptor() ([]byte, []int) {
-	return file_devices_proto_rawDescGZIP(), []int{9}
+	return file_devices_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SetDeviceAccessReq) GetName() string {
@@ -746,7 +807,12 @@ const file_devices_proto_rawDesc = "" +
 	"\rpreshared_key\x18\x03 \x01(\tR\fpresharedKey\x120\n" +
 	"\x14manual_ip_assignment\x18\x04 \x01(\bR\x12manualIpAssignment\x12.\n" +
 	"\x13manual_ipv4_address\x18\x05 \x01(\tR\x11manualIpv4Address\x12.\n" +
-	"\x13manual_ipv6_address\x18\x06 \x01(\tR\x11manualIpv6Address\"t\n" +
+	"\x13manual_ipv6_address\x18\x06 \x01(\tR\x11manualIpv6Address\"l\n" +
+	"\x12RotateDeviceKeyReq\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1d\n" +
+	"\n" +
+	"public_key\x18\x02 \x01(\tR\tpublicKey\x12#\n" +
+	"\rpreshared_key\x18\x03 \x01(\tR\fpresharedKey\"t\n" +
 	"\x0fRenameDeviceReq\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
 	"\bnew_name\x18\x02 \x01(\tR\anewName\x122\n" +
@@ -770,12 +836,13 @@ const file_devices_proto_rawDesc = "" +
 	"\bdisabled\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x129\n" +
 	"\n" +
 	"expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12(\n" +
-	"\x10clear_expires_at\x18\x05 \x01(\bR\x0eclearExpiresAt2\xbc\x03\n" +
+	"\x10clear_expires_at\x18\x05 \x01(\bR\x0eclearExpiresAt2\xfb\x03\n" +
 	"\aDevices\x121\n" +
 	"\tAddDevice\x12\x13.proto.AddDeviceReq\x1a\r.proto.Device\"\x00\x12=\n" +
 	"\vListDevices\x12\x15.proto.ListDevicesReq\x1a\x15.proto.ListDevicesRes\"\x00\x12@\n" +
 	"\fDeleteDevice\x12\x16.proto.DeleteDeviceReq\x1a\x16.google.protobuf.Empty\"\x00\x127\n" +
-	"\fRenameDevice\x12\x16.proto.RenameDeviceReq\x1a\r.proto.Device\"\x00\x12F\n" +
+	"\fRenameDevice\x12\x16.proto.RenameDeviceReq\x1a\r.proto.Device\"\x00\x12=\n" +
+	"\x0fRotateDeviceKey\x12\x19.proto.RotateDeviceKeyReq\x1a\r.proto.Device\"\x00\x12F\n" +
 	"\x0eListAllDevices\x12\x18.proto.ListAllDevicesReq\x1a\x18.proto.ListAllDevicesRes\"\x00\x12=\n" +
 	"\x0fSetDeviceAccess\x12\x19.proto.SetDeviceAccessReq\x1a\r.proto.Device\"\x00\x12=\n" +
 	"\x0fSetDeviceRoutes\x12\x19.proto.SetDeviceRoutesReq\x1a\r.proto.Device\"\x00B5Z3github.com/freifunkMUC/wg-access-server/proto/protob\x06proto3"
@@ -792,51 +859,54 @@ func file_devices_proto_rawDescGZIP() []byte {
 	return file_devices_proto_rawDescData
 }
 
-var file_devices_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_devices_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_devices_proto_goTypes = []any{
 	(*Device)(nil),                 // 0: proto.Device
 	(*AddDeviceReq)(nil),           // 1: proto.AddDeviceReq
-	(*RenameDeviceReq)(nil),        // 2: proto.RenameDeviceReq
-	(*ListDevicesReq)(nil),         // 3: proto.ListDevicesReq
-	(*ListDevicesRes)(nil),         // 4: proto.ListDevicesRes
-	(*DeleteDeviceReq)(nil),        // 5: proto.DeleteDeviceReq
-	(*ListAllDevicesReq)(nil),      // 6: proto.ListAllDevicesReq
-	(*ListAllDevicesRes)(nil),      // 7: proto.ListAllDevicesRes
-	(*SetDeviceRoutesReq)(nil),     // 8: proto.SetDeviceRoutesReq
-	(*SetDeviceAccessReq)(nil),     // 9: proto.SetDeviceAccessReq
-	(*timestamppb.Timestamp)(nil),  // 10: google.protobuf.Timestamp
-	(*wrapperspb.StringValue)(nil), // 11: google.protobuf.StringValue
-	(*wrapperspb.BoolValue)(nil),   // 12: google.protobuf.BoolValue
-	(*emptypb.Empty)(nil),          // 13: google.protobuf.Empty
+	(*RotateDeviceKeyReq)(nil),     // 2: proto.RotateDeviceKeyReq
+	(*RenameDeviceReq)(nil),        // 3: proto.RenameDeviceReq
+	(*ListDevicesReq)(nil),         // 4: proto.ListDevicesReq
+	(*ListDevicesRes)(nil),         // 5: proto.ListDevicesRes
+	(*DeleteDeviceReq)(nil),        // 6: proto.DeleteDeviceReq
+	(*ListAllDevicesReq)(nil),      // 7: proto.ListAllDevicesReq
+	(*ListAllDevicesRes)(nil),      // 8: proto.ListAllDevicesRes
+	(*SetDeviceRoutesReq)(nil),     // 9: proto.SetDeviceRoutesReq
+	(*SetDeviceAccessReq)(nil),     // 10: proto.SetDeviceAccessReq
+	(*timestamppb.Timestamp)(nil),  // 11: google.protobuf.Timestamp
+	(*wrapperspb.StringValue)(nil), // 12: google.protobuf.StringValue
+	(*wrapperspb.BoolValue)(nil),   // 13: google.protobuf.BoolValue
+	(*emptypb.Empty)(nil),          // 14: google.protobuf.Empty
 }
 var file_devices_proto_depIdxs = []int32{
-	10, // 0: proto.Device.created_at:type_name -> google.protobuf.Timestamp
-	10, // 1: proto.Device.last_handshake_time:type_name -> google.protobuf.Timestamp
-	10, // 2: proto.Device.expires_at:type_name -> google.protobuf.Timestamp
-	11, // 3: proto.RenameDeviceReq.owner:type_name -> google.protobuf.StringValue
+	11, // 0: proto.Device.created_at:type_name -> google.protobuf.Timestamp
+	11, // 1: proto.Device.last_handshake_time:type_name -> google.protobuf.Timestamp
+	11, // 2: proto.Device.expires_at:type_name -> google.protobuf.Timestamp
+	12, // 3: proto.RenameDeviceReq.owner:type_name -> google.protobuf.StringValue
 	0,  // 4: proto.ListDevicesRes.items:type_name -> proto.Device
-	11, // 5: proto.DeleteDeviceReq.owner:type_name -> google.protobuf.StringValue
+	12, // 5: proto.DeleteDeviceReq.owner:type_name -> google.protobuf.StringValue
 	0,  // 6: proto.ListAllDevicesRes.items:type_name -> proto.Device
-	11, // 7: proto.SetDeviceRoutesReq.owner:type_name -> google.protobuf.StringValue
-	11, // 8: proto.SetDeviceAccessReq.owner:type_name -> google.protobuf.StringValue
-	12, // 9: proto.SetDeviceAccessReq.disabled:type_name -> google.protobuf.BoolValue
-	10, // 10: proto.SetDeviceAccessReq.expires_at:type_name -> google.protobuf.Timestamp
+	12, // 7: proto.SetDeviceRoutesReq.owner:type_name -> google.protobuf.StringValue
+	12, // 8: proto.SetDeviceAccessReq.owner:type_name -> google.protobuf.StringValue
+	13, // 9: proto.SetDeviceAccessReq.disabled:type_name -> google.protobuf.BoolValue
+	11, // 10: proto.SetDeviceAccessReq.expires_at:type_name -> google.protobuf.Timestamp
 	1,  // 11: proto.Devices.AddDevice:input_type -> proto.AddDeviceReq
-	3,  // 12: proto.Devices.ListDevices:input_type -> proto.ListDevicesReq
-	5,  // 13: proto.Devices.DeleteDevice:input_type -> proto.DeleteDeviceReq
-	2,  // 14: proto.Devices.RenameDevice:input_type -> proto.RenameDeviceReq
-	6,  // 15: proto.Devices.ListAllDevices:input_type -> proto.ListAllDevicesReq
-	9,  // 16: proto.Devices.SetDeviceAccess:input_type -> proto.SetDeviceAccessReq
-	8,  // 17: proto.Devices.SetDeviceRoutes:input_type -> proto.SetDeviceRoutesReq
-	0,  // 18: proto.Devices.AddDevice:output_type -> proto.Device
-	4,  // 19: proto.Devices.ListDevices:output_type -> proto.ListDevicesRes
-	13, // 20: proto.Devices.DeleteDevice:output_type -> google.protobuf.Empty
-	0,  // 21: proto.Devices.RenameDevice:output_type -> proto.Device
-	7,  // 22: proto.Devices.ListAllDevices:output_type -> proto.ListAllDevicesRes
-	0,  // 23: proto.Devices.SetDeviceAccess:output_type -> proto.Device
-	0,  // 24: proto.Devices.SetDeviceRoutes:output_type -> proto.Device
-	18, // [18:25] is the sub-list for method output_type
-	11, // [11:18] is the sub-list for method input_type
+	4,  // 12: proto.Devices.ListDevices:input_type -> proto.ListDevicesReq
+	6,  // 13: proto.Devices.DeleteDevice:input_type -> proto.DeleteDeviceReq
+	3,  // 14: proto.Devices.RenameDevice:input_type -> proto.RenameDeviceReq
+	2,  // 15: proto.Devices.RotateDeviceKey:input_type -> proto.RotateDeviceKeyReq
+	7,  // 16: proto.Devices.ListAllDevices:input_type -> proto.ListAllDevicesReq
+	10, // 17: proto.Devices.SetDeviceAccess:input_type -> proto.SetDeviceAccessReq
+	9,  // 18: proto.Devices.SetDeviceRoutes:input_type -> proto.SetDeviceRoutesReq
+	0,  // 19: proto.Devices.AddDevice:output_type -> proto.Device
+	5,  // 20: proto.Devices.ListDevices:output_type -> proto.ListDevicesRes
+	14, // 21: proto.Devices.DeleteDevice:output_type -> google.protobuf.Empty
+	0,  // 22: proto.Devices.RenameDevice:output_type -> proto.Device
+	0,  // 23: proto.Devices.RotateDeviceKey:output_type -> proto.Device
+	8,  // 24: proto.Devices.ListAllDevices:output_type -> proto.ListAllDevicesRes
+	0,  // 25: proto.Devices.SetDeviceAccess:output_type -> proto.Device
+	0,  // 26: proto.Devices.SetDeviceRoutes:output_type -> proto.Device
+	19, // [19:27] is the sub-list for method output_type
+	11, // [11:19] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
 	11, // [11:11] is the sub-list for extension extendee
 	0,  // [0:11] is the sub-list for field type_name
@@ -853,7 +923,7 @@ func file_devices_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_devices_proto_rawDesc), len(file_devices_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

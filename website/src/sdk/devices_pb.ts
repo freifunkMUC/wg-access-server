@@ -58,6 +58,15 @@ export class Devices {
 		Device.deserializeBinary
 	);
 
+	private methodInfoRotateDeviceKey = new grpcWeb.MethodDescriptor<RotateDeviceKeyReq, Device>(
+		"RotateDeviceKey",
+		'unary',
+		RotateDeviceKeyReq as unknown as MessageCtor<RotateDeviceKeyReq>,
+		Device as unknown as MessageCtor<Device>,
+		(req: RotateDeviceKeyReq) => req.serializeBinary(),
+		Device.deserializeBinary
+	);
+
 	private methodInfoListAllDevices = new grpcWeb.MethodDescriptor<ListAllDevicesReq, ListAllDevicesRes>(
 		"ListAllDevices",
 		'unary',
@@ -155,6 +164,25 @@ export class Devices {
 				message,
 				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
 				this.methodInfoRenameDevice,
+				(err: grpcWeb.Error, res: Device) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(res.toObject());
+					}
+				},
+			);
+		});
+	}
+
+	rotateDeviceKey(req: RotateDeviceKeyReq.AsObject, metadata?: grpcWeb.Metadata): Promise<Device.AsObject> {
+		return new Promise((resolve, reject) => {
+			const message = RotateDeviceKeyReqFromObject(req);
+			this.client_.rpcCall(
+				this.hostname + '/proto.Devices/RotateDeviceKey',
+				message,
+				Object.assign({}, this.defaultMetadata ? this.defaultMetadata() : {}, metadata),
+				this.methodInfoRotateDeviceKey,
 				(err: grpcWeb.Error, res: Device) => {
 					if (err) {
 						reject(err);
@@ -727,6 +755,111 @@ export class AddDeviceReq extends jspb.Message {
 			case 6:
 				const field6 = reader.readString()
 				message.setManualIpv6Address(field6);
+				break;
+			default:
+				reader.skipField();
+				break;
+			}
+		}
+		return message;
+	}
+
+}
+export declare namespace RotateDeviceKeyReq {
+	export type AsObject = {
+		name: string,
+		publicKey: string,
+		presharedKey: string,
+	}
+}
+
+export class RotateDeviceKeyReq extends jspb.Message {
+
+	private static repeatedFields_ = [
+		
+	];
+
+	constructor(data?: jspb.Message.MessageArray) {
+		super();
+		jspb.Message.initialize(this, data || [], 0, -1, RotateDeviceKeyReq.repeatedFields_, null);
+	}
+
+
+	getName(): string {return jspb.Message.getFieldWithDefault(this, 1, "");
+	}
+
+	setName(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 1, value);
+	}
+
+	getPublicKey(): string {return jspb.Message.getFieldWithDefault(this, 2, "");
+	}
+
+	setPublicKey(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 2, value);
+	}
+
+	getPresharedKey(): string {return jspb.Message.getFieldWithDefault(this, 3, "");
+	}
+
+	setPresharedKey(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 3, value);
+	}
+
+	serializeBinary(): Uint8Array {
+		const writer = new jspb.BinaryWriter();
+		RotateDeviceKeyReq.serializeBinaryToWriter(this, writer);
+		return writer.getResultBuffer();
+	}
+
+	toObject(): RotateDeviceKeyReq.AsObject {
+		let f: any;
+		return {
+			name: this.getName(),
+			publicKey: this.getPublicKey(),
+			presharedKey: this.getPresharedKey(),
+		};
+	}
+
+	static serializeBinaryToWriter(message: RotateDeviceKeyReq, writer: jspb.BinaryWriter): void {
+		const field1 = message.getName();
+		if (field1.length > 0) {
+			writer.writeString(1, field1);
+		}
+		const field2 = message.getPublicKey();
+		if (field2.length > 0) {
+			writer.writeString(2, field2);
+		}
+		const field3 = message.getPresharedKey();
+		if (field3.length > 0) {
+			writer.writeString(3, field3);
+		}
+	}
+
+	static deserializeBinary(bytes: Uint8Array): RotateDeviceKeyReq {
+		var reader = new jspb.BinaryReader(bytes);
+		var message = new RotateDeviceKeyReq();
+		return RotateDeviceKeyReq.deserializeBinaryFromReader(message, reader);
+	}
+
+	static deserializeBinaryFromReader(message: RotateDeviceKeyReq, reader: jspb.BinaryReader): RotateDeviceKeyReq {
+		while (reader.nextField()) {
+			if (reader.isEndGroup()) {
+				break;
+			}
+			const field = reader.getFieldNumber();
+			switch (field) {
+			case 1:
+				const field1 = reader.readString()
+				message.setName(field1);
+				break;
+			case 2:
+				const field2 = reader.readString()
+				message.setPublicKey(field2);
+				break;
+			case 3:
+				const field3 = reader.readString()
+				message.setPresharedKey(field3);
 				break;
 			default:
 				reader.skipField();
@@ -1501,6 +1634,17 @@ function AddDeviceReqFromObject(obj: AddDeviceReq.AsObject | undefined): AddDevi
 	message.setManualIpAssignment(obj.manualIpAssignment);
 	message.setManualIpv4Address(obj.manualIpv4Address);
 	message.setManualIpv6Address(obj.manualIpv6Address);
+	return message;
+}
+
+function RotateDeviceKeyReqFromObject(obj: RotateDeviceKeyReq.AsObject | undefined): RotateDeviceKeyReq | undefined {
+	if (obj === undefined) {
+		return undefined;
+	}
+	const message = new RotateDeviceKeyReq();
+	message.setName(obj.name);
+	message.setPublicKey(obj.publicKey);
+	message.setPresharedKey(obj.presharedKey);
 	return message;
 }
 

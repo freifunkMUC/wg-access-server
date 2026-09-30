@@ -13,6 +13,11 @@ service Devices {
   rpc ListDevices(ListDevicesReq) returns (ListDevicesRes) {}
   rpc DeleteDevice(DeleteDeviceReq) returns (google.protobuf.Empty) {}
   rpc RenameDevice(RenameDeviceReq) returns (Device) {}
+  // RotateDeviceKey replaces the key material of one of your own devices,
+  // keeping its name, address and everything else. Your own only, and
+  // deliberately so: whoever rotates a key holds the private half, and that
+  // is the person using the device, not an admin.
+  rpc RotateDeviceKey(RotateDeviceKeyReq) returns (Device) {}
 
   // admin only
   rpc ListAllDevices(ListAllDevicesReq) returns (ListAllDevicesRes) {}
@@ -59,6 +64,13 @@ message AddDeviceReq {
   bool manual_ip_assignment = 4;
   string manual_ipv4_address = 5;
   string manual_ipv6_address = 6;
+}
+
+message RotateDeviceKeyReq {
+  string name = 1;
+  string public_key = 2;
+  // the new pre-shared key, or empty for a device that uses none
+  string preshared_key = 3;
 }
 
 message RenameDeviceReq {

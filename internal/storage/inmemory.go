@@ -226,6 +226,42 @@ func (s *InMemoryStorage) setRoutes(device *Device, routes string) (*Device, err
 	return &changed, nil
 }
 
+// SetKeys writes the key material of one device, like SetAccess writes whether
+// it may connect. A public key another device already uses is refused here as
+// the unique index refuses it in the SQL backends.
+func (s *InMemoryStorage) SetKeys(device *Device, publicKey string, presharedKey string) (*Device, error) {
+	changed, err := s.setKeys(device, publicKey, presharedKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// outside the lock, like every other event this storage emits
+	s.EmitUpdate(changed)
+	return changed, nil
+}
+
+func (s *InMemoryStorage) setKeys(device *Device, publicKey string, presharedKey string) (*Device, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	stored, ok := s.db[key(device)]
+	if !ok {
+		return nil, errors.New("device doesn't exist")
+	}
+
+	for storedKey, other := range s.db {
+		if other.PublicKey == publicKey && storedKey != key(device) {
+			return nil, errors.New("another device already uses this public key")
+		}
+	}
+
+	changed := *stored
+	changed.PublicKey = publicKey
+	changed.PresharedKey = presharedKey
+	s.db[key(&changed)] = &changed
+	return &changed, nil
+}
+
 // DeleteForOwner removes every device of one user. Nothing can fail halfway
 // through a map, so the all-or-nothing promise costs nothing here.
 func (s *InMemoryStorage) DeleteForOwner(owner string) ([]*Device, error) {

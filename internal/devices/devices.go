@@ -566,6 +566,59 @@ func (d *DeviceManager) RenameDevice(user string, name string, newName string) (
 	return renamed, nil
 }
 
+// RotateDeviceKey gives a device new key material and returns it as it is now.
+// Everything else stays: the name, the address, the networks behind it and its
+// access, so a key can be replaced without anything around the device being
+// changed - the client configuration is the only thing that has to be set up
+// anew, and whoever holds the old private key is out.
+//
+// The old peer goes right away rather than at the next sync: until it does,
+// the key that is being replaced still reaches the VPN, and replacing a key
+// somebody else may have is the reason to do this at all.
+func (d *DeviceManager) RotateDeviceKey(user string, name string, publicKey string, presharedKey string) (*storage.Device, error) {
+	if !wgKeyRegex.MatchString(publicKey) {
+		return nil, invalid("Public key has invalid format.")
+	}
+
+	// preshared key is optional, as it is when a device is added
+	if len(presharedKey) != 0 && !wgKeyRegex.MatchString(presharedKey) {
+		return nil, invalid("Pre-shared key has invalid format.")
+	}
+
+	device, err := d.storage.Get(user, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve device: %w", err)
+	}
+
+	if device.PublicKey == publicKey {
+		return nil, invalid("This is the key the device already uses.")
+	}
+
+	// The unique index would refuse it as well, but with a message about a
+	// constraint rather than about the device somebody else is using.
+	if existing, err := d.storage.GetByPublicKey(publicKey); err == nil && existing != nil {
+		return nil, invalid("Another device already uses this key.")
+	}
+
+	previous := device.PublicKey
+	changed, err := d.storage.SetKeys(device, publicKey, presharedKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to change the keys of the device: %w", err)
+	}
+
+	// The peer of the old key is not in storage any more, so the sync that
+	// follows the update event removes it on every replica. Doing it here as
+	// well is what makes the old key stop working now rather than then.
+	if err := d.wg.RemovePeer(previous); err != nil {
+		logrus.Warn(fmt.Errorf("failed to remove the peer of the replaced key: %w", err))
+	}
+	if err := d.applyPeer(changed); err != nil {
+		logrus.Warn(fmt.Errorf("failed to add the peer of the new key: %w", err))
+	}
+
+	return changed, nil
+}
+
 // AccessChange is what SetDeviceAccess should change about a device. A field
 // that is not set is left as it is, so one of the two can be changed without
 // sending the other back - two admins working at the same time then cannot

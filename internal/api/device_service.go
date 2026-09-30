@@ -114,6 +114,31 @@ func (d *DeviceService) RenameDevice(ctx context.Context, request *connect.Reque
 	return connect.NewResponse(mapDevice(device)), nil
 }
 
+// RotateDeviceKey replaces the key material of a device, keeping everything
+// else about it. Your own devices only: the private half of the new key never
+// leaves the browser that made it, so this is the person using the device, not
+// an admin acting on it. An admin who wants somebody's device off the VPN
+// blocks or deletes it instead.
+func (d *DeviceService) RotateDeviceKey(ctx context.Context, request *connect.Request[proto.RotateDeviceKeyReq]) (*connect.Response[proto.Device], error) {
+	req := request.Msg
+	user, err := authsession.CurrentUser(ctx)
+	if err != nil {
+		return nil, errNotAuthenticated()
+	}
+
+	device, err := d.DeviceManager.RotateDeviceKey(user.Subject, req.GetName(), req.GetPublicKey(), req.GetPresharedKey())
+	if err != nil {
+		return nil, deviceError(ctx, err, "failed to change the keys of the device")
+	}
+
+	audit.Log(ctx, audit.DeviceRotate, logrus.Fields{
+		"device": device.Name,
+		"owner":  device.Owner,
+	})
+
+	return connect.NewResponse(mapDevice(device)), nil
+}
+
 // SetDeviceAccess blocks a device from connecting, or gives it an expiry date.
 // Admins only, and deliberately so: a user who could lift the block or push
 // the expiry date of their own device out would have no block at all. They can
