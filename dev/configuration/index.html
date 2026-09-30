@@ -809,8 +809,16 @@
 
 
 <h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link"> ¶</a></h1>
-<p>You can configure wg-access-server using environment variables, cli flags or a config file
-taking precedence over one another in that order.</p>
+<p>You can configure wg-access-server using environment variables, cli flags or a config file.</p>
+<p><strong>The config file wins.</strong> It is read last, so any setting it names overrides the same setting given
+as a cli flag or an environment variable; among the other two, a cli flag overrides an environment
+variable. Setting the same thing in both a file and the environment is the one thing to avoid: the
+environment value is then simply ignored, which is how deployments end up with an admin account that
+does not exist. The server warns at startup when it happens for the settings where that hurts most.</p>
+<p>A setting written under the wrong heading is a related trap - <code>externalHost</code> belongs at the top
+level, and under <code>wireguard:</code> it configures nothing. Keys the configuration has no home for are
+ignored rather than refused, so that a file written for another version still starts, but the server
+says at startup that it found one.</p>
 <p>The default configuration should work out of the box if you're just looking to try it out.</p>
 <p>The only required configuration is a wireguard private key.
 You can generate a wireguard private key by <a href="https://www.wireguard.com/quickstart/#key-generation">following the official docs</a>.</p>
