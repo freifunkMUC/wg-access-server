@@ -234,6 +234,9 @@ func (d *UserService) twoFactorFor(ctx context.Context) (*authsession.Identity, 
 		return nil, connect.NewError(connect.CodeFailedPrecondition,
 			errors.New("this account signs in through an identity provider: set up a second factor there"))
 	}
+	if user.Provider != authconfig.SimpleAuthProvider {
+		return nil, errNoSecondFactorHere()
+	}
 	return user, nil
 }
 
@@ -497,7 +500,18 @@ func (d *UserService) passkeysFor(ctx context.Context) (*authsession.Identity, e
 		return nil, connect.NewError(connect.CodeFailedPrecondition,
 			errors.New("this account signs in through an identity provider: its passkeys belong there"))
 	}
+	if user.Provider != authconfig.SimpleAuthProvider {
+		return nil, errNoSecondFactorHere()
+	}
 	return user, nil
+}
+
+// errNoSecondFactorHere refuses a second factor to somebody signed in with
+// basic auth, which has nowhere to ask for one: the password would still sign
+// them in alone.
+func errNoSecondFactorHere() error {
+	return connect.NewError(connect.CodeFailedPrecondition,
+		errors.New("basic auth cannot ask for a second factor: sign in with the password form to set one up"))
 }
 
 func mapUser(u *devices.User) *proto.User {

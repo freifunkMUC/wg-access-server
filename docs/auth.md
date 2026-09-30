@@ -283,8 +283,9 @@ database.
 !!! note
 
     This is for `simple` auth, the sign-in page. `basic` auth is the browser's own username and
-    password dialog, which has nowhere to ask for a second one. With an identity provider, the
-    second factor belongs there.
+    password dialog, which has nowhere to ask for a second one: it refuses an account that has a
+    second factor rather than letting the password alone sign it in, and nobody signed in with it
+    can set one up. With an identity provider, the second factor belongs there.
 
 ## Sessions
 
