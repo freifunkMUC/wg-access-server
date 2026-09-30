@@ -49,7 +49,7 @@ func TestPasskeys(t *testing.T) {
 				{ID: owner + "-2", Owner: owner, Name: "My phone", Data: []byte(`{"id":"two"}`), CreatedAt: newer},
 				{ID: other + "-1", Owner: other, Name: "Not theirs", Data: []byte(`{"id":"three"}`), CreatedAt: newer},
 			} {
-				if err := s.SavePasskey(passkey); err != nil {
+				if err := s.AddPasskey(passkey); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -77,7 +77,7 @@ func TestPasskeys(t *testing.T) {
 			}
 			stored.Data = []byte(`{"id":"two","signCount":7}`)
 			stored.LastUsedAt = &used
-			if err := s.SavePasskey(stored); err != nil {
+			if err := s.UpdatePasskey(stored); err != nil {
 				t.Fatal(err)
 			}
 			if stored, err = s.GetPasskey(owner + "-2"); err != nil {
@@ -92,6 +92,34 @@ func TestPasskeys(t *testing.T) {
 			// ... and nothing was added by writing it again
 			if listed, _ = s.ListPasskeys(owner); len(listed) != 2 {
 				t.Errorf("%d passkeys after writing one back, want two", len(listed))
+			}
+
+			// a credential id somebody already has is refused, whoever asks:
+			// an authenticator picks its own ids, so this is what stops one
+			// person taking another's passkey away
+			err = s.AddPasskey(&Passkey{
+				ID: owner + "-2", Owner: other, Name: "taken over", Data: []byte(`{"id":"x"}`),
+				CreatedAt: time.Now().UTC(),
+			})
+			if !errors.Is(err, ErrPasskeyExists) {
+				t.Errorf("err = %v, want ErrPasskeyExists", err)
+			}
+			if taken, err := s.GetPasskey(owner + "-2"); err != nil {
+				t.Fatal(err)
+			} else if taken.Owner != owner || taken.Name != "My phone" {
+				t.Errorf("the passkey changed hands: %+v", taken)
+			}
+
+			// ... and writing one back is owner-scoped as well
+			if err := s.UpdatePasskey(&Passkey{
+				ID: owner + "-2", Owner: other, Name: "taken over", Data: []byte(`{"id":"x"}`),
+			}); !errors.Is(err, ErrPasskeyNotFound) {
+				t.Errorf("err = %v, want ErrPasskeyNotFound", err)
+			}
+			if taken, err := s.GetPasskey(owner + "-2"); err != nil {
+				t.Fatal(err)
+			} else if taken.Owner != owner || taken.Name != "My phone" {
+				t.Errorf("the passkey was written by somebody else: %+v", taken)
 			}
 
 			// somebody else's is not theirs to delete
@@ -109,6 +137,48 @@ func TestPasskeys(t *testing.T) {
 				t.Errorf("err = %v, want ErrPasskeyNotFound after deleting it", err)
 			}
 		})
+	}
+}
+
+// An authenticator picks its own credential id, so whoever registers picks
+// what is written. Taking an id that somebody else holds would take their
+// passkey - and with it their second factor - away from them.
+func TestAPasskeyCannotBeTakenFromSomebodyElse(t *testing.T) {
+	s := NewMemoryStorage()
+	id := "the-credential-id"
+
+	if err := s.AddPasskey(&Passkey{
+		ID: id, Owner: "bob", Name: "bob's key", Data: []byte(`{"id":"b"}`), CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	err := s.AddPasskey(&Passkey{
+		ID: id, Owner: "alice", Name: "alice's key", Data: []byte(`{"id":"a"}`), CreatedAt: time.Now(),
+	})
+	if !errors.Is(err, ErrPasskeyExists) {
+		t.Fatalf("err = %v, want ErrPasskeyExists", err)
+	}
+
+	bobs, err := s.ListPasskeys("bob")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bobs) != 1 || bobs[0].Name != "bob's key" {
+		t.Errorf("bob's passkeys = %+v, want the one he registered", bobs)
+	}
+	if alices, _ := s.ListPasskeys("alice"); len(alices) != 0 {
+		t.Errorf("alice has %d passkeys, want none", len(alices))
+	}
+
+	// ... and writing one back is no way round it either
+	if err := s.UpdatePasskey(&Passkey{
+		ID: id, Owner: "alice", Name: "alice's key", Data: []byte(`{"id":"a"}`),
+	}); !errors.Is(err, ErrPasskeyNotFound) {
+		t.Errorf("err = %v, want ErrPasskeyNotFound", err)
+	}
+	if bobs, _ = s.ListPasskeys("bob"); len(bobs) != 1 || bobs[0].Name != "bob's key" {
+		t.Errorf("bob's passkeys = %+v, want his own", bobs)
 	}
 }
 

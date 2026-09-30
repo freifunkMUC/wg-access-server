@@ -152,7 +152,21 @@ func (t *TwoFactor) Check(subject string, given string) bool {
 		return false
 	}
 
-	if CheckTOTP(user.TotpSecret, given, t.now()) {
+	if step, ok := CheckTOTPStep(user.TotpSecret, given, t.now()); ok {
+		// A code is good for three steps, so the one that just signed
+		// somebody in must not sign anybody in again. Anything up to the
+		// last accepted step is refused, which also covers the step before
+		// it that the clock skew window would otherwise still take.
+		if step <= user.TotpLastStep {
+			return false
+		}
+		state := user.TOTP()
+		state.LastStep = step
+		if err := t.storage.SetUserTOTP(subject, state); err != nil {
+			// The code was right, but it would stay usable. Refusing is the
+			// safe way to be wrong here.
+			return false
+		}
 		return true
 	}
 

@@ -125,7 +125,7 @@ func TestListingAndRemoving(t *testing.T) {
 		{ID: "two", Owner: "alice", Name: "My phone", Data: []byte("{}"), CreatedAt: time.Now().UTC()},
 		{ID: "three", Owner: "bob", Name: "Not hers", Data: []byte("{}"), CreatedAt: time.Now().UTC()},
 	} {
-		if err := s.SavePasskey(passkey); err != nil {
+		if err := s.AddPasskey(passkey); err != nil {
 			t.Fatal(err)
 		}
 	}

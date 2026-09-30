@@ -598,6 +598,7 @@ func (s *SQLStorage) SetUserTOTP(subject string, state TOTPState) error {
 			"totp_secret":     state.Secret,
 			"totp_enabled_at": state.EnabledAt,
 			"totp_recovery":   state.Recovery,
+			"totp_last_step":  state.LastStep,
 		})
 	if q.Error != nil {
 		return fmt.Errorf("failed to write the second factor of user '%s': %w", subject, q.Error)

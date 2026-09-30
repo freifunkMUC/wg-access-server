@@ -25,6 +25,9 @@ var (
 	// ErrNoChallenge is the second half of a registration or a sign-in
 	// arriving without the first, or long after it.
 	ErrNoChallenge = errors.New("this passkey exchange has expired: start again")
+	// ErrPasskeyExists is registering a credential id that is already
+	// registered - to this person or to anybody else.
+	ErrPasskeyExists = errors.New("this passkey is already registered")
 )
 
 // challengeFor is how long the browser has to answer. A person reaching for a
@@ -148,7 +151,13 @@ func (p *Passkeys) FinishRegistration(r *http.Request, subject string, name stri
 		Data:      data,
 		CreatedAt: p.now().UTC(),
 	}
-	if err := p.storage.SavePasskey(passkey); err != nil {
+	if err := p.storage.AddPasskey(passkey); err != nil {
+		if errors.Is(err, storage.ErrPasskeyExists) {
+			// An authenticator picks its own credential id, so this is a
+			// credential id that was asked for. It belongs to whoever
+			// registered it first, and this registration does not get it.
+			return nil, ErrPasskeyExists
+		}
 		return nil, fmt.Errorf("failed to store the passkey: %w", err)
 	}
 
@@ -225,7 +234,7 @@ func (p *Passkeys) FinishLogin(r *http.Request, subject string, answer []byte) e
 	}
 	used := p.now().UTC()
 	stored.LastUsedAt = &used
-	if err := p.storage.SavePasskey(stored); err != nil {
+	if err := p.storage.UpdatePasskey(stored); err != nil {
 		return nil //nolint:nilerr // the sign-in was fine; the bookkeeping was not
 	}
 

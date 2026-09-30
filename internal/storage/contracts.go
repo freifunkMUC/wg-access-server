@@ -119,6 +119,10 @@ type TOTPState struct {
 	EnabledAt *time.Time
 	// Recovery holds the unused recovery codes, hashed, comma separated.
 	Recovery string
+	// LastStep is the time step a code was last accepted at. A code is good
+	// for its step and the ones either side, so without remembering this the
+	// same code signs in again for as long as its window lasts.
+	LastStep int64
 }
 
 // User is somebody who has signed in at least once.
@@ -156,6 +160,7 @@ type User struct {
 	TotpSecret    string     `json:"-"`
 	TotpEnabledAt *time.Time `json:"-"`
 	TotpRecovery  string     `json:"-"`
+	TotpLastStep  int64      `json:"-"`
 
 	// PasswordFrom is the configured entry that was in effect when the
 	// password was set. When the configuration names a different one now, an
@@ -166,7 +171,10 @@ type User struct {
 
 // TOTP returns the two-factor state of this user.
 func (u *User) TOTP() TOTPState {
-	return TOTPState{Secret: u.TotpSecret, EnabledAt: u.TotpEnabledAt, Recovery: u.TotpRecovery}
+	return TOTPState{
+		Secret: u.TotpSecret, EnabledAt: u.TotpEnabledAt,
+		Recovery: u.TotpRecovery, LastStep: u.TotpLastStep,
+	}
 }
 
 // TwoFactorEnabled says whether this user is asked for a code when they sign

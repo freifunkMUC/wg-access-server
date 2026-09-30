@@ -212,6 +212,9 @@ pretending to be this one cannot ask for it, and there is nothing a person can b
 out over the telephone. Somebody signing in with `simple` auth can register one under the key icon,
 as many as they like: one to carry, one in a drawer.
 
+- A credential id that is already registered is refused, whoever is asking. An authenticator picks
+  its own credential ids, so without that rule somebody could register the id of another person's
+  passkey and take their second factor away.
 - It is asked for **after the password**, like a code. Which of the two a person uses is up to them;
   the sign-in page offers both when both are set up.
 - Removing the last one hands the account back to the password alone, and the question says so.
@@ -240,6 +243,9 @@ phones and servers rarely agree on the second.
 
 - **Setting it up asks for a code before it counts.** Until that code arrives, the secret is stored
   but nothing is asked of anybody: a QR code somebody walked away from locks nobody out.
+- **A code signs in once.** It is good for the current thirty second step and the one either side,
+  so that phones and servers need not agree on the second, but the step it was accepted at is
+  remembered and nothing up to that step is taken again (RFC 6238 §5.2).
 - **Ten recovery codes** come with it, shown once. Each signs in once and is used up by it. Only
   their hashes are kept, so nothing here can show them again - and they are hashed with SHA-256
   rather than bcrypt, because they are long random strings and ten slow hashes per attempt would be
