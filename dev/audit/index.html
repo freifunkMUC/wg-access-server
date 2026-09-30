@@ -793,6 +793,11 @@ which is what you filter on:</p>
 <td><code>target_user</code>, <code>devices_blocked</code>, <code>tokens_deleted</code>, <code>sessions_ended</code></td>
 </tr>
 <tr>
+<td><code>user.password</code></td>
+<td>Somebody changed their own password</td>
+<td><code>sessions_ended</code></td>
+</tr>
+<tr>
 <td><code>session.delete</code></td>
 <td>Somebody ended a browser session of theirs</td>
 <td><code>session</code>, or <code>sessions</code> and <code>reason</code>***</td>
@@ -816,6 +821,8 @@ device grace period.</p>
 <p>*** <code>session</code> names the one session that was ended. "Sign out everywhere else" ends several at
 once and records <code>sessions</code> as how many that was, with <code>reason=all others</code>; the ids are not worth a
 record each, they are gone.</p>
+<p><code>user.password</code> records that the password changed and how many other sessions that ended. Neither
+the old nor the new password is recorded, in any form.</p>
 <p><code>device.rotate</code> records that the key changed, not the keys: the new public key says nothing an
 operator needs, and key material does not belong in a log.</p>
 <p><code>device.expire</code> is recorded by the server itself, so its actor is <code>system</code>: nobody asked for it, the

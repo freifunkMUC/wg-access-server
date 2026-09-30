@@ -435,6 +435,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#changing-your-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing your password
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#sessions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -811,6 +822,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#changing-your-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing your password
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#sessions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1117,6 +1139,26 @@ when they sign in again, as an admin right does today.</p>
 <p>Somebody in no policy, and everybody signing in through basic or simple auth, keeps <code>vpn.allowedIPs</code>.</p>
 <p>The admin page shows which policies somebody ended up in, which is how a rule is checked against
 what the provider actually sends.</p>
+<h2 id="changing-your-password">Changing your password<a class="headerlink" href="#changing-your-password" title="Permanent link"> ¶</a></h2>
+<p>With <code>basic</code> or <code>simple</code> auth the password comes from the config file, which only an admin can edit.
+Somebody signed in that way can now set their own instead, under the key icon in the navigation:</p>
+<ul>
+<li>The <strong>config file stays the list of who may sign in.</strong> A password is only ever stored for a user it
+  lists, so a stored password can never create an account.</li>
+<li>What they set is kept as a bcrypt hash in the <code>users</code> table, together with the configured entry it
+  was set against. While that entry is unchanged, their password is the one that counts and the
+  configured one stops working.</li>
+<li><strong>An admin editing the entry in the config file takes it back</strong>: the stored password was set
+  against an entry that is no longer there, so it is ignored and the configured password counts
+  again. That is how a password is reset - there is no other way in, by design.</li>
+<li>Changing it <strong>ends every other session</strong> of that person. Whoever knew the old password may be
+  holding one.</li>
+<li>A password set here has to be at least 10 characters. The configured entries are not held to that:
+  those are an admin's business, and refusing them at sign-in would lock people out.</li>
+</ul>
+<p>Their devices are unaffected either way - a tunnel does not use anybody's password.</p>
+<p>With an identity provider there is nothing here to change: the password is theirs, and the page says
+so rather than pretending otherwise.</p>
 <h2 id="sessions">Sessions<a class="headerlink" href="#sessions" title="Permanent link"> ¶</a></h2>
 <p>Signing in creates a session, and the cookie the browser gets carries <strong>nothing but its id</strong>. Who
 signed in, and what their identity provider said about them, is kept by the server.</p>
