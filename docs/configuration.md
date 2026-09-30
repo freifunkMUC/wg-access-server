@@ -1,7 +1,17 @@
 # Configuration
 
-You can configure wg-access-server using environment variables, cli flags or a config file
-taking precedence over one another in that order.
+You can configure wg-access-server using environment variables, cli flags or a config file.
+
+**The config file wins.** It is read last, so any setting it names overrides the same setting given
+as a cli flag or an environment variable; among the other two, a cli flag overrides an environment
+variable. Setting the same thing in both a file and the environment is the one thing to avoid: the
+environment value is then simply ignored, which is how deployments end up with an admin account that
+does not exist. The server warns at startup when it happens for the settings where that hurts most.
+
+A setting written under the wrong heading is a related trap - `externalHost` belongs at the top
+level, and under `wireguard:` it configures nothing. Keys the configuration has no home for are
+ignored rather than refused, so that a file written for another version still starts, but the server
+says at startup that it found one.
 
 The default configuration should work out of the box if you're just looking to try it out.
 
