@@ -520,8 +520,63 @@ func presharedKeyOf(device *storage.Device) string {
 	return key.String()
 }
 
+// ListAllDevices returns every device on the server, for an admin.
 func (d *DeviceManager) ListAllDevices() ([]*storage.Device, error) {
-	return d.storage.List("")
+	devices, err := d.storage.List("")
+	if err != nil {
+		return nil, err
+	}
+	return d.withOwnerNames(devices), nil
+}
+
+// withOwnerNames fills in the owner name and email a device is missing. A
+// device records both as they were when it was added, so one added while the
+// identity provider sent no name keeps calling its owner by their subject for
+// good. The users table has the newer answer, and an admin reading a list of
+// devices wants to see people, not opaque identifiers.
+func (d *DeviceManager) withOwnerNames(devices []*storage.Device) []*storage.Device {
+	incomplete := false
+	for _, device := range devices {
+		if device.OwnerName == "" || device.OwnerEmail == "" {
+			incomplete = true
+			break
+		}
+	}
+	if !incomplete {
+		return devices
+	}
+
+	users, err := d.storage.Users()
+	if err != nil {
+		// not worth failing the listing over: the devices are still correct,
+		// they just name some of their owners by subject
+		logrus.Warn(fmt.Errorf("failed to look up the names of device owners: %w", err))
+		return devices
+	}
+	known := make(map[string]*storage.User, len(users))
+	for _, user := range users {
+		known[user.Subject] = user
+	}
+
+	filled := make([]*storage.Device, 0, len(devices))
+	for _, device := range devices {
+		user, ok := known[device.Owner]
+		if !ok || (device.OwnerName != "" && device.OwnerEmail != "") {
+			filled = append(filled, device)
+			continue
+		}
+		// a copy: the stored device is not ours to change, and a storage
+		// backend may well have handed out the one it keeps
+		completed := *device
+		if completed.OwnerName == "" {
+			completed.OwnerName = user.Name
+		}
+		if completed.OwnerEmail == "" {
+			completed.OwnerEmail = user.Email
+		}
+		filled = append(filled, &completed)
+	}
+	return filled
 }
 
 func (d *DeviceManager) ListDevices(user string) ([]*storage.Device, error) {

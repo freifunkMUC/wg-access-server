@@ -83,9 +83,14 @@ auth:
     # /callback is recommended.
     redirectURL: "https://wg-access-server.example.com/callback"
     # List of scopes to request claims for. Must include 'openid'.
-    # 'email' is added automatically when 'emailDomains' is used. Can include 'profile' to show the user's name in the UI.
+    # 'email' is added automatically when 'emailDomains' is used.
+    # 'profile' is what makes the provider send a name or a username: without
+    # it the UI lists everybody by their subject, the opaque identifier the
+    # provider issues. The name is taken from the 'name' claim, falling back
+    # to 'preferred_username', 'nickname' and 'given_name' - Keycloak only
+    # fills 'name' for users who have a first and a last name.
     # Add custom ones if required for 'claimMapping'.
-    # Defaults to ["openid"]
+    # Defaults to ["openid", "profile"]
     scopes:
       - openid
       - profile

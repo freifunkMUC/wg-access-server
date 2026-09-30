@@ -220,9 +220,7 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 			Subject:  subject,
 			Claims:   *claims,
 		}
-		if name, ok := oidcClaims["name"].(string); ok {
-			identity.Name = name
-		}
+		identity.Name = displayName(oidcClaims)
 		if email != "" {
 			identity.Email = email
 		}
@@ -239,6 +237,24 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 	}
 }
 
+// nameClaims are the claims somebody's display name is taken from, best
+// first. Not every provider fills 'name': Keycloak only does once a user has
+// a first and a last name, and an installation whose users have neither had
+// the whole UI call them by their subject. The username they know themselves
+// by is a far better label than that.
+var nameClaims = []string{"name", "preferred_username", "nickname", "given_name"}
+
+// displayName returns what to call the person these claims describe, empty
+// when the provider sent nothing to call them by.
+func displayName(claims map[string]interface{}) string {
+	for _, claim := range nameClaims {
+		if name, ok := claims[claim].(string); ok && strings.TrimSpace(name) != "" {
+			return strings.TrimSpace(name)
+		}
+	}
+	return ""
+}
+
 // ensureScopes returns the scopes to request from the provider. Restricting
 // access by email domain needs the email claim, and a provider only sends it
 // when the email scope was asked for - without it every single login would be
@@ -246,7 +262,13 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 func ensureScopes(configured []string, emailDomains []string) []string {
 	scopes := configured
 	if len(scopes) == 0 {
-		scopes = []string{oidc.ScopeOpenID}
+		// 'profile' comes along by default: without it a provider sends
+		// neither a name nor a username, and everybody ends up listed by
+		// their subject - the opaque identifier their provider issues.
+		scopes = []string{oidc.ScopeOpenID, "profile"}
+	} else if !slices.Contains(scopes, "profile") {
+		logrus.Warn("The configured OIDC scopes do not include 'profile': " +
+			"users and their devices will be listed by their subject, not by their name")
 	}
 	if len(emailDomains) == 0 || slices.Contains(scopes, "email") {
 		return scopes

@@ -101,3 +101,68 @@ func TestForgetUser(t *testing.T) {
 		t.Errorf("the list still has %d users: %+v", len(users), users)
 	}
 }
+
+// A device keeps the owner name it was given when it was added. Somebody who
+// first signed in through a provider that sent no name got devices that call
+// them by their subject - a hash nobody recognises - and those devices never
+// learn the name their owner has since arrived with.
+func TestListAllDevicesNamesOwnersFromTheUsersTable(t *testing.T) {
+	s := storage.NewMemoryStorage()
+	if err := s.Open(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+
+	const subject = "7b1c0a4e9d2f43a8b65e0c1d8f2a37b4"
+	if err := s.SaveUser(&storage.User{
+		Subject: subject, Name: "Alice Example", Email: "alice@example.com", LastLogin: time.Now(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, device := range []*storage.Device{
+		// added before the provider ever sent a name
+		{Owner: subject, Name: "laptop", PublicKey: testDeviceKey(t, 1), Address: "10.44.0.2/32"},
+		// added after, and its own name is the one that counts
+		{
+			Owner: subject, OwnerName: "Alice at the time", OwnerEmail: "alice@example.com",
+			Name: "phone", PublicKey: testDeviceKey(t, 2), Address: "10.44.0.3/32",
+		},
+		// nobody the server has ever seen sign in: nothing to fill in with
+		{Owner: "bob", Name: "tablet", PublicKey: testDeviceKey(t, 3), Address: "10.44.0.4/32"},
+	} {
+		if err := s.Save(device); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	manager := New(wgembed.NewNoOpInterface(), s, "10.44.0.0/24", "")
+	devices, err := manager.ListAllDevices()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	byName := map[string]*storage.Device{}
+	for _, device := range devices {
+		byName[device.Name] = device
+	}
+	if got := byName["laptop"]; got == nil || got.OwnerName != "Alice Example" || got.OwnerEmail != "alice@example.com" {
+		t.Errorf("laptop owner = %+v, want the name and email the users table knows", got)
+	}
+	if got := byName["phone"]; got == nil || got.OwnerName != "Alice at the time" {
+		t.Errorf("phone owner name = %+v, want the name the device was added with", got)
+	}
+	if got := byName["tablet"]; got == nil || got.OwnerName != "" {
+		t.Errorf("tablet owner name = %+v, want it left alone", got)
+	}
+
+	// the stored device is not changed, only what the listing reports
+	stored, err := s.List(subject)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, device := range stored {
+		if device.Name == "laptop" && device.OwnerName != "" {
+			t.Errorf("stored laptop owner name = %q, want it untouched", device.OwnerName)
+		}
+	}
+}

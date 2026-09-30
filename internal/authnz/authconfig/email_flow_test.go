@@ -89,7 +89,10 @@ func TestGitlabLoginRequestsTheEmailScope(t *testing.T) {
 	assert.Contains(t, scopes, "email")
 }
 
-func TestGitlabWithoutEmailDomainsAsksForOpenIDOnly(t *testing.T) {
+// Without email domains there is no address to check, so the email scope is
+// not asked for - but the profile scope still is, or GitLab tells the server
+// nothing to call anybody by.
+func TestGitlabWithoutEmailDomainsAsksForOpenIDAndProfile(t *testing.T) {
 	idp := newFakeIDP(t)
 	config := &GitlabConfig{
 		Name:         "test-gitlab",
@@ -102,7 +105,7 @@ func TestGitlabWithoutEmailDomainsAsksForOpenIDOnly(t *testing.T) {
 	provider := config.Provider()
 	runtime := authruntime.NewProviderRuntime(sessions.NewCookieStore([]byte("test-session-key")), testSessions())
 
-	assert.Equal(t, []string{"openid"}, requestedScopes(t, provider, runtime))
+	assert.Equal(t, []string{"openid", "profile"}, requestedScopes(t, provider, runtime))
 }
 
 // requestedScopes drives the login handler and reads the scopes it sends to

@@ -22,10 +22,11 @@ func (c *GitlabConfig) Provider() *authruntime.Provider {
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
 		RedirectURL:  c.RedirectURL,
-		// No scopes of our own: the OIDC provider asks for "openid" and adds
-		// "email" when emailDomains is configured. Hardcoding "openid" here
-		// used to make every login fail with "Missing or invalid email
-		// address", because GitLab only returns the address with that scope.
+		// No scopes of our own: the OIDC provider asks for "openid" and
+		// "profile", and adds "email" when emailDomains is configured.
+		// Hardcoding "openid" here used to make every login fail with
+		// "Missing or invalid email address", because GitLab only returns the
+		// address with that scope.
 		EmailDomains: c.EmailDomains,
 	}
 	p := o.Provider()

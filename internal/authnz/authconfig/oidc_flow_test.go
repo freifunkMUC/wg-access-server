@@ -312,3 +312,59 @@ func mustRule(t *testing.T, rule string) ruleExpression {
 	require.NoError(t, yaml.Unmarshal([]byte(strconv.Quote(rule)), &expression))
 	return expression
 }
+
+// Keycloak only fills the 'name' claim once somebody has a first and a last
+// name on their account. Without the fallback everybody else was known to the
+// server by their subject alone, and the admin overview listed devices and
+// users by a hash nobody can match to a person.
+func TestOIDCLoginNamesTheUserFromTheUsernameClaim(t *testing.T) {
+	tests := []struct {
+		name   string
+		claims map[string]interface{}
+		want   string
+	}{
+		{
+			name:   "the name claim wins",
+			claims: map[string]interface{}{"name": "Alice Example", "preferred_username": "alice"},
+			want:   "Alice Example",
+		},
+		{
+			name:   "the username stands in for a missing name",
+			claims: map[string]interface{}{"preferred_username": "alice"},
+			want:   "alice",
+		},
+		{
+			name:   "an empty name claim does not win",
+			claims: map[string]interface{}{"name": "   ", "preferred_username": "alice"},
+			want:   "alice",
+		},
+		{
+			name:   "nothing to go by leaves the name empty",
+			claims: map[string]interface{}{},
+			want:   "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			idp, provider, runtime, router := newOIDCFlow(t)
+
+			state, nonce, cookies := doLogin(t, provider, runtime)
+			idp.tokenNonce = nonce
+			idp.extraClaims = tt.claims
+
+			rec := doCallback(t, router, state, cookies)
+			require.Equal(t, http.StatusSeeOther, rec.Code, "body: %s", rec.Body.String())
+
+			req := httptest.NewRequest("GET", "http://wg-access-server.test/", nil)
+			for _, cookie := range rec.Result().Cookies() {
+				req.AddCookie(cookie)
+			}
+			session, err := runtime.GetSession(req)
+			require.NoError(t, err)
+			require.NotNil(t, session.Identity)
+
+			assert.Equal(t, tt.want, session.Identity.Name)
+		})
+	}
+}
