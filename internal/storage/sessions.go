@@ -58,8 +58,9 @@ type SessionStorage interface {
 	// TouchSession records that a session was used.
 	TouchSession(id string, at time.Time) error
 	DeleteSession(id string) error
-	// DeleteSessionsForOwner ends every session of one user.
-	DeleteSessionsForOwner(owner string) error
+	// DeleteSessionsForOwner ends every session of one user and returns how
+	// many that was.
+	DeleteSessionsForOwner(owner string) (int, error)
 	// DeleteExpiredSessions removes what nobody can use any more.
 	DeleteExpiredSessions(now time.Time) (int, error)
 }
@@ -121,15 +122,17 @@ func (s *InMemoryStorage) DeleteSession(id string) error {
 	return nil
 }
 
-func (s *InMemoryStorage) DeleteSessionsForOwner(owner string) error {
+func (s *InMemoryStorage) DeleteSessionsForOwner(owner string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	deleted := 0
 	for id, session := range s.sessions {
 		if session.Owner == owner {
 			delete(s.sessions, id)
+			deleted++
 		}
 	}
-	return nil
+	return deleted, nil
 }
 
 func (s *InMemoryStorage) DeleteExpiredSessions(now time.Time) (int, error) {
@@ -189,11 +192,12 @@ func (s *SQLStorage) DeleteSession(id string) error {
 	return nil
 }
 
-func (s *SQLStorage) DeleteSessionsForOwner(owner string) error {
-	if err := s.db.Where("owner = ?", owner).Delete(&Session{}).Error; err != nil {
-		return fmt.Errorf("failed to delete the sessions of the user: %w", err)
+func (s *SQLStorage) DeleteSessionsForOwner(owner string) (int, error) {
+	q := s.db.Where("owner = ?", owner).Delete(&Session{})
+	if q.Error != nil {
+		return 0, fmt.Errorf("failed to delete the sessions of the user: %w", q.Error)
 	}
-	return nil
+	return int(q.RowsAffected), nil
 }
 
 func (s *SQLStorage) DeleteExpiredSessions(now time.Time) (int, error) {

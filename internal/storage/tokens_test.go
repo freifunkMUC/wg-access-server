@@ -33,8 +33,8 @@ func TestTokenStorage(t *testing.T) {
 			owner := "token-owner-" + name
 			other := "token-other-" + name
 			t.Cleanup(func() {
-				_ = s.DeleteTokensForOwner(owner)
-				_ = s.DeleteTokensForOwner(other)
+				_, _ = s.DeleteTokensForOwner(owner)
+				_, _ = s.DeleteTokensForOwner(other)
 			})
 
 			// whole seconds: MySQL stores no fractions
@@ -105,8 +105,12 @@ func TestTokenStorage(t *testing.T) {
 				t.Errorf("a revoked token is still found: %v", err)
 			}
 
-			if err := s.DeleteTokensForOwner(other); err != nil {
+			deleted, err := s.DeleteTokensForOwner(other)
+			if err != nil {
 				t.Fatal(err)
+			}
+			if deleted != 1 {
+				t.Errorf("deleted %d tokens, want the one of that user", deleted)
 			}
 			if left, _ := s.ListTokens(other); len(left) != 0 {
 				t.Errorf("%d tokens of the user are left", len(left))

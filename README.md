@@ -21,6 +21,7 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 - [API tokens](https://www.freie-netze.org/wg-access-server/auth/#api-tokens) for scripts, using the same API as the web UI
 - Devices can be renamed; admins see and manage the devices of all users
 - Admins can block a device or give it an expiry date, for temporary access ([device access](#device-access))
+- Admins can take somebody's access away in one action, without deleting anything ([revoking access](#taking-somebodys-access-away))
 - Networks behind a device, for site-to-site links and subnet routers ([routed networks](#networks-behind-a-device))
 - An optional limit on how many devices a user may create
 - WireGuard client configurations as a file or a QR code
@@ -132,6 +133,29 @@ waiting for the next restart. Blocking takes effect right away, on every replica
 Both are recorded in the [audit log](https://www.freie-netze.org/wg-access-server/audit/), and
 `wg_access_server_devices_blocked` counts the devices in that state wherever the device
 [metrics](#metrics) are enabled.
+
+## Taking somebody's access away
+
+When a person leaves or a laptop is lost, the device list is the wrong place to start: their access
+is their devices, their API tokens and the browsers they are signed in with. **Revoke access**, next
+to each user under _admin_, takes all three in one action:
+
+- every device of theirs is blocked, so no tunnel of theirs comes up,
+- every API token of theirs is revoked, so no script of theirs reaches the API,
+- and every browser session of theirs is ended, so nobody is left signed in as them.
+
+Nothing is deleted. The devices keep their keys and their addresses, so unblocking one gives the
+access back and the configuration the person already has keeps working - which is what makes this
+usable for somebody who is only away for a while, or for a suspicion that turns out to be wrong.
+
+Revoking twice is not an error, it simply finds nothing left to take. Aiming it at yourself is
+refused: it would block your own devices and sign you out halfway through. It is an admin action,
+recorded in the [audit log](https://www.freie-netze.org/wg-access-server/audit/) as `user.revoke`
+with what it took.
+
+What it does **not** do is stop them from signing in again. If their identity provider still lets
+them in, they get a new session - and their devices stay blocked, which is the part that matters.
+Removing them at the provider, or deleting the user here, is what ends that.
 
 ## Networks behind a device
 

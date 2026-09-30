@@ -38,6 +38,8 @@ const (
 	UsersListUsersProcedure = "/proto.Users/ListUsers"
 	// UsersDeleteUserProcedure is the fully-qualified name of the Users's DeleteUser RPC.
 	UsersDeleteUserProcedure = "/proto.Users/DeleteUser"
+	// UsersRevokeAccessProcedure is the fully-qualified name of the Users's RevokeAccess RPC.
+	UsersRevokeAccessProcedure = "/proto.Users/RevokeAccess"
 )
 
 // UsersClient is a client for the proto.Users service.
@@ -45,6 +47,9 @@ type UsersClient interface {
 	// admin only
 	ListUsers(context.Context, *connect.Request[proto.ListUsersReq]) (*connect.Response[proto.ListUsersRes], error)
 	DeleteUser(context.Context, *connect.Request[proto.DeleteUserReq]) (*connect.Response[emptypb.Empty], error)
+	// Takes somebody's access away without deleting anything: their devices are
+	// blocked, their API tokens revoked and their sessions ended.
+	RevokeAccess(context.Context, *connect.Request[proto.RevokeAccessReq]) (*connect.Response[proto.RevokeAccessRes], error)
 }
 
 // NewUsersClient constructs a client for the proto.Users service. By default, it uses the Connect
@@ -70,13 +75,20 @@ func NewUsersClient(httpClient connect.HTTPClient, baseURL string, opts ...conne
 			connect.WithSchema(usersMethods.ByName("DeleteUser")),
 			connect.WithClientOptions(opts...),
 		),
+		revokeAccess: connect.NewClient[proto.RevokeAccessReq, proto.RevokeAccessRes](
+			httpClient,
+			baseURL+UsersRevokeAccessProcedure,
+			connect.WithSchema(usersMethods.ByName("RevokeAccess")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // usersClient implements UsersClient.
 type usersClient struct {
-	listUsers  *connect.Client[proto.ListUsersReq, proto.ListUsersRes]
-	deleteUser *connect.Client[proto.DeleteUserReq, emptypb.Empty]
+	listUsers    *connect.Client[proto.ListUsersReq, proto.ListUsersRes]
+	deleteUser   *connect.Client[proto.DeleteUserReq, emptypb.Empty]
+	revokeAccess *connect.Client[proto.RevokeAccessReq, proto.RevokeAccessRes]
 }
 
 // ListUsers calls proto.Users.ListUsers.
@@ -89,11 +101,19 @@ func (c *usersClient) DeleteUser(ctx context.Context, req *connect.Request[proto
 	return c.deleteUser.CallUnary(ctx, req)
 }
 
+// RevokeAccess calls proto.Users.RevokeAccess.
+func (c *usersClient) RevokeAccess(ctx context.Context, req *connect.Request[proto.RevokeAccessReq]) (*connect.Response[proto.RevokeAccessRes], error) {
+	return c.revokeAccess.CallUnary(ctx, req)
+}
+
 // UsersHandler is an implementation of the proto.Users service.
 type UsersHandler interface {
 	// admin only
 	ListUsers(context.Context, *connect.Request[proto.ListUsersReq]) (*connect.Response[proto.ListUsersRes], error)
 	DeleteUser(context.Context, *connect.Request[proto.DeleteUserReq]) (*connect.Response[emptypb.Empty], error)
+	// Takes somebody's access away without deleting anything: their devices are
+	// blocked, their API tokens revoked and their sessions ended.
+	RevokeAccess(context.Context, *connect.Request[proto.RevokeAccessReq]) (*connect.Response[proto.RevokeAccessRes], error)
 }
 
 // NewUsersHandler builds an HTTP handler from the service implementation. It returns the path on
@@ -115,12 +135,20 @@ func NewUsersHandler(svc UsersHandler, opts ...connect.HandlerOption) (string, h
 		connect.WithSchema(usersMethods.ByName("DeleteUser")),
 		connect.WithHandlerOptions(opts...),
 	)
+	usersRevokeAccessHandler := connect.NewUnaryHandler(
+		UsersRevokeAccessProcedure,
+		svc.RevokeAccess,
+		connect.WithSchema(usersMethods.ByName("RevokeAccess")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/proto.Users/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UsersListUsersProcedure:
 			usersListUsersHandler.ServeHTTP(w, r)
 		case UsersDeleteUserProcedure:
 			usersDeleteUserHandler.ServeHTTP(w, r)
+		case UsersRevokeAccessProcedure:
+			usersRevokeAccessHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -136,4 +164,8 @@ func (UnimplementedUsersHandler) ListUsers(context.Context, *connect.Request[pro
 
 func (UnimplementedUsersHandler) DeleteUser(context.Context, *connect.Request[proto.DeleteUserReq]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.DeleteUser is not implemented"))
+}
+
+func (UnimplementedUsersHandler) RevokeAccess(context.Context, *connect.Request[proto.RevokeAccessReq]) (*connect.Response[proto.RevokeAccessRes], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("proto.Users.RevokeAccess is not implemented"))
 }

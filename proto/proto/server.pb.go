@@ -79,8 +79,12 @@ type InfoRes struct {
 	Mtu                             int32                   `protobuf:"varint,17,opt,name=mtu,proto3" json:"mtu,omitempty"`
 	ClientConfigPersistentKeepalive int32                   `protobuf:"varint,18,opt,name=client_config_persistent_keepalive,json=clientConfigPersistentKeepalive,proto3" json:"client_config_persistent_keepalive,omitempty"`
 	ApiTokensEnabled                bool                    `protobuf:"varint,19,opt,name=api_tokens_enabled,json=apiTokensEnabled,proto3" json:"api_tokens_enabled,omitempty"`
-	unknownFields                   protoimpl.UnknownFields
-	sizeCache                       protoimpl.SizeCache
+	// who is signed in, as their devices name their owner. The UI tells their
+	// own row from the others with it - an admin must not be offered an action
+	// that would take their own access away mid-click.
+	Subject       string `protobuf:"bytes,20,opt,name=subject,proto3" json:"subject,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InfoRes) Reset() {
@@ -239,12 +243,19 @@ func (x *InfoRes) GetApiTokensEnabled() bool {
 	return false
 }
 
+func (x *InfoRes) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
 var File_server_proto protoreflect.FileDescriptor
 
 const file_server_proto_rawDesc = "" +
 	"\n" +
 	"\fserver.proto\x12\x05proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x0fbuildinfo.proto\"\t\n" +
-	"\aInfoReq\"\xd6\x06\n" +
+	"\aInfoReq\"\xf0\x06\n" +
 	"\aInfoRes\x12\x1d\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\tR\tpublicKey\x120\n" +
@@ -269,7 +280,8 @@ const file_server_proto_rawDesc = "" +
 	"build_info\x18\x10 \x01(\v2\x10.proto.BuildInfoR\tbuildInfo\x12\x10\n" +
 	"\x03mtu\x18\x11 \x01(\x05R\x03mtu\x12K\n" +
 	"\"client_config_persistent_keepalive\x18\x12 \x01(\x05R\x1fclientConfigPersistentKeepalive\x12,\n" +
-	"\x12api_tokens_enabled\x18\x13 \x01(\bR\x10apiTokensEnabledJ\x04\b\x04\x10\x05R\vhost_vpn_ip22\n" +
+	"\x12api_tokens_enabled\x18\x13 \x01(\bR\x10apiTokensEnabled\x12\x18\n" +
+	"\asubject\x18\x14 \x01(\tR\asubjectJ\x04\b\x04\x10\x05R\vhost_vpn_ip22\n" +
 	"\x06Server\x12(\n" +
 	"\x04Info\x12\x0e.proto.InfoReq\x1a\x0e.proto.InfoRes\"\x00B5Z3github.com/freifunkMUC/wg-access-server/proto/protob\x06proto3"
 

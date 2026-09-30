@@ -199,8 +199,9 @@ func (m *Manager) EndOthers(owner string, keep string) (int, error) {
 	return ended, nil
 }
 
-// EndAllForOwner signs somebody out everywhere.
-func (m *Manager) EndAllForOwner(owner string) error {
+// EndAllForOwner signs somebody out everywhere and returns how many sessions
+// that was.
+func (m *Manager) EndAllForOwner(owner string) (int, error) {
 	return m.storage.DeleteSessionsForOwner(owner)
 }
 

@@ -511,6 +511,40 @@ func (s *SQLStorage) DeleteForOwner(owner string) ([]*Device, error) {
 	return deleted, nil
 }
 
+// BlockForOwner blocks every device of one user that is not blocked already,
+// in a single transaction. Like DeleteForOwner the events follow the commit,
+// and like SetAccess the update goes through UpdateColumns - the gorm watcher
+// cannot map a bulk update back to a device, so the events are emitted here.
+func (s *SQLStorage) BlockForOwner(owner string) ([]*Device, error) {
+	var blocked []*Device
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("owner = ? AND disabled = ?", owner, false).Find(&blocked).Error; err != nil {
+			return fmt.Errorf("failed to list the devices of the user: %w", err)
+		}
+
+		for _, device := range blocked {
+			q := tx.Model(&Device{}).
+				Where("owner = ? AND name = ?", device.Owner, device.Name).
+				UpdateColumns(map[string]interface{}{"disabled": true})
+			if q.Error != nil {
+				return fmt.Errorf("failed to block device '%s': %w", device.Name, q.Error)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, device := range blocked {
+		device.Disabled = true
+		s.EmitUpdate(device)
+	}
+
+	return blocked, nil
+}
+
 // SaveUser writes what is known about somebody, inserting or replacing in one
 // statement: the subject is the primary key and the only unique thing about
 // the row, so an upsert has no ambiguity to get wrong.

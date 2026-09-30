@@ -72,6 +72,7 @@ func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoR
 		BuildInfo:                       &proto.BuildInfo{Version: buildinfo.Version(), Commit: buildinfo.ShortCommitHash()},
 		Mtu:                             int32(s.Config.WireGuard.MTU),
 		ApiTokensEnabled:                s.Config.EnableAPITokens,
+		Subject:                         user.Subject,
 	}), nil
 }
 

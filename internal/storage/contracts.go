@@ -60,6 +60,12 @@ type Storage interface {
 	// because this is how a user's access is revoked. The delete events
 	// follow once the change is durable.
 	DeleteForOwner(owner string) ([]*Device, error)
+	// BlockForOwner blocks every device of one user that is not blocked
+	// already, and returns the devices it changed. Like DeleteForOwner it is
+	// all or nothing - this is how an admin takes somebody's access away, and
+	// half of it would be no revocation at all - and the update events follow
+	// the commit.
+	BlockForOwner(owner string) ([]*Device, error)
 	Close() error
 	Open() error
 }

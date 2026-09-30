@@ -36,6 +36,12 @@ import numeral from 'numeral';
 import { Loading } from '../../components/Loading';
 import { Error } from '../../components/Error';
 
+// count writes "1 device" and "2 devices", so that what an action reports
+// back reads like a sentence.
+export function count(n: number, thing: string): string {
+  return `${n} ${thing}${n === 1 ? '' : 's'}`;
+}
+
 type SortColumn = keyof Device.AsObject | 'download' | 'upload' | 'connected' | 'access';
 
 export const AllDevices = observer(function AllDevices() {
@@ -108,6 +114,35 @@ export const AllDevices = observer(function AllDevices() {
         console.error('Failed to delete user:', error);
         toast({ text: 'Failed to delete the user: ' + errorMessage(error), intent: 'error' });
       }
+    }
+  };
+
+  // revokeAccess takes every way in from somebody at once, without deleting
+  // anything: their devices keep their keys and addresses, so lifting the
+  // blocks gives the access back without them setting up a client anew.
+  const revokeAccess = async (user: User.AsObject) => {
+    const whom = user.displayName || user.name;
+    if (
+      !(await confirm(
+        `Take ${whom}'s access away? Their devices stop connecting, their API tokens are revoked and ` +
+          'they are signed out everywhere. Nothing is deleted - you can unblock the devices later.',
+      ))
+    ) {
+      return;
+    }
+    try {
+      const res = await grpc.users.revokeAccess({ name: user.name });
+      toast({
+        text: `${whom}: ${count(res.devicesBlocked, 'device')} blocked, ${count(
+          res.tokensDeleted,
+          'API token',
+        )} revoked, ${count(res.sessionsEnded, 'session')} ended`,
+        intent: 'success',
+      });
+      await deviceResource.refresh();
+    } catch (error) {
+      console.error('Failed to revoke access:', error);
+      toast({ text: 'Failed to take the access away: ' + errorMessage(error), intent: 'error' });
     }
   };
 
@@ -452,9 +487,24 @@ export const AllDevices = observer(function AllDevices() {
                 <TableCell>{lastSeen(user.lastLogin)}</TableCell>
                 <TableCell>{user.policies?.length ? user.policies.join(', ') : '-'}</TableCell>
                 <TableCell>
-                  <Button variant="outlined" color="secondary" onClick={() => deleteUser(user)}>
-                    Delete
-                  </Button>
+                  <Stack direction="row" spacing={1}>
+                    {/* not on your own row: it would block your own devices
+                        and sign you out halfway through, so the server
+                        refuses it and the button has nothing to do */}
+                    {user.name !== AppState.info?.subject && (
+                      <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={() => revokeAccess(user)}
+                        title="Block their devices, revoke their tokens and sign them out"
+                      >
+                        Revoke access
+                      </Button>
+                    )}
+                    <Button variant="outlined" color="secondary" onClick={() => deleteUser(user)}>
+                      Delete
+                    </Button>
+                  </Stack>
                 </TableCell>
               </TableRow>
             ))}
