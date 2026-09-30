@@ -42,7 +42,7 @@ func (d *UserService) ListUsers(ctx context.Context, _ *connect.Request[proto.Li
 		return nil, errNotAuthenticated()
 	}
 
-	if !user.Claims.Has("admin", "true") {
+	if !user.Claims.IsAdmin() {
 		return nil, errNotAdmin()
 	}
 
@@ -63,7 +63,7 @@ func (d *UserService) DeleteUser(ctx context.Context, request *connect.Request[p
 		return nil, errNotAuthenticated()
 	}
 
-	if !user.Claims.Has("admin", "true") {
+	if !user.Claims.IsAdmin() {
 		return nil, errNotAdmin()
 	}
 
@@ -111,7 +111,7 @@ func (d *UserService) RevokeAccess(ctx context.Context, request *connect.Request
 		return nil, errNotAuthenticated()
 	}
 
-	if !user.Claims.Has("admin", "true") {
+	if !user.Claims.IsAdmin() {
 		return nil, errNotAdmin()
 	}
 
@@ -319,7 +319,7 @@ func (d *UserService) ResetTwoFactor(ctx context.Context, request *connect.Reque
 	if err != nil {
 		return nil, errNotAuthenticated()
 	}
-	if !user.Claims.Has("admin", "true") {
+	if !user.Claims.IsAdmin() {
 		return nil, errNotAdmin()
 	}
 	if d.TwoFactor == nil {
