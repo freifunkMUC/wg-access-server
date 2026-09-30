@@ -422,8 +422,15 @@ next attempt for that username waits, and the wait doubles with every further fa
 A successful login clears it, and a username that has not been tried for 15 minutes is forgotten.
 Failed attempts are logged with the username and the remote address.
 
-There is deliberately no lockout after N attempts: it would let anyone keep the admin account locked
-simply by failing to log in on purpose. The counters are also kept per username rather than per client
+The second step is different: after 10 wrong codes or passkeys it is refused for 15 minutes after the
+last wrong one, and the right password does not give the attempts back. A delay alone is not enough
+there, because six digits are only a million guesses and parallel requests all wait at once. Only
+somebody who knows the password can use up these attempts, so the limit cannot lock anybody else out.
+
+Usernames longer than 256 bytes are refused without being counted or logged.
+
+There is deliberately no lockout after N wrong passwords: it would let anyone keep the admin account
+locked simply by failing to log in on purpose. The counters are also kept per username rather than per client
 address, because wg-access-server is commonly reached through a reverse proxy where every user shares
 one address - and trusting `X-Forwarded-For` would let a client pick its own key and skip the throttle.
 

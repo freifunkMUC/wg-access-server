@@ -1,6 +1,7 @@
 package authconfig
 
 import (
+	"sync"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
@@ -39,9 +40,21 @@ var (
 	// used entry is dropped.
 	loginThrottleSize = 4096
 
+	// maxSecondFactorFailures is how many wrong codes or passkeys an account
+	// gets before the second step is refused for secondFactorLockout.
+	maxSecondFactorFailures = 10
+	// secondFactorLockout is how long the second step stays refused, counted
+	// from the last wrong answer.
+	secondFactorLockout = 15 * time.Minute
+
 	// sleep is time.Sleep, replaced in tests.
 	sleep = time.Sleep
 )
+
+// maxUsernameLength is longer than any username worth configuring. A longer
+// one cannot be right, and would otherwise be kept by the throttle and
+// written to the log in full - a form field can hold megabytes.
+const maxUsernameLength = 256
 
 type attempts struct {
 	failures int
@@ -50,7 +63,16 @@ type attempts struct {
 
 // loginThrottle tracks failed login attempts per username.
 type loginThrottle struct {
+	// mu guards the records in cache, which the cache hands out by pointer.
+	mu    sync.Mutex
 	cache *lru.Cache[string, *attempts]
+
+	// secondFactor counts wrong answers to the second step. The delay above
+	// is not enough there: whoever has the password can send guesses in
+	// parallel and reset the delay with the password, and six digits are only
+	// a million guesses. A hard limit is fine for this step, where it cannot
+	// lock anybody out who does not know the password.
+	secondFactor map[string]*attempts
 }
 
 func newLoginThrottle() *loginThrottle {
@@ -58,9 +80,37 @@ func newLoginThrottle() *loginThrottle {
 	if err != nil {
 		// only returned for a size <= 0, which is a constant here
 		logrus.Error(err)
-		return &loginThrottle{}
+		return &loginThrottle{secondFactor: map[string]*attempts{}}
 	}
-	return &loginThrottle{cache: cache}
+	return &loginThrottle{cache: cache, secondFactor: map[string]*attempts{}}
+}
+
+// beginSecondFactor reserves an attempt at the second step for username, or
+// says that there are none left. The attempt counts as wrong until
+// secondFactorSucceeded says otherwise, so that parallel requests cannot get
+// past the limit.
+func (t *loginThrottle) beginSecondFactor(username string) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	record, found := t.secondFactor[username]
+	if !found || time.Since(record.last) > secondFactorLockout {
+		record = &attempts{}
+		t.secondFactor[username] = record
+	}
+	if record.failures >= maxSecondFactorFailures {
+		return false
+	}
+	record.failures++
+	record.last = time.Now()
+	return true
+}
+
+// secondFactorSucceeded forgets the wrong answers of username.
+func (t *loginThrottle) secondFactorSucceeded(username string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	delete(t.secondFactor, username)
 }
 
 // wait blocks for as long as the previous failures for this username demand.
@@ -93,6 +143,8 @@ func (t *loginThrottle) failures(username string) int {
 	if t.cache == nil {
 		return 0
 	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	record, found := t.cache.Get(username)
 	if !found {
 		return 0
@@ -108,6 +160,8 @@ func (t *loginThrottle) recordFailure(username string) {
 	if t.cache == nil {
 		return
 	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	record, found := t.cache.Get(username)
 	if !found || time.Since(record.last) > loginThrottleReset {
 		record = &attempts{}

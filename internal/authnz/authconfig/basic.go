@@ -53,14 +53,15 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime, th
 		}
 
 		// A request without any credentials is the browser asking for the
-		// challenge, not a failed attempt.
-		attempted := u != ""
+		// challenge, not a failed attempt. A username too long to be
+		// anybody's is not kept or logged either.
+		attempted := u != "" && len(u) <= maxUsernameLength
 		if attempted {
 			throttle.wait(u)
 		}
 		// Every way out of a right password returns, so reaching past this
 		// block means the credentials were not right.
-		if ok := checkCreds(c.Users, u, p, runtime); ok {
+		if ok := attempted && checkCreds(c.Users, u, p, runtime); ok {
 			// Basic auth has nowhere to ask for a second factor. Letting the
 			// password alone in would make the second factor worthless for
 			// everybody who can reach this provider.
