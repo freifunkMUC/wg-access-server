@@ -64,6 +64,16 @@ func policiesOf(identity *authsession.Identity) []string {
 // recordLogin remembers somebody who signed in. A failure is logged and no
 // more: the sign-in itself worked, and refusing it because of a write that is
 // only needed later would be the worse outcome.
+// twoFactorIssuer is the name an authenticator app shows beside the code. The
+// external host tells two servers apart in a list of accounts; without one it
+// is the product name, which is better than nothing.
+func twoFactorIssuer(conf *config.AppConfig) string {
+	if host := conf.ExternalHost; host != "" {
+		return host
+	}
+	return "wg-access-server"
+}
+
 // storedPasswords lets the built-in providers check a password a user set for
 // themselves. A user who never signed in, or a storage that cannot be read,
 // simply has none - the configured entry then decides, as it did before.
@@ -77,6 +87,28 @@ func (s storedPasswords) UserPassword(subject string) (string, string) {
 		return "", ""
 	}
 	return user.PasswordHash, user.PasswordFrom
+}
+
+// storedTwoFactor lets the built-in sign-in ask for a code. It reads the
+// storage on every sign-in rather than holding a copy: a second factor that
+// was turned off a minute ago must not still be asked for, and one that was
+// turned on must be.
+type storedTwoFactor struct {
+	storage storage.Storage
+}
+
+func (t storedTwoFactor) Enabled(subject string) bool {
+	user, err := t.storage.GetUser(subject)
+	if err != nil || user == nil {
+		return false
+	}
+	return user.TwoFactorEnabled()
+}
+
+func (t storedTwoFactor) Check(subject string, code string) bool {
+	// The issuer matters only for the enrolment URI, so it can be anything
+	// here: this only ever checks codes.
+	return users.NewTwoFactor(t.storage, nil, "").Check(subject, code)
 }
 
 func recordLogin(storageBackend storage.Storage, deviceManager *devices.DeviceManager) func(*authsession.Identity) {
@@ -129,7 +161,8 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	claims := authnz.ClaimsMiddleware(conf)
 	middleware, err := authnz.NewMiddleware(conf.Auth, claims, browserSessions,
 		authnz.WithLoginRecorder(recordLogin(storageBackend, deviceManager)),
-		authnz.WithPasswords(storedPasswords{storage: storageBackend}))
+		authnz.WithPasswords(storedPasswords{storage: storageBackend}),
+		authnz.WithTwoFactor(storedTwoFactor{storage: storageBackend}))
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up authnz middleware: %w", err)
 	}
@@ -152,8 +185,11 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	// configuration says who may sign in, and the storage holds what they
 	// chose. Without one of those providers there is nothing here to change.
 	var passwords *users.Passwords
+	var twoFactor *users.TwoFactor
 	if conf.Auth.ConfiguredEntries() > 0 {
 		passwords = users.NewPasswords(storageBackend, conf.Auth.ConfiguredEntry, authconfig.PasswordMatches)
+		// The issuer is what an authenticator app lists the account under.
+		twoFactor = users.NewTwoFactor(storageBackend, passwords, twoFactorIssuer(conf))
 	}
 
 	apiServices := &api.Services{
@@ -162,6 +198,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 		Tokens:        tokens,
 		Sessions:      browserSessions,
 		Passwords:     passwords,
+		TwoFactor:     twoFactor,
 		Wg:            wg,
 	}
 

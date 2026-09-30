@@ -192,6 +192,29 @@ export const AllDevices = observer(function AllDevices() {
     }
   };
 
+  // resetTwoFactor takes somebody's second factor away, for an admin helping
+  // a person whose phone is gone. Their password alone then signs them in, so
+  // it is as much trust as handing out a password - and the question says so.
+  const resetTwoFactor = async (user: User.AsObject) => {
+    const whom = user.displayName || user.name;
+    if (
+      !(await confirm(
+        `Remove the second factor of ${whom}? Their password alone then signs them in, so only do this once you ` +
+          'know who you are talking to.',
+      ))
+    ) {
+      return;
+    }
+    try {
+      await grpc.users.resetTwoFactor({ name: user.name });
+      toast({ text: `${whom} can sign in with their password again`, intent: 'success' });
+      await userResource.refresh();
+    } catch (error) {
+      console.error('Failed to reset the second factor:', error);
+      toast({ text: 'Failed to remove the second factor: ' + errorMessage(error), intent: 'error' });
+    }
+  };
+
   // setAccess sends one change - blocking a device, or its expiry date - and
   // leaves the other as it is, so two admins working at the same time do not
   // undo each other.
@@ -628,6 +651,7 @@ export const AllDevices = observer(function AllDevices() {
               <TableCell>Name</TableCell>
               <TableCell>Last login</TableCell>
               <TableCell>Policies</TableCell>
+              <TableCell>Two-factor</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -639,6 +663,9 @@ export const AllDevices = observer(function AllDevices() {
                 </TableCell>
                 <TableCell>{lastSeen(user.lastLogin)}</TableCell>
                 <TableCell>{user.policies?.length ? user.policies.join(', ') : '-'}</TableCell>
+                <TableCell>
+                  {user.twoFactor ? <Chip label="On" color="success" size="small" /> : <span>-</span>}
+                </TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={1}>
                     {/* not on your own row: it would block your own devices
@@ -654,6 +681,16 @@ export const AllDevices = observer(function AllDevices() {
                         Revoke access
                       </Button>
                     )}
+                    {user.twoFactor && (
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => resetTwoFactor(user)}
+                        title="Remove their second factor, for somebody whose phone is gone"
+                      >
+                        Reset 2FA
+                      </Button>
+                    )}
                     <Button variant="outlined" color="secondary" onClick={() => deleteUser(user)}>
                       Delete
                     </Button>
@@ -663,7 +700,7 @@ export const AllDevices = observer(function AllDevices() {
             ))}
             {users.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4}>
+                <TableCell colSpan={5}>
                   <Typography color="text.secondary">No user matches what you are looking for.</Typography>
                 </TableCell>
               </TableRow>

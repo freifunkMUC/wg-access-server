@@ -25,6 +25,9 @@ type UserService struct {
 	// when no built-in provider is configured, and then there is nothing to
 	// change here.
 	Passwords *users.Passwords
+	// TwoFactor is the second factor of the built-in sign-in, nil for the
+	// same reason.
+	TwoFactor *users.TwoFactor
 	// Tokens is nil in tests that do not care about them.
 	Tokens *apitokens.Manager
 	// Sessions is nil in tests that do not care about them.
@@ -218,12 +221,129 @@ func (d *UserService) ChangePassword(ctx context.Context, request *connect.Reque
 	return connect.NewResponse(&proto.ChangePasswordRes{SessionsEnded: int32(ended)}), nil
 }
 
+// twoFactorFor returns the second factor of whoever is asking, or the reason
+// they have none to speak of.
+func (d *UserService) twoFactorFor(ctx context.Context) (*authsession.Identity, error) {
+	user, err := authsession.CurrentUser(ctx)
+	if err != nil {
+		return nil, errNotAuthenticated()
+	}
+	if d.TwoFactor == nil || !authconfig.HasPassword(user.Provider) {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("this account signs in through an identity provider: set up a second factor there"))
+	}
+	return user, nil
+}
+
+// StartTwoFactor hands out a secret for an authenticator app. Nothing is
+// asked of the user until they confirm it with a code, so a QR code somebody
+// walked away from locks nobody out.
+func (d *UserService) StartTwoFactor(ctx context.Context, _ *connect.Request[proto.StartTwoFactorReq]) (*connect.Response[proto.StartTwoFactorRes], error) {
+	user, err := d.twoFactorFor(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	account := user.Name
+	if account == "" {
+		account = user.Subject
+	}
+
+	secret, uri, err := d.TwoFactor.Start(user.Subject, account)
+	if err != nil {
+		if errors.Is(err, users.ErrTwoFactorSet) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.New("this account already has a second factor: turn it off first"))
+		}
+		return nil, internalError(ctx, err, "failed to start the two-factor setup")
+	}
+
+	return connect.NewResponse(&proto.StartTwoFactorRes{Secret: secret, Uri: uri}), nil
+}
+
+// ConfirmTwoFactor turns it on, once a code from the app proves the app has
+// the secret, and returns the recovery codes - the only time they exist
+// outside the person's own hands.
+func (d *UserService) ConfirmTwoFactor(ctx context.Context, request *connect.Request[proto.ConfirmTwoFactorReq]) (*connect.Response[proto.ConfirmTwoFactorRes], error) {
+	user, err := d.twoFactorFor(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	codes, err := d.TwoFactor.Confirm(user.Subject, request.Msg.GetCode())
+	if err != nil {
+		switch {
+		case errors.Is(err, users.ErrWrongCode):
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("that code is not right"))
+		case errors.Is(err, users.ErrNoTwoFactor):
+			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("start the setup first"))
+		case errors.Is(err, users.ErrTwoFactorSet):
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.New("this account already has a second factor"))
+		}
+		return nil, internalError(ctx, err, "failed to turn the second factor on")
+	}
+
+	audit.Log(ctx, audit.UserTwoFactor, logrus.Fields{"enabled": true})
+
+	return connect.NewResponse(&proto.ConfirmTwoFactorRes{RecoveryCodes: codes}), nil
+}
+
+// DisableTwoFactor turns it off. It asks for the password, so that a browser
+// somebody left signed in is not enough to take it away.
+func (d *UserService) DisableTwoFactor(ctx context.Context, request *connect.Request[proto.DisableTwoFactorReq]) (*connect.Response[emptypb.Empty], error) {
+	user, err := d.twoFactorFor(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := d.TwoFactor.Disable(user.Subject, request.Msg.GetPassword()); err != nil {
+		if errors.Is(err, users.ErrWrongPassword) {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("that is not your password"))
+		}
+		return nil, internalError(ctx, err, "failed to turn the second factor off")
+	}
+
+	audit.Log(ctx, audit.UserTwoFactor, logrus.Fields{"enabled": false})
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
+// ResetTwoFactor takes somebody's second factor away, for an admin helping a
+// person whose phone is gone. Their password then signs them in again, so it
+// is as much trust as handing out a password - and it is recorded as such.
+func (d *UserService) ResetTwoFactor(ctx context.Context, request *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error) {
+	user, err := authsession.CurrentUser(ctx)
+	if err != nil {
+		return nil, errNotAuthenticated()
+	}
+	if !user.Claims.Has("admin", "true") {
+		return nil, errNotAdmin()
+	}
+	if d.TwoFactor == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("this server keeps no second factors"))
+	}
+
+	if err := d.TwoFactor.Reset(request.Msg.GetName()); err != nil {
+		if errors.Is(err, users.ErrNoTwoFactor) || errors.Is(err, users.ErrNoPasswordHere) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("this user has no second factor"))
+		}
+		return nil, internalError(ctx, err, "failed to remove the second factor")
+	}
+
+	audit.Log(ctx, audit.UserTwoFactorReset, logrus.Fields{"target_user": request.Msg.GetName()})
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
 func mapUser(u *devices.User) *proto.User {
 	return &proto.User{
 		Name:        u.Name,
 		DisplayName: u.DisplayName,
 		LastLogin:   timeToTimestamp(u.LastLogin),
 		Policies:    u.Policies,
+		TwoFactor:   u.TwoFactor,
 	}
 }
 

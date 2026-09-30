@@ -93,6 +93,14 @@ var migrations = []migration{
 			return db.AutoMigrate(&userV3{})
 		},
 	},
+	{
+		// The second factor of the built-in sign-in. Nobody has one after
+		// the upgrade, and nobody is asked for one until they set it up.
+		id: "0009_user_two_factor",
+		apply: func(db *gorm.DB) error {
+			return db.AutoMigrate(&userV4{})
+		},
+	},
 }
 
 type migration struct {
@@ -300,6 +308,25 @@ type userV3 struct {
 }
 
 func (userV3) TableName() string {
+	return "users"
+}
+
+// userV4 is the users table as 0009_user_two_factor left it.
+type userV4 struct {
+	Subject       string `gorm:"type:varchar(100);primaryKey"`
+	Provider      string
+	Name          string
+	Email         string
+	Policies      string
+	LastLogin     time.Time
+	PasswordHash  string
+	PasswordFrom  string
+	TotpSecret    string
+	TotpEnabledAt *time.Time
+	TotpRecovery  string
+}
+
+func (userV4) TableName() string {
 	return "users"
 }
 

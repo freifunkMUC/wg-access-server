@@ -318,12 +318,35 @@ func (s *InMemoryStorage) SaveUser(user *User) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	stored := *user
-	// a login carries no password, and must not wipe the one the user set
-	if previous, ok := s.users[user.Subject]; ok && stored.PasswordHash == "" {
-		stored.PasswordHash = previous.PasswordHash
-		stored.PasswordFrom = previous.PasswordFrom
+	// a login carries neither a password nor a second factor, and must not
+	// wipe what the user set
+	if previous, ok := s.users[user.Subject]; ok {
+		if stored.PasswordHash == "" {
+			stored.PasswordHash = previous.PasswordHash
+			stored.PasswordFrom = previous.PasswordFrom
+		}
+		if stored.TotpSecret == "" {
+			stored.TotpSecret = previous.TotpSecret
+			stored.TotpEnabledAt = previous.TotpEnabledAt
+			stored.TotpRecovery = previous.TotpRecovery
+		}
 	}
 	s.users[user.Subject] = &stored
+	return nil
+}
+
+func (s *InMemoryStorage) SetUserTOTP(subject string, state TOTPState) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	user, ok := s.users[subject]
+	if !ok {
+		return fmt.Errorf("user '%s' does not exist", subject)
+	}
+	changed := *user
+	changed.TotpSecret = state.Secret
+	changed.TotpEnabledAt = state.EnabledAt
+	changed.TotpRecovery = state.Recovery
+	s.users[subject] = &changed
 	return nil
 }
 

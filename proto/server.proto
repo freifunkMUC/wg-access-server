@@ -48,4 +48,8 @@ message InfoRes {
   // whether this session can change its own password: the built-in sign-in
   // keeps it here, an identity provider keeps it itself
   bool password_change_enabled = 21;
+  // whether this session's account is asked for a second factor
+  bool two_factor_enabled = 22;
+  // how many recovery codes it has left, so the UI can say when they run low
+  int32 recovery_codes_left = 23;
 }

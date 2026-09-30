@@ -32,6 +32,8 @@ type Services struct {
 	// Passwords is nil when no built-in provider is configured: there is then
 	// no password here to change.
 	Passwords *users.Passwords
+	// TwoFactor is nil for the same reason.
+	TwoFactor *users.TwoFactor
 	Wg        wgembed.WireGuardInterface
 }
 
@@ -55,6 +57,7 @@ func Router(deps *Services) http.Handler {
 				Tokens:        deps.Tokens,
 				Sessions:      deps.Sessions,
 				Passwords:     deps.Passwords,
+				TwoFactor:     deps.TwoFactor,
 			}, options)
 		},
 		func() (string, http.Handler) {
@@ -69,6 +72,7 @@ func Router(deps *Services) http.Handler {
 				Wg:             deps.Wg,
 				DeviceManager:  deps.DeviceManager,
 				PasswordChange: deps.Passwords != nil,
+				TwoFactor:      deps.TwoFactor,
 			}, options)
 		},
 	} {

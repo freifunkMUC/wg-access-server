@@ -99,6 +99,25 @@ type UserStorage interface {
 	// they set it. An empty hash removes it and hands them back to the
 	// configuration. The user has to exist.
 	SetUserPassword(subject string, hash string, from string) error
+	// SetUserTOTP stores the two-factor state of one user, all of it at once:
+	// the secret, whether it has been confirmed, and the recovery codes that
+	// are still unused. They only ever change together. The user has to
+	// exist.
+	SetUserTOTP(subject string, state TOTPState) error
+}
+
+// TOTPState is the two-factor state of one user as it is stored. The zero
+// value is somebody who has no second factor, which is how everybody starts.
+type TOTPState struct {
+	// Secret is the shared secret, base32. It is set when enrolment starts
+	// and only counts once EnabledAt is set: an enrolment somebody walked
+	// away from must not ask them for codes.
+	Secret string
+	// EnabledAt is when they confirmed the enrolment with a code from their
+	// app. Nil means no second factor is asked for.
+	EnabledAt *time.Time
+	// Recovery holds the unused recovery codes, hashed, comma separated.
+	Recovery string
 }
 
 // User is somebody who has signed in at least once.
@@ -124,11 +143,29 @@ type User struct {
 	//
 	// It is never returned to anybody: the API maps users without it.
 	PasswordHash string `json:"-"`
+	// TotpSecret, TotpEnabledAt and TotpRecovery are the second factor; see
+	// TOTPState, which is how they are read and written together. Like the
+	// password they never leave the server.
+	TotpSecret    string     `json:"-"`
+	TotpEnabledAt *time.Time `json:"-"`
+	TotpRecovery  string     `json:"-"`
+
 	// PasswordFrom is the configured entry that was in effect when the
 	// password was set. When the configuration names a different one now, an
 	// admin has changed it, and theirs wins: the stored password is ignored.
 	// Without this an admin could not take a password back.
 	PasswordFrom string `json:"-"`
+}
+
+// TOTP returns the two-factor state of this user.
+func (u *User) TOTP() TOTPState {
+	return TOTPState{Secret: u.TotpSecret, EnabledAt: u.TotpEnabledAt, Recovery: u.TotpRecovery}
+}
+
+// TwoFactorEnabled says whether this user is asked for a code when they sign
+// in: a secret alone is an enrolment nobody finished.
+func (u *User) TwoFactorEnabled() bool {
+	return u.TotpSecret != "" && u.TotpEnabledAt != nil
 }
 
 // PolicyList returns the policies one by one, empty for a user without any.

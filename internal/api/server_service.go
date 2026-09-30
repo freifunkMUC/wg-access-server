@@ -14,6 +14,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/network"
+	"github.com/freifunkMUC/wg-access-server/internal/users"
 	"github.com/freifunkMUC/wg-access-server/proto/proto"
 )
 
@@ -29,6 +30,16 @@ type ServerService struct {
 	// when a built-in provider is configured. Whether this session's own
 	// password is one of them is decided per request.
 	PasswordChange bool
+	// TwoFactor is the second factor of the built-in sign-in, nil when the
+	// server keeps none.
+	TwoFactor *users.TwoFactor
+}
+
+func recoveryCodesLeft(twoFactor *users.TwoFactor, subject string) int32 {
+	if twoFactor == nil {
+		return 0
+	}
+	return int32(twoFactor.RecoveryCodesLeft(subject))
 }
 
 func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoReq]) (*connect.Response[proto.InfoRes], error) {
@@ -79,6 +90,8 @@ func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoR
 		ApiTokensEnabled:                s.Config.EnableAPITokens,
 		Subject:                         user.Subject,
 		PasswordChangeEnabled:           s.PasswordChange && authconfig.HasPassword(user.Provider),
+		TwoFactorEnabled:                s.TwoFactor != nil && s.TwoFactor.Enabled(user.Subject),
+		RecoveryCodesLeft:               recoveryCodesLeft(s.TwoFactor, user.Subject),
 	}), nil
 }
 

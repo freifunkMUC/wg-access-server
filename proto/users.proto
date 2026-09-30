@@ -18,6 +18,14 @@ service Users {
   // Changes your own password. Only for the built-in sign-in - with an
   // identity provider the password is theirs, not ours.
   rpc ChangePassword(ChangePasswordReq) returns (ChangePasswordRes) {}
+
+  // The second factor of the built-in sign-in: an authenticator app, and the
+  // recovery codes for when the phone is gone. Your own only.
+  rpc StartTwoFactor(StartTwoFactorReq) returns (StartTwoFactorRes) {}
+  rpc ConfirmTwoFactor(ConfirmTwoFactorReq) returns (ConfirmTwoFactorRes) {}
+  rpc DisableTwoFactor(DisableTwoFactorReq) returns (google.protobuf.Empty) {}
+  // admin only: take somebody's second factor away when their phone is gone
+  rpc ResetTwoFactor(ResetTwoFactorReq) returns (google.protobuf.Empty) {}
 }
 
 message User {
@@ -28,6 +36,8 @@ message User {
   // the access policies their identity provider put them in at that login.
   // Empty: their devices may reach what vpn.allowedIPs says.
   repeated string policies = 4;
+  // whether they are asked for a second factor when they sign in
+  bool two_factor = 5;
 }
 
 message ListUsersReq {
@@ -51,6 +61,33 @@ message ChangePasswordReq {
 // must not keep a session that was made with it.
 message ChangePasswordRes {
   int32 sessions_ended = 1;
+}
+
+message StartTwoFactorReq {}
+
+message StartTwoFactorRes {
+  // the shared secret, for whoever cannot scan a QR code
+  string secret = 1;
+  // the otpauth:// URI the QR code holds
+  string uri = 2;
+}
+
+message ConfirmTwoFactorReq {
+  string code = 1;
+}
+
+// The recovery codes, shown once. What the server keeps cannot produce them
+// again.
+message ConfirmTwoFactorRes {
+  repeated string recovery_codes = 1;
+}
+
+message DisableTwoFactorReq {
+  string password = 1;
+}
+
+message ResetTwoFactorReq {
+  string name = 1;
 }
 
 message RevokeAccessReq {

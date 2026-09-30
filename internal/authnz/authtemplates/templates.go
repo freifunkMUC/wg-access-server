@@ -53,6 +53,9 @@ type SimpleAuthPage struct {
 	ErrorMessage string
 	// OtherProviders adds a link back to the other ways to sign in.
 	OtherProviders bool
+	// AskForCode turns the page into the second step: the password was
+	// right, and the code from the authenticator app is what is missing.
+	AskForCode bool
 }
 
 func RenderSimpleAuthPage(w io.Writer, data SimpleAuthPage) error {

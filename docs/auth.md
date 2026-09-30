@@ -204,6 +204,39 @@ Their devices are unaffected either way - a tunnel does not use anybody's passwo
 With an identity provider there is nothing here to change: the password is theirs, and the page says
 so rather than pretending otherwise.
 
+## Two-factor authentication
+
+Somebody signing in with `simple` auth can ask for a code from an authenticator app on top of their
+password, under the same key icon. It is TOTP - RFC 6238, six digits, thirty seconds - so every
+authenticator app does it, and the server checks the step before and after the current one, because
+phones and servers rarely agree on the second.
+
+- **Setting it up asks for a code before it counts.** Until that code arrives, the secret is stored
+  but nothing is asked of anybody: a QR code somebody walked away from locks nobody out.
+- **Ten recovery codes** come with it, shown once. Each signs in once and is used up by it. Only
+  their hashes are kept, so nothing here can show them again - and they are hashed with SHA-256
+  rather than bcrypt, because they are long random strings and ten slow hashes per attempt would be
+  a way to hold the server up.
+- **Turning it off asks for the password**, so that a browser left signed in is not enough to take
+  it away.
+- **An admin can remove it** for somebody whose phone is gone, from the user list under _admin_.
+  Their password alone then signs them in again, so it is as much trust as handing out a password -
+  and it is recorded as `user.two_factor_reset`.
+
+The password step and the code step are two requests. Between them the browser holds a cookie that
+says whose password was right and expires after five minutes; it is not a login, and nothing reads
+an identity out of it. A code posted without that step sends the browser back to the sign-in page.
+
+The secret is stored as the authenticator app needs it - a shared secret cannot be hashed, or
+neither side could compute the same code. It is worth the same care as the device keys in the same
+database.
+
+!!! note
+
+    This is for `simple` auth, the sign-in page. `basic` auth is the browser's own username and
+    password dialog, which has nowhere to ask for a second one. With an identity provider, the
+    second factor belongs there.
+
 ## Sessions
 
 Signing in creates a session, and the cookie the browser gets carries **nothing but its id**. Who

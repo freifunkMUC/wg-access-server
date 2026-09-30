@@ -73,6 +73,9 @@ type User struct {
 	LastLogin *time.Time
 	// Policies are the access policies they were in at that login.
 	Policies []string
+	// TwoFactor is whether they are asked for a code when they sign in. An
+	// admin sees it so that they know who to reset when a phone is gone.
+	TwoFactor bool
 }
 
 // https://lists.zx2c4.com/pipermail/wireguard/2020-December/006222.html
@@ -777,6 +780,7 @@ func (d *DeviceManager) ListUsers() ([]*User, error) {
 		listed := &User{
 			Name: user.Subject, DisplayName: user.Name,
 			LastLogin: &lastLogin, Policies: user.PolicyList(),
+			TwoFactor: user.TwoFactorEnabled(),
 		}
 		users = append(users, listed)
 		byName[user.Subject] = listed
