@@ -48,7 +48,10 @@ func newGormLogger() gormlogger.Interface {
 		LogLevel: gormlogger.Info,
 		// a device that does not exist is an answer, not a failure
 		IgnoreRecordNotFoundError: true,
-		Colorful:                  false,
+		// The values are preshared keys, second-factor secrets and password
+		// hashes: the statement is what helps, not what went into it.
+		ParameterizedQueries: true,
+		Colorful:             false,
 	})
 }
 
@@ -102,13 +105,22 @@ func pgconn(u *url.URL) string {
 		decodedQuery = ""
 	}
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s %s",
-		u.Hostname(),
-		u.Port(),
-		u.User.Username(),
-		password,
-		strings.TrimLeft(u.Path, "/"),
+		pgQuote(u.Hostname()),
+		pgQuote(u.Port()),
+		pgQuote(u.User.Username()),
+		pgQuote(password),
+		pgQuote(strings.TrimLeft(u.Path, "/")),
 		decodedQuery,
 	)
+}
+
+// pgQuote quotes a value of a keyword/value connection string. Unquoted, a
+// space ends the value: a password with one broke the connection string, and
+// the rest of it ended up in the error message.
+func pgQuote(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, `'`, `\'`)
+	return "'" + value + "'"
 }
 
 func mysqlconn(u *url.URL) string {
@@ -640,7 +652,15 @@ func (s *SQLStorage) Users() ([]*User, error) {
 }
 
 func (s *SQLStorage) DeleteUser(subject string) error {
-	if err := s.db.Where("subject = ?", subject).Delete(&User{}).Error; err != nil {
+	// the passkeys go with the user: kept, they would be the second factor
+	// of whoever is added under the same name later
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("owner = ?", subject).Delete(&Passkey{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("subject = ?", subject).Delete(&User{}).Error
+	})
+	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
 	return nil

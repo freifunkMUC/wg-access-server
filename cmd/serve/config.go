@@ -24,6 +24,13 @@ import (
 // misspelled 'adminPassword' would put the password in the log.
 var unknownField = regexp.MustCompile(`unknown field "([^"]+)"`)
 
+// configFileError describes a configuration file that cannot be decoded
+// without quoting it. The decoder's own message shows the lines around the
+// problem, and those can hold adminPassword, a client secret or a private key.
+func configFileError(err error) error {
+	return fmt.Errorf("failed to bind configuration file: %s", yaml.FormatError(err, false, false))
+}
+
 // warnAboutUnknownKeys reports keys the configuration does not have a home
 // for. They are dropped without a word otherwise, so a setting under the
 // wrong heading - externalHost under 'wireguard:', where it does not belong -
@@ -97,13 +104,13 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		// hand us a document that is null, and that clears every field.
 		var configured any
 		if err := yaml.Unmarshal(b, &configured); err != nil {
-			logrus.Fatal(fmt.Errorf("failed to bind configuration file: %w", err))
+			logrus.Fatal(configFileError(err))
 		}
 		if configured != nil {
 			warnAboutOverriddenEnv(configured)
 			warnAboutUnknownKeys(b)
 			if err := yaml.Unmarshal(b, &cmd.AppConfig); err != nil {
-				logrus.Fatal(fmt.Errorf("failed to bind configuration file: %w", err))
+				logrus.Fatal(configFileError(err))
 			}
 		}
 	}

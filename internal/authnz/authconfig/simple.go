@@ -98,8 +98,9 @@ func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRu
 		u := r.PostForm.Get("username")
 		p := r.PostForm.Get("password")
 
-		// An empty form is not an attempt at a password.
-		attempted := u != "" && p != ""
+		// An empty form is not an attempt at a password, and neither is a
+		// username too long to be anybody's.
+		attempted := u != "" && p != "" && len(u) <= maxUsernameLength
 		if attempted {
 			throttle.wait(u)
 		}
@@ -195,6 +196,10 @@ func finishWithCode(w http.ResponseWriter, r *http.Request, runtime *ProviderRun
 	}
 
 	username := session.Pending.Subject
+	if !throttle.beginSecondFactor(username) {
+		refuseSecondFactor(w, runtime, username, r.RemoteAddr)
+		return
+	}
 	throttle.wait(username)
 
 	if !runtime.CheckTwoFactor(username, code) {
@@ -206,12 +211,22 @@ func finishWithCode(w http.ResponseWriter, r *http.Request, runtime *ProviderRun
 	}
 
 	throttle.recordSuccess(username)
+	throttle.secondFactorSucceeded(username)
 	if err := runtime.SetSession(w, r, sessionFor(username)); err != nil {
 		logrus.Error(fmt.Errorf("failed to start the session after the second factor: %w", err))
 		http.Error(w, "Could not sign in", http.StatusInternalServerError)
 		return
 	}
 	runtime.Done(w, r)
+}
+
+// refuseSecondFactor answers an attempt at the second step after too many
+// wrong ones, without checking it.
+func refuseSecondFactor(w http.ResponseWriter, runtime *ProviderRuntime, username string, remoteAddr string) {
+	logrus.Warnf("Refused two-factor attempt for user '%s' after %d wrong answers (simple auth, remote address: %s)",
+		username, maxSecondFactorFailures, remoteAddr)
+	w.WriteHeader(http.StatusTooManyRequests)
+	renderCodePage(w, runtime, username, "Too many wrong answers. Wait a few minutes before you try again.")
 }
 
 func renderCodePage(w http.ResponseWriter, runtime *ProviderRuntime, username string, errorMessage string) {
@@ -278,6 +293,10 @@ func finishWithPasskey(w http.ResponseWriter, r *http.Request, runtime *Provider
 	}
 
 	username := session.Pending.Subject
+	if !throttle.beginSecondFactor(username) {
+		refuseSecondFactor(w, runtime, username, r.RemoteAddr)
+		return
+	}
 	throttle.wait(username)
 
 	if err := runtime.FinishPasskeyLogin(r, username, answer); err != nil {
@@ -290,6 +309,7 @@ func finishWithPasskey(w http.ResponseWriter, r *http.Request, runtime *Provider
 	}
 
 	throttle.recordSuccess(username)
+	throttle.secondFactorSucceeded(username)
 	if err := runtime.SetSession(w, r, sessionFor(username)); err != nil {
 		logrus.Error(fmt.Errorf("failed to start the session after the passkey: %w", err))
 		http.Error(w, "Could not sign in", http.StatusInternalServerError)

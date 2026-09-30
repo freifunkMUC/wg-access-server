@@ -37,6 +37,9 @@ func (c *BasicAuthConfig) Provider() *authruntime.Provider {
 	}
 }
 
+// secondFactorNotPossible is the answer for an account with a second factor.
+const secondFactorNotPossible = "This account has a second factor, which basic auth cannot ask for. Sign in with the password form instead."
+
 func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime, throttle *loginThrottle) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// accept standard basic auth challenges
@@ -45,19 +48,38 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime, th
 		if !isBasic {
 			// we'll handle form submissions and direct
 			// browser challenges
-			u = r.FormValue("username")
-			p = r.FormValue("password")
+			// the form posts them; in the URL they would end up in proxy
+			// logs and the browser history
+			u = r.PostFormValue("username")
+			p = r.PostFormValue("password")
 		}
 
 		// A request without any credentials is the browser asking for the
-		// challenge, not a failed attempt.
-		attempted := u != ""
+		// challenge, not a failed attempt. A username too long to be
+		// anybody's is not kept or logged either.
+		attempted := u != "" && len(u) <= maxUsernameLength
 		if attempted {
 			throttle.wait(u)
 		}
 		// Every way out of a right password returns, so reaching past this
 		// block means the credentials were not right.
-		if ok := checkCreds(c.Users, u, p, runtime); ok {
+		if ok := attempted && checkCreds(c.Users, u, p, runtime); ok {
+			// Basic auth has nowhere to ask for a second factor. Letting the
+			// password alone in would make the second factor worthless for
+			// everybody who can reach this provider.
+			if runtime.TwoFactorRequired(u) {
+				logrus.Warnf("Refused basic auth login for user '%s': the account has a second factor (remote address: %s)", u, r.RemoteAddr)
+				if !isBasic {
+					runtime.ShowBanner(w, r, authsession.Banner{
+						Text:   secondFactorNotPossible,
+						Intent: "danger",
+					})
+				} else {
+					http.Error(w, secondFactorNotPossible, http.StatusForbidden)
+				}
+				return
+			}
+
 			throttle.recordSuccess(u)
 			err := runtime.SetSession(w, r, &authsession.AuthSession{
 				Identity: &authsession.Identity{

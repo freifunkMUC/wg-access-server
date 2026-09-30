@@ -205,7 +205,9 @@ func (c *GithubConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oau
 		}
 
 		if err := runtime.SetSession(w, r, &authsession.AuthSession{Identity: identity}); err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			// the details are the database's, not the browser's business
+			logrus.Error(fmt.Errorf("failed to start the session after the GitHub sign-in: %w", err))
+			http.Error(w, "Could not sign in", http.StatusInternalServerError)
 			return
 		}
 		runtime.Done(w, r)

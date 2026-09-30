@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-webauthn/webauthn/protocol"
@@ -44,7 +45,10 @@ const maxPasskeyName = 64
 // a page pretending to be this one cannot ask for it, and a person cannot read
 // it out to somebody on the phone. That is the reason for having it.
 type Passkeys struct {
-	storage storage.Storage
+	// challengeMu makes reading and clearing a challenge one step, so that
+	// two requests with the same answer cannot both find it.
+	challengeMu sync.Mutex
+	storage     storage.Storage
 	// relyingParty says which site this is, as far as a browser is
 	// concerned. It is what binds a credential to this server.
 	relyingParty func(r *http.Request) (id string, origin string)
@@ -140,12 +144,7 @@ func (p *Passkeys) BeginRegistration(r *http.Request, subject string) (json.RawM
 // FinishRegistration stores what the browser made, under a name the person
 // can tell it by.
 func (p *Passkeys) FinishRegistration(r *http.Request, subject string, name string, answer []byte) (*storage.Passkey, error) {
-	user, err := p.user(subject)
-	if err != nil {
-		return nil, err
-	}
-
-	session, err := p.takeChallenge(subject, user.stored)
+	user, session, err := p.userAndChallenge(subject)
 	if err != nil {
 		return nil, err
 	}
@@ -221,12 +220,7 @@ func (p *Passkeys) BeginLogin(r *http.Request, subject string) (json.RawMessage,
 // FinishLogin says whether the browser proved it holds a passkey of this
 // person, and records that the passkey was used.
 func (p *Passkeys) FinishLogin(r *http.Request, subject string, answer []byte) error {
-	user, err := p.user(subject)
-	if err != nil {
-		return err
-	}
-
-	session, err := p.takeChallenge(subject, user.stored)
+	user, session, err := p.userAndChallenge(subject)
 	if err != nil {
 		return err
 	}
@@ -244,6 +238,12 @@ func (p *Passkeys) FinishLogin(r *http.Request, subject string, answer []byte) e
 	credential, err := auth.ValidateLogin(user, *session, parsed)
 	if err != nil {
 		return fmt.Errorf("the passkey was not accepted: %w", err)
+	}
+	// The library only reports a sign count that did not go up; refusing
+	// is up to us. The stored count is left as it was, so that the passkey
+	// that is not the copy keeps working.
+	if credential.Authenticator.CloneWarning {
+		return errors.New("the passkey was not accepted: its sign count did not go up, so a copy of it may be in use")
 	}
 
 	// The sign count and the backup state travel with the credential, so it
@@ -295,6 +295,22 @@ func (p *Passkeys) keepChallenge(subject string, session *webauthn.SessionData) 
 		return fmt.Errorf("failed to keep the passkey challenge: %w", err)
 	}
 	return nil
+}
+
+// userAndChallenge reads somebody and takes their challenge in one step.
+func (p *Passkeys) userAndChallenge(subject string) (*passkeyUser, *webauthn.SessionData, error) {
+	p.challengeMu.Lock()
+	defer p.challengeMu.Unlock()
+
+	user, err := p.user(subject)
+	if err != nil {
+		return nil, nil, err
+	}
+	session, err := p.takeChallenge(subject, user.stored)
+	if err != nil {
+		return nil, nil, err
+	}
+	return user, session, nil
 }
 
 // takeChallenge reads the challenge and clears it, so that an answer counts
@@ -418,6 +434,10 @@ func (u *passkeyUser) WebAuthnCredentials() []webauthn.Credential {
 			// A row nothing can read is not a credential anybody can use.
 			continue
 		}
+		// Only what the sign-in at hand shows counts. Earlier versions
+		// stored the warning without acting on it, and one stored then
+		// must not lock the passkey out for good.
+		credential.Authenticator.CloneWarning = false
 		credentials = append(credentials, credential)
 	}
 	return credentials

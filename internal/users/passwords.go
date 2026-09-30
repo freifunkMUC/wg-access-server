@@ -6,6 +6,8 @@ package users
 import (
 	"errors"
 	"fmt"
+	"sync"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -21,6 +23,19 @@ var (
 	// keep: one from an identity provider, or a user the configuration does
 	// not list.
 	ErrNoPasswordHere = errors.New("no password is kept here for this account")
+	// ErrTooManyAttempts is a password that was not checked, because too
+	// many wrong ones came before it.
+	ErrTooManyAttempts = errors.New("too many wrong passwords")
+)
+
+const (
+	// maxWrongPasswords is how many wrong passwords an account's own
+	// actions take before the password is not checked for wrongPasswordsFor.
+	// Only somebody signed in as them can use these up, so a limit cannot
+	// lock anybody else out - and the sign-in has a throttle of its own.
+	maxWrongPasswords = 5
+	// wrongPasswordsFor is how long the limit lasts after the last wrong one.
+	wrongPasswordsFor = 15 * time.Minute
 )
 
 // Configured returns the configured entry for a user - the htpasswd hash an
@@ -39,10 +54,55 @@ type Passwords struct {
 	storage    storage.UserStorage
 	configured Configured
 	matches    Matches
+
+	// wrong counts the wrong passwords per account. Without a limit, somebody
+	// holding a stolen session or API token could guess the password through
+	// these actions as fast as bcrypt allows, around the sign-in throttle.
+	mu    sync.Mutex
+	wrong map[string]*wrongPasswords
+	now   func() time.Time
+}
+
+type wrongPasswords struct {
+	count int
+	last  time.Time
 }
 
 func NewPasswords(s storage.UserStorage, configured Configured, matches Matches) *Passwords {
-	return &Passwords{storage: s, configured: configured, matches: matches}
+	return &Passwords{storage: s, configured: configured, matches: matches, wrong: map[string]*wrongPasswords{}, now: time.Now}
+}
+
+// attempt reserves a password check for subject, or says there are none left.
+// It counts as wrong until right() says otherwise, so that parallel requests
+// cannot get past the limit.
+func (p *Passwords) attempt(subject string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.wrong == nil {
+		p.wrong = map[string]*wrongPasswords{}
+	}
+	now := time.Now()
+	if p.now != nil {
+		now = p.now()
+	}
+
+	record, found := p.wrong[subject]
+	if !found || now.Sub(record.last) > wrongPasswordsFor {
+		record = &wrongPasswords{}
+		p.wrong[subject] = record
+	}
+	if record.count >= maxWrongPasswords {
+		return false
+	}
+	record.count++
+	record.last = now
+	return true
+}
+
+func (p *Passwords) right(subject string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	delete(p.wrong, subject)
 }
 
 // Verify says whether this is the password of that user, by the same rule the
@@ -52,6 +112,9 @@ func (p *Passwords) Verify(subject string, password string) error {
 	entry, listed := p.configured(subject)
 	if !listed {
 		return ErrNoPasswordHere
+	}
+	if !p.attempt(subject) {
+		return ErrTooManyAttempts
 	}
 
 	stored, from := p.stored(subject)
@@ -64,6 +127,7 @@ func (p *Passwords) Verify(subject string, password string) error {
 	if !ok {
 		return ErrWrongPassword
 	}
+	p.right(subject)
 	return nil
 }
 

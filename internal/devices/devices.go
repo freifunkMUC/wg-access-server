@@ -79,7 +79,7 @@ type User struct {
 }
 
 // https://lists.zx2c4.com/pipermail/wireguard/2020-December/006222.html
-var wgKeyRegex = regexp.MustCompile("^[A-Za-z0-9+/]{42}[A|E|I|M|Q|U|Y|c|g|k|o|s|w|4|8|0]=$")
+var wgKeyRegex = regexp.MustCompile("^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$")
 
 // ValidationError carries a message meant for the user: it says what they got
 // wrong, not how the server works. Everything else that goes wrong stays in

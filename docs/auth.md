@@ -71,6 +71,8 @@ auth:
     users: []
   oidc:
     # A name for the backend (is shown on the login page and possibly in the devices list of the 'all devices' admin page)
+    # Every identity provider needs a name of its own, and none may be called "basic" or "simple":
+    # the name tells the users of different providers apart, so the server refuses to start otherwise.
     name: "My OIDC Backend"
     # Should point to the OIDC Issuer (excluding /.well-known/openid-configuration)
     issuer: "https://identity.example.com"
@@ -203,6 +205,10 @@ Somebody signed in that way can now set their own instead, under the key icon in
   to use there.
 - A password set here has to be at least 10 characters. The configured entries are not held to that:
   those are an admin's business, and refusing them at sign-in would lock people out.
+- **Five wrong passwords** - here, when turning the second factor off or when replacing the recovery
+  codes - stop the password from being checked for 15 minutes after the last wrong one. A stolen
+  session must not be a way to guess the password. Only somebody signed in as the person can use
+  them up, and signing in is not affected.
 
 Their devices are unaffected either way - a tunnel does not use anybody's password.
 
@@ -283,8 +289,9 @@ database.
 !!! note
 
     This is for `simple` auth, the sign-in page. `basic` auth is the browser's own username and
-    password dialog, which has nowhere to ask for a second one. With an identity provider, the
-    second factor belongs there.
+    password dialog, which has nowhere to ask for a second one: it refuses an account that has a
+    second factor rather than letting the password alone sign it in, and nobody signed in with it
+    can set one up. With an identity provider, the second factor belongs there.
 
 ## Sessions
 
@@ -421,8 +428,15 @@ next attempt for that username waits, and the wait doubles with every further fa
 A successful login clears it, and a username that has not been tried for 15 minutes is forgotten.
 Failed attempts are logged with the username and the remote address.
 
-There is deliberately no lockout after N attempts: it would let anyone keep the admin account locked
-simply by failing to log in on purpose. The counters are also kept per username rather than per client
+The second step is different: after 10 wrong codes or passkeys it is refused for 15 minutes after the
+last wrong one, and the right password does not give the attempts back. A delay alone is not enough
+there, because six digits are only a million guesses and parallel requests all wait at once. Only
+somebody who knows the password can use up these attempts, so the limit cannot lock anybody else out.
+
+Usernames longer than 256 bytes are refused without being counted or logged.
+
+There is deliberately no lockout after N wrong passwords: it would let anyone keep the admin account
+locked simply by failing to log in on purpose. The counters are also kept per username rather than per client
 address, because wg-access-server is commonly reached through a reverse proxy where every user shares
 one address - and trusting `X-Forwarded-For` would let a client pick its own key and skip the throttle.
 
