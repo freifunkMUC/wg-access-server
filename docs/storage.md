@@ -134,7 +134,8 @@ Take a backup before upgrading, as with any database.
 
 ## Migration Between Backends
 
-You can migrate your registered devices and API tokens between backends using the
+You can migrate your registered devices, API tokens and users - with the passwords they set for
+themselves, their second factors and their passkeys - between backends using the
 `wg-access-server migrate <src> <dest>` command. Stop the server first: devices added while the
 migration runs are left behind.
 
