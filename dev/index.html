@@ -1199,6 +1199,10 @@ https://github.com/freifunkMUC/wg-access-server-chart.</p>
 <p>Both are admin-only on purpose. A user can see on their own device why it cannot connect, but cannot
 lift a block or push an expiry out - a block they could lift would be no block. They can still delete
 the device.</p>
+<p><strong>A block or an expiry belongs to the device, not to the person.</strong> Somebody who can still sign in can
+delete a blocked or expired device and add a new one, which is neither. Blocking is for a device -
+one that was lost, or that should be off for a while. To keep a person out, use
+<a href="#taking-somebodys-access-away">Revoke access</a> and stop them from signing in.</p>
 <p><strong>Several at once.</strong> Every row in the device list has a tick box, and the one in the header takes
 everything the search and the filter leave - not only the page in view, which matters when the
 search narrows three hundred devices down to the twelve of one person. A bar above the table then
@@ -1241,8 +1245,10 @@ refused: it would block your own devices and sign you out halfway through. It is
 recorded in the <a href="https://www.freie-netze.org/wg-access-server/audit/">audit log</a> as <code>user.revoke</code>
 with what it took.</p>
 <p>What it does <strong>not</strong> do is stop them from signing in again. If their identity provider still lets
-them in, they get a new session - and their devices stay blocked, which is the part that matters.
-Removing them at the provider, or deleting the user here, is what ends that.</p>
+them in, they get a new session, and with it they can delete a blocked device and add a new one: a
+block belongs to the device, not to the person. Deleting the user here does not stop that either.
+What keeps them out is the sign-in: removing them at their identity provider, from the <code>users</code> of
+basic or simple auth, or from what <code>accessClaim</code> or the GitHub organizations, teams and users allow.</p>
 <h2 id="networks-behind-a-device">Networks behind a device<a class="headerlink" href="#networks-behind-a-device" title="Permanent link"> ¶</a></h2>
 <p>A device is usually one computer or one phone. It can also be the router of a whole site: an admin
 assigns the networks that live behind it under <em>admin</em> → <em>Networks</em>, and the server then sends
