@@ -68,7 +68,8 @@ export const Password = observer(function Password() {
 
       <Typography variant="body2" sx={{ mb: 2 }}>
         This is the password you sign in with. Changing it signs out every other browser you are signed in with - the
-        one you are using stays. Your devices keep connecting either way: a tunnel does not use your password.
+        one you are using stays - and revokes your API tokens. Your devices keep connecting either way: a tunnel does
+        not use your password.
       </Typography>
 
       <form onSubmit={submit}>

@@ -154,7 +154,7 @@ export const TwoFactor = observer(function TwoFactor() {
         <form onSubmit={confirm}>
           <Typography variant="body2" sx={{ mb: 2 }}>
             Scan this with your authenticator app, then type the code it shows to finish. Nothing is asked of you until
-            you do.
+            you do. Finishing signs out every other browser you are signed in with and revokes your API tokens.
           </Typography>
           <QRCode content={setup.uri} />
           <Typography variant="body2" sx={{ mt: 2 }}>

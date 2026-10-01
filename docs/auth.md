@@ -196,8 +196,8 @@ Somebody signed in that way can now set their own instead, under the key icon in
 - **An admin editing the entry in the config file takes it back**: the stored password was set
   against an entry that is no longer there, so it is ignored and the configured password counts
   again. That is how a password is reset - there is no other way in, by design.
-- Changing it **ends every other session** of that person. Whoever knew the old password may be
-  holding one.
+- Changing it **ends every other session** of that person **and revokes their API tokens**.
+  Whoever knew the old password may be holding a session, or have made a token with it.
 - It is stored as **bcrypt**, which salts every hash itself: the salt is part of the stored string,
   so the same password set by two people does not look the same, and one precomputed set of hashes
   cannot be tried against the whole table. The configured entries are whatever an admin wrote -
@@ -228,6 +228,9 @@ as many as they like: one to carry, one in a drawer.
   passkey and take their second factor away.
 - It is asked for **after the password**, like a code. Which of the two a person uses is up to them;
   the sign-in page offers both when both are set up.
+- **Registering the first one ends every other session** of that person and revokes their API
+  tokens, as turning on the code from an app does: a passkey makes the password alone no longer
+  enough. Further passkeys leave both alone.
 - Removing the last one hands the account back to the password alone, and the question says so.
 - **A passkey can be renamed.** The name is the person's own label, and a drawer key that moved to a
   keyring should not have to be registered again to say so. Only the name changes: the credential
@@ -260,6 +263,9 @@ phones and servers rarely agree on the second.
 
 - **Setting it up asks for a code before it counts.** Until that code arrives, the secret is stored
   but nothing is asked of anybody: a QR code somebody walked away from locks nobody out.
+- **Turning it on ends every other session and revokes the API tokens** of that person. They were
+  opened with the password alone, which is exactly what is no longer meant to be enough. The
+  browser it was turned on in stays signed in.
 - **A code signs in once.** It is good for the current thirty second step and the one either side,
   so that phones and servers need not agree on the second, but the step it was accepted at is
   remembered and nothing up to that step is taken again (RFC 6238 §5.2).
@@ -394,6 +400,9 @@ token has admin rights - except manage the account itself (see below). It works 
   are refused with `permission_denied`. Otherwise a leaked token could become the account: set a
   second factor its owner does not have, or sign them out of the browser they would notice it from.
   Listing sessions and passkeys still works, it changes nothing.
+- **Changing the password and turning the second factor on revoke every token** of that person. A
+  token made with the password alone would otherwise stay a way in without it. They have to be
+  created again afterwards.
 
 Requests with a token that does not work get a `401` (a disabled feature too), an owner who has lost
 access a `403`. Creating and revoking tokens is recorded in the [audit log](./audit.md), and so is
