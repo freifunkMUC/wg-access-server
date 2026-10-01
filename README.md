@@ -258,6 +258,9 @@ See the [Releases section](https://github.com/freifunkMUC/wg-access-server/relea
 
 The software consists of a Go server and a React app.
 
+If you use an AI coding assistant, it and you follow
+[AGENTS.md](https://github.com/freifunkMUC/wg-access-server/blob/master/AGENTS.md).
+
 To work on it locally:
 
 1. Start the web UI's development server: `cd website && npm install && npm start` (Vite, on `:3000`).
