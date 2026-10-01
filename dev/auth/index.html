@@ -504,6 +504,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="What the server remembers about a sign-in">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-identifier-one-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One identifier, one provider
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -913,6 +930,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="What the server remembers about a sign-in">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-identifier-one-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One identifier, one provider
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1089,6 +1123,8 @@ config file (config.yaml).</p>
 <span class="w">    </span><span class="c1"># A name for the backend (is shown on the login page and possibly in the devices list of the 'all devices' admin page)</span>
 <span class="w">    </span><span class="c1"># Every identity provider needs a name of its own, and none may be called "basic" or "simple":</span>
 <span class="w">    </span><span class="c1"># the name tells the users of different providers apart, so the server refuses to start otherwise.</span>
+<span class="w">    </span><span class="c1"># Do not rename it once people have signed in: the name is remembered with them, and a sign-in</span>
+<span class="w">    </span><span class="c1"># through a provider of another name is refused (see "One identifier, one provider").</span>
 <span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"My</span><span class="nv"> </span><span class="s">OIDC</span><span class="nv"> </span><span class="s">Backend"</span>
 <span class="w">    </span><span class="c1"># Should point to the OIDC Issuer (excluding /.well-known/openid-configuration)</span>
 <span class="w">    </span><span class="nt">issuer</span><span class="p">:</span><span class="w"> </span><span class="s">"https://identity.example.com"</span>
@@ -1347,6 +1383,20 @@ their identity provider knows, and only at the moment they sign in.</p>
 </ul>
 <p>Name and email address were already stored with every device, so nothing is kept that was not kept
 before - except for a person who has no device at all.</p>
+<h3 id="one-identifier-one-provider">One identifier, one provider<a class="headerlink" href="#one-identifier-one-provider" title="Permanent link"> ¶</a></h3>
+<p>Devices, the row above, the access policies and the DNS names all name a person by the identifier
+their provider uses - nothing else. Two providers that hand out the same identifier would make two
+people one: whoever signs in second would get the devices of the first. So <strong>a sign-in is refused
+when its identifier already belongs to somebody of another provider</strong>, with a <code>403</code> that says so and
+a warning in the log naming both providers.</p>
+<ul>
+<li>Which provider somebody belongs to is the one in that row. For somebody who has not signed in
+  since the row was introduced, it is the provider their devices were added through.</li>
+<li>Basic and Simple Auth count as one: both check the users the configuration lists.</li>
+<li><strong>Renaming a provider</strong> - the <code>name</code> of an <code>oidc</code>, <code>gitlab</code> or <code>github</code> backend - makes everybody
+  who signed in through it somebody of another provider. Keep the name. Deleting a user in the web
+  UI frees their identifier, along with their devices and their API tokens.</li>
+</ul>
 <h2 id="api-tokens">API tokens<a class="headerlink" href="#api-tokens" title="Permanent link"> ¶</a></h2>
 <p>With <code>enableApiTokens: true</code>, users can create tokens on the <em>API tokens</em> page of the web UI (the key
 icon) and use the API from scripts without a browser session:</p>
