@@ -99,6 +99,11 @@ type Device struct {
 func NewStorage(uri string) (Storage, error) {
 	u, err := url.Parse(uri)
 	if err != nil {
+		// url.Error contains the full uri including the password
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			err = urlErr.Err
+		}
 		return nil, errors.Wrap(err, "error parsing storage uri")
 	}
 
@@ -113,9 +118,9 @@ func NewStorage(uri string) (Storage, error) {
 	case "mysql":
 		fallthrough
 	case "sqlite3":
-		logrus.Infof("Storing data in SQL backend at %s", u)
+		logrus.Infof("Storing data in SQL backend at %s", u.Redacted())
 		return NewSqlStorage(u), nil
 	}
 
-	return nil, fmt.Errorf("unknown storage backend %s", u)
+	return nil, fmt.Errorf("unknown storage backend %s", u.Redacted())
 }
