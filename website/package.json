@@ -20,7 +20,7 @@
     "@mui/material": "^9.4.0",
     "common-tags": "^1.8.2",
     "date-fns": "^4.4.0",
-    "google-protobuf": "^4.0.2",
+    "google-protobuf": "^4.0.3",
     "mobx": "^7.0.3",
     "mobx-react": "^10.0.2",
     "numeral": "^2.0.6",
