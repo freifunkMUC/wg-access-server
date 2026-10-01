@@ -123,6 +123,8 @@ describe('revoking somebody"s access', () => {
     await waitFor(() => expect(revokeAccess).toHaveBeenCalledWith({ name: 'alice' }));
     // the question has to say that nothing is deleted, or nobody dares press it
     expect(asked.mock.calls[0][0]).toMatch(/Nothing is deleted/);
+    // and that it does not keep them out: a block is the device's, not theirs
+    expect(asked.mock.calls[0][0]).toMatch(/can still sign in/);
     expect(toasted).toHaveBeenCalledWith(
       expect.objectContaining({
         intent: 'success',
