@@ -9,3 +9,4 @@ d5c559f248f2fddfd85e1e3b695c341115c5d29e:internal/storage/sql_secrets_test.go:ge
 0e1cb0e57f63b06765d030ff083c462f804a771b:cmd/serve/config_file_test.go:generic-api-key:110
 0e1cb0e57f63b06765d030ff083c462f804a771b:cmd/serve/testdata/full-config.yaml:generic-api-key:19
 0e1cb0e57f63b06765d030ff083c462f804a771b:cmd/serve/testdata/full-config.yaml:generic-api-key:63
+b5a97839f28af06e27d3be681a449c85a45548ae:internal/storage/sql_secrets_test.go:generic-api-key:32
