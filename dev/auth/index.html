@@ -1238,8 +1238,8 @@ Somebody signed in that way can now set their own instead, under the key icon in
 <li><strong>An admin editing the entry in the config file takes it back</strong>: the stored password was set
   against an entry that is no longer there, so it is ignored and the configured password counts
   again. That is how a password is reset - there is no other way in, by design.</li>
-<li>Changing it <strong>ends every other session</strong> of that person. Whoever knew the old password may be
-  holding one.</li>
+<li>Changing it <strong>ends every other session</strong> of that person <strong>and revokes their API tokens</strong>.
+  Whoever knew the old password may be holding a session, or have made a token with it.</li>
 <li>It is stored as <strong>bcrypt</strong>, which salts every hash itself: the salt is part of the stored string,
   so the same password set by two people does not look the same, and one precomputed set of hashes
   cannot be tried against the whole table. The configured entries are whatever an admin wrote -
@@ -1267,6 +1267,9 @@ as many as they like: one to carry, one in a drawer.</p>
   passkey and take their second factor away.</li>
 <li>It is asked for <strong>after the password</strong>, like a code. Which of the two a person uses is up to them;
   the sign-in page offers both when both are set up.</li>
+<li><strong>Registering the first one ends every other session</strong> of that person and revokes their API
+  tokens, as turning on the code from an app does: a passkey makes the password alone no longer
+  enough. Further passkeys leave both alone.</li>
 <li>Removing the last one hands the account back to the password alone, and the question says so.</li>
 <li><strong>A passkey can be renamed.</strong> The name is the person's own label, and a drawer key that moved to a
   keyring should not have to be registered again to say so. Only the name changes: the credential
@@ -1297,6 +1300,9 @@ phones and servers rarely agree on the second.</p>
 <ul>
 <li><strong>Setting it up asks for a code before it counts.</strong> Until that code arrives, the secret is stored
   but nothing is asked of anybody: a QR code somebody walked away from locks nobody out.</li>
+<li><strong>Turning it on ends every other session and revokes the API tokens</strong> of that person. They were
+  opened with the password alone, which is exactly what is no longer meant to be enough. The
+  browser it was turned on in stays signed in.</li>
 <li><strong>A code signs in once.</strong> It is good for the current thirty second step and the one either side,
   so that phones and servers need not agree on the second, but the step it was accepted at is
   remembered and nothing up to that step is taken again (RFC 6238 §5.2).</li>
@@ -1403,8 +1409,9 @@ icon) and use the API from scripts without a browser session:</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer wgas_..."</span><span class="w"> </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/json'</span><span class="w"> </span>-d<span class="w"> </span><span class="s1">'{}'</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>https://wg-access-server.example.com/api/proto.Devices/ListDevices
 </code></pre></div>
-<p>A token acts as the user who created it and may do exactly what they may do in the web UI - an
-admin's token has admin rights. It works for the API under <code>/api</code> only, not for the web UI.</p>
+<p>A token acts as the user who created it and may do what they may do in the web UI - an admin's
+token has admin rights - except manage the account itself (see below). It works for the API under
+<code>/api</code> only, not for the web UI.</p>
 <ul>
 <li><strong>What is stored:</strong> only a SHA-256 hash of the token. The token itself is shown once, when it is
   created. Every token starts with <code>wgas_</code>, so a leaked one is easy to recognise, for secret scanners
@@ -1423,6 +1430,14 @@ admin's token has admin rights. It works for the API under <code>/api</code> onl
   revokes their tokens too. A revoked or expired token stops working immediately, on every replica.</li>
 <li><strong>A token cannot create further tokens.</strong> Otherwise a leaked token could outlive its expiry
   through the tokens it created. Creating a token needs a web session.</li>
+<li><strong>A token cannot manage the account.</strong> Changing the password, setting up or turning off the second
+  factor, replacing the recovery codes, adding, renaming or removing a passkey and ending sessions
+  are refused with <code>permission_denied</code>. Otherwise a leaked token could become the account: set a
+  second factor its owner does not have, or sign them out of the browser they would notice it from.
+  Listing sessions and passkeys still works, it changes nothing.</li>
+<li><strong>Changing the password and turning the second factor on revoke every token</strong> of that person. A
+  token made with the password alone would otherwise stay a way in without it. They have to be
+  created again afterwards.</li>
 </ul>
 <p>Requests with a token that does not work get a <code>401</code> (a disabled feature too), an owner who has lost
 access a <code>403</code>. Creating and revoking tokens is recorded in the <a href="../audit/">audit log</a>, and so is
