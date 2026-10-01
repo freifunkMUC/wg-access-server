@@ -1313,6 +1313,10 @@ would need a rule per device and network - which is why policies are nftables on
 <p>Two things every member keeps whatever their policy says: the <strong>server's own addresses</strong>, because
 that is where the embedded DNS proxy answers, and whatever <code>vpn.allowedIPs</code> reaches is <em>not</em> among
 them - a policy replaces that list rather than adding to it.</p>
+<p><strong>A policy restricts per address family.</strong> On a server with IPv4 and IPv6, a policy that names IPv4
+networks only lets its members reach those over IPv4, and over IPv6 nothing but the server - not
+what <code>vpn.allowedIPs</code> opens over IPv6. To let them out over IPv6 too, name IPv6 networks in the
+policy.</p>
 <p>The rules are rebuilt when a device is added, changed or removed, and when somebody signs in, since
 that is when their policies can change. On Postgres every replica hears about both. A device that
 may not connect - blocked, or past its expiry - is in no set: it has no peer, so nothing can come

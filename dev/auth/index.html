@@ -1197,8 +1197,10 @@ config file (config.yaml).</p>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-org</span>
 <span class="w">    </span><span class="nt">teams</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-org/vpn-users</span>
+<span class="w">    </span><span class="c1"># Users as "login:id". Only the id counts - see below for why, and</span>
+<span class="w">    </span><span class="c1"># where to look it up.</span>
 <span class="w">    </span><span class="nt">users</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">octocat</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">octocat:583231</span>
 <span class="w">    </span><span class="c1"># Who is an admin.</span>
 <span class="w">    </span><span class="nt">adminTeams</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-org/vpn-admins</span>
@@ -1460,14 +1462,20 @@ an <code>oidc</code> configuration.</p>
   they are configured. Only an <em>active</em> membership counts, a pending invitation does not. If the
   organization restricts third-party access, an owner has to approve the OAuth app first - until then
   GitHub does not show the memberships to it, and signing in fails.</li>
-<li><strong>Users</strong> are matched by their login, ignoring case. A GitHub user can rename their account, and
-  somebody else can then register the old login. Prefer organizations or teams where you can.</li>
+<li><strong>Users</strong> in <code>users</code> and <code>adminUsers</code> are written as <code>login:id</code>, and only the numeric id is
+  matched. A GitHub user can rename their account or delete it, and somebody else can then register
+  the old login - with a login alone they would get the access, or the admin rights, of the person
+  it was meant for. The id of a login is at <code>https://api.github.com/users/&lt;login&gt;</code> (for GitHub
+  Enterprise Server <code>&lt;baseURL&gt;/api/v3/users/&lt;login&gt;</code>). The login is only there for whoever reads the
+  configuration: somebody who renamed their account keeps their access, and the server warns that
+  the configuration names them by their old login. An entry without an id stops the server at
+  startup.</li>
 <li><strong>Devices belong to the GitHub account id</strong>, not the login, so they stay with the account across
   a rename. Accounts of a GitHub Enterprise Server are kept apart from github.com ones.</li>
 <li>The primary email address is shown in the web UI if GitHub verified it.</li>
 <li>As with every provider, membership is checked when signing in. Removing somebody from the
   organization takes effect when their web session ends (<code>sessionStore.maxAge</code>). Deleting the user in
-  the web UI removes their devices and API tokens at once, but not a session they still have.</li>
+  the web UI removes their devices and API tokens and ends their sessions at once.</li>
 </ul>
 <h2 id="login-throttling">Login throttling<a class="headerlink" href="#login-throttling" title="Permanent link"> ¶</a></h2>
 <p>Failed logins to the Simple Auth and Basic Auth backends are slowed down: after a wrong password the
