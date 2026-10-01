@@ -42,13 +42,42 @@ type GithubConfig struct {
 	Organizations []string `yaml:"organizations"`
 	// Members of any of these teams may sign in, as "organization/team-slug".
 	Teams []string `yaml:"teams"`
-	// These GitHub users may sign in, by login.
+	// These GitHub users may sign in, as "login:id". Only the id is
+	// matched: a login can be changed, and the old one registered by
+	// somebody else. The login is there for whoever reads the configuration.
 	Users []string `yaml:"users"`
 
 	// Members of these teams are admins, as "organization/team-slug".
 	AdminTeams []string `yaml:"adminTeams"`
-	// These GitHub users are admins, by login.
+	// These GitHub users are admins, as "login:id" like Users.
 	AdminUsers []string `yaml:"adminUsers"`
+}
+
+// githubUser is an entry of Users or AdminUsers.
+type githubUser struct {
+	login string
+	id    int64
+}
+
+// parseGithubUser reads a "login:id" entry.
+func parseGithubUser(entry string) (githubUser, error) {
+	login, id, ok := strings.Cut(entry, ":")
+	parsed, err := strconv.ParseInt(id, 10, 64)
+	if !ok || login == "" || err != nil || parsed <= 0 {
+		return githubUser{}, fmt.Errorf("user %q is not of the form login:id - a login alone can be registered by somebody else once it is free", entry)
+	}
+	return githubUser{login: login, id: parsed}, nil
+}
+
+// findGithubUser returns the entry of list with the given id. Entries that
+// cannot be read match nobody; Validate refuses them at startup.
+func findGithubUser(list []string, id int64) (githubUser, bool) {
+	for _, entry := range list {
+		if user, err := parseGithubUser(entry); err == nil && user.id == id {
+			return user, true
+		}
+	}
+	return githubUser{}, false
 }
 
 // Validate reports a configuration that would not work, or that would let
@@ -67,6 +96,11 @@ func (c *GithubConfig) Validate() error {
 	}
 	if len(c.Organizations) == 0 && len(c.Teams) == 0 && len(c.Users) == 0 {
 		return errors.New("anybody can create a GitHub account - restrict who may sign in with organizations, teams or users")
+	}
+	for _, entry := range slices.Concat(c.Users, c.AdminUsers) {
+		if _, err := parseGithubUser(entry); err != nil {
+			return fmt.Errorf("%w (the id of a login is at %s/users/<login>)", err, c.apiURL())
+		}
 	}
 	for _, team := range slices.Concat(c.Teams, c.AdminTeams) {
 		if org, slug, ok := strings.Cut(team, "/"); !ok || org == "" || slug == "" || strings.Contains(slug, "/") {
@@ -97,6 +131,12 @@ func (c *GithubConfig) endpoints() (oauth2.Endpoint, string) {
 		AuthURL:  base + "/login/oauth/authorize",
 		TokenURL: base + "/login/oauth/access_token",
 	}, base + "/api/v3"
+}
+
+// apiURL is where the REST API is.
+func (c *GithubConfig) apiURL() string {
+	_, api := c.endpoints()
+	return api
 }
 
 // scopes asks for no more than the configuration needs: the email address
@@ -245,7 +285,7 @@ func (c *GithubConfig) identity(ctx context.Context, api *githubAPI) (*authsessi
 		}
 	}
 
-	allowed, err := c.allowed(ctx, api, user.Login, teams)
+	allowed, err := c.allowed(ctx, api, user.ID, user.Login, teams)
 	if err != nil {
 		return nil, err
 	}
@@ -262,14 +302,25 @@ func (c *GithubConfig) identity(ctx context.Context, api *githubAPI) (*authsessi
 	if identity.Name == "" {
 		identity.Name = user.Login
 	}
-	if containsFold(c.AdminUsers, user.Login) || intersectsFold(c.AdminTeams, teams) {
+	if c.listed(c.AdminUsers, "adminUsers", user.ID, user.Login) || intersectsFold(c.AdminTeams, teams) {
 		identity.Claims.MakeAdmin()
 	}
 	return identity, nil
 }
 
-func (c *GithubConfig) allowed(ctx context.Context, api *githubAPI, login string, teams []string) (bool, error) {
-	if containsFold(c.Users, login) || intersectsFold(c.Teams, teams) {
+// listed reports whether the account with this id is in list, and warns when
+// it is listed under a login it no longer has: the configuration is out of
+// date, and the login in it may already belong to somebody else.
+func (c *GithubConfig) listed(list []string, name string, id int64, login string) bool {
+	user, ok := findGithubUser(list, id)
+	if ok && !strings.EqualFold(user.login, login) {
+		logrus.Warnf("The GitHub user %d is in %s as %q but is called %q now: update the configuration", id, name, user.login, login)
+	}
+	return ok
+}
+
+func (c *GithubConfig) allowed(ctx context.Context, api *githubAPI, id int64, login string, teams []string) (bool, error) {
+	if c.listed(c.Users, "users", id, login) || intersectsFold(c.Teams, teams) {
 		return true, nil
 	}
 	for _, org := range c.Organizations {
