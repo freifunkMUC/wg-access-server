@@ -275,8 +275,9 @@ func TestNftablesRulesetPoliciesWithoutNAT(t *testing.T) {
 	assert.Contains(t, rules, "ip saddr 10.0.5.0/24 ip daddr @policy_staff_ip accept")
 }
 
-// Each family sees only what belongs to it, and a policy that says nothing
-// about one is not mentioned there at all.
+// Each family sees only what belongs to it. A policy that names no networks
+// of a family still restricts its members there: they reach the server and
+// nothing else.
 func TestNftablesRulesetPoliciesPerFamily(t *testing.T) {
 	rules := ruleset(t, ForwardingOptions{
 		CIDR:       "10.44.0.0/24",
@@ -291,7 +292,7 @@ func TestNftablesRulesetPoliciesPerFamily(t *testing.T) {
 		}, {
 			Name:       "v4only",
 			AllowedIPs: []string{"192.168.9.0/24"},
-			Members:    []string{"10.44.0.3/32"},
+			Members:    []string{"10.44.0.3/32", "fd48:4c4:7aa9::3/128"},
 		}},
 	})
 
@@ -299,7 +300,48 @@ func TestNftablesRulesetPoliciesPerFamily(t *testing.T) {
 	assert.Contains(t, rules, "elements = { fd48:4c4:7aa9::2 }")
 	assert.Contains(t, rules, "ip6 saddr @policy_staff_ip6 ip6 daddr 2001:db8:5::/48 accept")
 	assert.Contains(t, rules, "ip saddr @policy_v4only_ip ip daddr 192.168.9.0/24 accept")
-	assert.NotContains(t, rules, "policy_v4only_ip6", "a policy without IPv6 networks has nothing to say there")
+	assert.NotContains(t, rules, "ip6 saddr @policy_v4only_ip6 ip6 daddr", "a policy without IPv6 networks opens none")
+	assert.Contains(t, rules, "elements = { fd48:4c4:7aa9::2, fd48:4c4:7aa9::3 }", "the IPv6 address of a v4only device is not restricted")
+}
+
+// A policy with IPv4 networks only, on a server that has IPv6 too, must not
+// leave its members everything vpn.allowedIPs opens over IPv6: the policy is
+// what they may reach, and over IPv6 that is nothing but the server.
+func TestNftablesRulesetPolicyWithoutNetworksOfAFamily(t *testing.T) {
+	rules := ruleset(t, ForwardingOptions{
+		CIDR:            "10.44.0.0/24",
+		CIDRv6:          "fd48:4c4:7aa9::/64",
+		NAT44:           true,
+		NAT66:           true,
+		AllowedIPs:      []string{"0.0.0.0/0", "::/0"},
+		ServerAddresses: []string{"10.44.0.1", "fd48:4c4:7aa9::1"},
+		Policies: []Policy{{
+			Name:       "staff",
+			AllowedIPs: []string{"10.0.5.0/24"},
+			Members:    []string{"10.44.0.2/32", "fd48:4c4:7aa9::2/128"},
+		}},
+	})
+
+	forward := rules[strings.Index(rules, "chain forward"):]
+	lines := strings.Split(forward, "\n")
+	at := func(rule string) int {
+		t.Helper()
+		for i, line := range lines {
+			if strings.TrimSpace(line) == rule {
+				return i
+			}
+		}
+		t.Fatalf("no rule %q in\n%s", rule, rules)
+		return -1
+	}
+
+	server := at("ip6 saddr fd48:4c4:7aa9::/64 ip6 daddr fd48:4c4:7aa9::1 accept")
+	reject := at("ip6 saddr @policy_members_ip6 reject")
+	everything := at("ip6 saddr fd48:4c4:7aa9::/64 ip6 daddr ::/0 accept")
+	assert.Less(t, server, reject, "the server is reachable before the members are turned away")
+	assert.Less(t, reject, everything, "the members are turned away before what everybody may reach")
+	assert.Contains(t, rules, "elements = { fd48:4c4:7aa9::2 }")
+	assert.NotContains(t, rules, "ip6 saddr @policy_staff_ip6 ip6 daddr", "the policy opens nothing over IPv6")
 }
 
 // Nothing but a name the configuration was checked for may end up in a set
