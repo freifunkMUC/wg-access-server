@@ -1,6 +1,10 @@
 package authconfig
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/freifunkMUC/wg-access-server/pkg/authnz/authruntime"
 )
 
@@ -44,6 +48,65 @@ func (c *AuthConfig) DesiresSignInPage() bool {
 		}
 	}
 	return false
+}
+
+// Validate reports a configuration whose providers could be taken for each
+// other.
+//
+// The name is how a user's identity says where it came from: the admin rule
+// of the built-in sign-in and the OIDC access claim look it up by name. An
+// identity provider named like the built-in sign-in, or two sharing a name,
+// would be taken for each other.
+func (c *AuthConfig) Validate() error {
+	names := c.identityProviderNames()
+	sorted := make([]string, 0, len(names))
+	for name := range names {
+		sorted = append(sorted, name)
+	}
+	sort.Strings(sorted)
+	for _, name := range sorted {
+		where := names[name]
+		sort.Strings(where)
+		if name == BasicAuthProvider || name == SimpleAuthProvider {
+			return fmt.Errorf("%s: the name %q is taken by the built-in sign-in, give the provider another one", where[0], name)
+		}
+		if len(where) > 1 {
+			return fmt.Errorf("%s share the name %q: their users could not be told apart, give each provider its own", strings.Join(where, " and "), name)
+		}
+	}
+	return nil
+}
+
+// identityProviderNames returns where each identity provider is configured,
+// by the name its users carry - with the defaults Providers() applies.
+func (c *AuthConfig) identityProviderNames() map[string][]string {
+	names := map[string][]string{}
+	add := func(name, where string) {
+		names[name] = append(names[name], where)
+	}
+
+	if c.OIDC != nil {
+		add(c.OIDC.Name, "auth.oidc")
+	}
+	if c.Gitlab != nil {
+		add(c.Gitlab.Name, "auth.gitlab")
+	}
+	for key, provider := range c.Multiple {
+		if provider == nil {
+			continue
+		}
+		if provider.OIDC != nil {
+			name := provider.OIDC.Name
+			if name == "" {
+				name = key
+			}
+			add(name, "auth.multiple."+key+".oidc")
+		}
+		if provider.Gitlab != nil {
+			add(provider.Gitlab.Name, "auth.multiple."+key+".gitlab")
+		}
+	}
+	return names
 }
 
 func (c *AuthConfig) Providers() []*authruntime.Provider {

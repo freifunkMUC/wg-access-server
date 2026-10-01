@@ -80,6 +80,9 @@ func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRu
 				runtime.Done(w, r)
 				return
 			}
+			if refusedSignIn(w, r, err) {
+				return
+			}
 		}
 
 		w.WriteHeader(http.StatusForbidden)

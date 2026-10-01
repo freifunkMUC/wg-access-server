@@ -28,7 +28,7 @@ type User struct {
 }
 
 // https://lists.zx2c4.com/pipermail/wireguard/2020-December/006222.html
-var wgKeyRegex = regexp.MustCompile("^[A-Za-z0-9+/]{42}[A|E|I|M|Q|U|Y|c|g|k|o|s|w|4|8|0]=$")
+var wgKeyRegex = regexp.MustCompile("^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$")
 
 func New(wg wgembed.WireGuardInterface, s storage.Storage, cidr, cidrv6 string) *DeviceManager {
 	return &DeviceManager{wg, s, cidr, cidrv6}

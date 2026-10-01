@@ -262,7 +262,8 @@ func (cmd *servecmd) Run() {
 	}))
 
 	// Authentication middleware
-	middleware, err := authnz.NewMiddleware(conf.Auth, authnz.ClaimsMiddleware(conf))
+	middleware, err := authnz.NewMiddleware(conf.Auth, authnz.ClaimsMiddleware(conf),
+		authnz.WithLoginCheck(checkLogin(storageBackend)))
 	if err != nil {
 		logrus.Error(errors.Wrap(err, "failed to set up authnz middleware"))
 		return
@@ -374,6 +375,10 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 	}
 
 	if err := cmd.loadSecretFiles(); err != nil {
+		logrus.Fatal(err)
+	}
+
+	if err := cmd.AppConfig.Auth.Validate(); err != nil {
 		logrus.Fatal(err)
 	}
 

@@ -39,8 +39,10 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime) ht
 		if !isBasic {
 			// we'll handle form submissions and direct
 			// browser challenges
-			u = r.FormValue("username")
-			p = r.FormValue("password")
+			// the form posts them; in the URL they would end up in proxy
+			// logs and the browser history
+			u = r.PostFormValue("username")
+			p = r.PostFormValue("password")
 		}
 
 		if ok := checkCreds(c.Users, u, p); ok {
@@ -54,6 +56,9 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime) ht
 			})
 			if err == nil {
 				runtime.Done(w, r)
+				return
+			}
+			if refusedSignIn(w, r, err) {
 				return
 			}
 		}

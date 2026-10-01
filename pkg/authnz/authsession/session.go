@@ -14,7 +14,10 @@ type AuthSession struct {
 	// State holds the OAuth2 state value used for CSRF protection
 	State *string
 	// Nonce holds the OpenID Connect nonce used to bind an ID token to the login session
-	Nonce    *string
+	Nonce *string
+	// Verifier holds the PKCE code verifier, which binds the authorization
+	// code to the browser that started the login
+	Verifier *string
 	Identity *Identity
 }
 
