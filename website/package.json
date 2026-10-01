@@ -41,7 +41,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
-    "eslint": "^10.10.0",
+    "eslint": "^10.11.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "fork-ts-checker-webpack-plugin": "^9.1.0",
     "grpc-web": "^2.1.1",
