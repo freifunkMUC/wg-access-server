@@ -372,7 +372,7 @@ func (s *InMemoryStorage) GetUser(subject string) (*User, error) {
 	defer s.mu.RUnlock()
 	user, ok := s.users[subject]
 	if !ok {
-		return nil, errors.New("user doesn't exist")
+		return nil, ErrUserNotFound
 	}
 	return user, nil
 }

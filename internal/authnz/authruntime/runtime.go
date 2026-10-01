@@ -70,6 +70,9 @@ type ProviderRuntime struct {
 	otherProviders bool
 	// recordLogin is told who signed in, once a provider has established it.
 	recordLogin func(*authsession.Identity)
+	// checkLogin may refuse a sign-in the provider accepted, before it
+	// becomes a session.
+	checkLogin func(*authsession.Identity) error
 	// passwords is where a user's own password is looked up, nil when
 	// nothing stores one.
 	passwords Passwords
@@ -150,6 +153,29 @@ func (p *ProviderRuntime) OnLogin(record func(*authsession.Identity)) {
 	p.recordLogin = record
 }
 
+// OnLoginCheck registers what decides whether a sign-in a provider accepted
+// may become a session. Like OnLogin it is the one place that sees every
+// provider. An error that is a *RefusedError is the sign-in being refused;
+// anything else is the check failing, and refuses it as well.
+func (p *ProviderRuntime) OnLoginCheck(check func(*authsession.Identity) error) {
+	p.checkLogin = check
+}
+
+// RefusedError is a sign-in the provider accepted and the server does not.
+// Reason is for the person signing in, Detail for the log: what the person is
+// told must not hand out more than they already know.
+type RefusedError struct {
+	Reason string
+	Detail string
+}
+
+func (e *RefusedError) Error() string {
+	if e.Detail != "" {
+		return e.Detail
+	}
+	return e.Reason
+}
+
 // SetProviderCount tells the providers how many there are, so a provider's
 // own login page knows whether to offer a way back to the others.
 func (p *ProviderRuntime) SetProviderCount(count int) {
@@ -162,6 +188,12 @@ func (p *ProviderRuntime) HasOtherProviders() bool {
 }
 
 func (p *ProviderRuntime) SetSession(w http.ResponseWriter, r *http.Request, s *authsession.AuthSession) error {
+	if s.Identity != nil && p.checkLogin != nil {
+		if err := p.checkLogin(s.Identity); err != nil {
+			return err
+		}
+	}
+
 	if err := authsession.SetSession(p.store, p.browserSessions, r, w, s); err != nil {
 		return err
 	}

@@ -79,6 +79,9 @@ type Storage interface {
 	Open() error
 }
 
+// ErrUserNotFound is somebody who has never signed in.
+var ErrUserNotFound = errors.New("user not found")
+
 // UserStorage remembers the people who signed in. A device names its owner,
 // but everything else about them - their display name, and what their identity
 // provider said about which groups they are in - exists only while they have a
@@ -88,8 +91,8 @@ type UserStorage interface {
 	// SaveUser records somebody who signed in, replacing what was recorded
 	// before. It is the only way a user is created.
 	SaveUser(user *User) error
-	// GetUser returns what is known about somebody, or an error when they
-	// have never signed in.
+	// GetUser returns what is known about somebody, or ErrUserNotFound when
+	// they have never signed in.
 	GetUser(subject string) (*User, error)
 	// Users returns everybody who has signed in.
 	Users() ([]*User, error)

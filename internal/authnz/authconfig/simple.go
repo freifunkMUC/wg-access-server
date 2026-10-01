@@ -127,8 +127,7 @@ func simpleAuthPostEndpoint(c *SimpleAuthConfig, runtime *authruntime.ProviderRu
 			// session column that was too narrow to hold any session: every
 			// sign-in looked like a typo. The second-factor paths below
 			// already answer this way.
-			logrus.Error(fmt.Errorf("failed to start the session after the password: %w", err))
-			http.Error(w, "Could not sign in", http.StatusInternalServerError)
+			sessionNotStarted(w, r, err, "after the password")
 			return
 		}
 
@@ -213,8 +212,7 @@ func finishWithCode(w http.ResponseWriter, r *http.Request, runtime *ProviderRun
 	throttle.recordSuccess(username)
 	throttle.secondFactorSucceeded(username)
 	if err := runtime.SetSession(w, r, sessionFor(username)); err != nil {
-		logrus.Error(fmt.Errorf("failed to start the session after the second factor: %w", err))
-		http.Error(w, "Could not sign in", http.StatusInternalServerError)
+		sessionNotStarted(w, r, err, "after the second factor")
 		return
 	}
 	runtime.Done(w, r)
@@ -311,8 +309,7 @@ func finishWithPasskey(w http.ResponseWriter, r *http.Request, runtime *Provider
 	throttle.recordSuccess(username)
 	throttle.secondFactorSucceeded(username)
 	if err := runtime.SetSession(w, r, sessionFor(username)); err != nil {
-		logrus.Error(fmt.Errorf("failed to start the session after the passkey: %w", err))
-		http.Error(w, "Could not sign in", http.StatusInternalServerError)
+		sessionNotStarted(w, r, err, "after the passkey")
 		return
 	}
 	runtime.Done(w, r)

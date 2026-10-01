@@ -96,8 +96,7 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime, th
 			// As in simple auth: the password was right, so this is not a
 			// credentials problem and saying so would send people looking
 			// for the wrong thing.
-			logrus.Error(fmt.Errorf("failed to start the session after the password: %w", err))
-			http.Error(w, "Could not sign in", http.StatusInternalServerError)
+			sessionNotStarted(w, r, err, "after the password")
 			return
 		}
 

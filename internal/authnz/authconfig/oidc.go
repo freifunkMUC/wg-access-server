@@ -278,9 +278,7 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 			Identity: identity,
 		})
 		if err != nil {
-			// the details are the database's, not the browser's business
-			logrus.Error(fmt.Errorf("failed to start the session after the OIDC sign-in: %w", err))
-			http.Error(w, "Could not sign in", http.StatusInternalServerError)
+			sessionNotStarted(w, r, err, "after the OIDC sign-in")
 			return
 		}
 

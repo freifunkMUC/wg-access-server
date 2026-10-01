@@ -1,6 +1,7 @@
 package authruntime
 
 import (
+	"errors"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -50,5 +51,40 @@ func TestSetSessionWithoutARecorder(t *testing.T) {
 		Identity: &authsession.Identity{Subject: "alice"},
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A refused sign-in is not a sign-in: no session, and nothing recorded.
+func TestSetSessionRefused(t *testing.T) {
+	runtime := NewProviderRuntime(sessions.NewCookieStore([]byte("0123456789abcdef0123456789abcdef")), websessions.New(storage.NewMemoryStorage(), time.Hour))
+
+	recorded := 0
+	runtime.OnLogin(func(*authsession.Identity) { recorded++ })
+	runtime.OnLoginCheck(func(identity *authsession.Identity) error {
+		if identity.Subject == "alice" {
+			return &RefusedError{Reason: "not here"}
+		}
+		return nil
+	})
+
+	w := httptest.NewRecorder()
+	err := runtime.SetSession(w, httptest.NewRequest("GET", "/", nil), &authsession.AuthSession{
+		Identity: &authsession.Identity{Subject: "alice", Provider: "oidc"},
+	})
+	var refused *RefusedError
+	if !errors.As(err, &refused) {
+		t.Fatalf("SetSession = %v, want the refusal", err)
+	}
+	if recorded != 0 {
+		t.Error("a refused sign-in was recorded")
+	}
+	if cookies := w.Result().Cookies(); len(cookies) != 0 {
+		t.Errorf("a refused sign-in set cookies: %v", cookies)
+	}
+
+	// the state of a flow in progress is nobody signing in, and not checked
+	state := "the state of a flow in progress"
+	if err := runtime.SetSession(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil), &authsession.AuthSession{State: &state}); err != nil {
+		t.Errorf("SetSession of a flow in progress = %v", err)
 	}
 }
