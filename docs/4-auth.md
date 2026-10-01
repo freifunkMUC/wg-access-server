@@ -62,6 +62,8 @@ auth:
     users: []
   oidc:
     # A name for the backend (is shown on the login page and possibly in the devices list of the 'all devices' admin page)
+    # Every identity provider needs a name of its own, and none may be called "basic" or "simple":
+    # the name tells the users of different providers apart, so the server refuses to start otherwise.
     name: "My OIDC Backend"
     # Should point to the OIDC Issuer (excluding /.well-known/openid-configuration)
     issuer: "https://identity.example.com"

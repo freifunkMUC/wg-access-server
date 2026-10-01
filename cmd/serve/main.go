@@ -377,6 +377,10 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 		logrus.Fatal(err)
 	}
 
+	if err := cmd.AppConfig.Auth.Validate(); err != nil {
+		logrus.Fatal(err)
+	}
+
 	if cmd.AppConfig.LogLevel != "" {
 		if level, err := logrus.ParseLevel(cmd.AppConfig.LogLevel); err == nil {
 			logrus.SetLevel(level)
