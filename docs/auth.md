@@ -368,8 +368,9 @@ curl -H "Authorization: Bearer wgas_..." -H 'Content-Type: application/json' -d 
   https://wg-access-server.example.com/api/proto.Devices/ListDevices
 ```
 
-A token acts as the user who created it and may do exactly what they may do in the web UI - an
-admin's token has admin rights. It works for the API under `/api` only, not for the web UI.
+A token acts as the user who created it and may do what they may do in the web UI - an admin's
+token has admin rights - except manage the account itself (see below). It works for the API under
+`/api` only, not for the web UI.
 
 - **What is stored:** only a SHA-256 hash of the token. The token itself is shown once, when it is
   created. Every token starts with `wgas_`, so a leaked one is easy to recognise, for secret scanners
@@ -388,6 +389,11 @@ admin's token has admin rights. It works for the API under `/api` only, not for 
   revokes their tokens too. A revoked or expired token stops working immediately, on every replica.
 - **A token cannot create further tokens.** Otherwise a leaked token could outlive its expiry
   through the tokens it created. Creating a token needs a web session.
+- **A token cannot manage the account.** Changing the password, setting up or turning off the second
+  factor, replacing the recovery codes, adding, renaming or removing a passkey and ending sessions
+  are refused with `permission_denied`. Otherwise a leaked token could become the account: set a
+  second factor its owner does not have, or sign them out of the browser they would notice it from.
+  Listing sessions and passkeys still works, it changes nothing.
 
 Requests with a token that does not work get a `401` (a disabled feature too), an owner who has lost
 access a `403`. Creating and revoking tokens is recorded in the [audit log](./audit.md), and so is

@@ -180,6 +180,9 @@ func (d *UserService) ChangePassword(ctx context.Context, request *connect.Reque
 	if err != nil {
 		return nil, errNotAuthenticated()
 	}
+	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
+	}
 
 	if d.Passwords == nil || !authconfig.HasPassword(user.Provider) {
 		return nil, connect.NewError(connect.CodeFailedPrecondition,
@@ -232,6 +235,9 @@ func (d *UserService) twoFactorFor(ctx context.Context) (*authsession.Identity, 
 	user, err := authsession.CurrentUser(ctx)
 	if err != nil {
 		return nil, errNotAuthenticated()
+	}
+	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
 	}
 	if d.TwoFactor == nil || !authconfig.HasPassword(user.Provider) {
 		return nil, connect.NewError(connect.CodeFailedPrecondition,
@@ -412,6 +418,9 @@ func (d *UserService) BeginPasskey(ctx context.Context, _ *connect.Request[proto
 	if err != nil {
 		return nil, err
 	}
+	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
+	}
 
 	options, err := d.Passkeys.BeginRegistration(users.RequestFrom(ctx), user.Subject)
 	if err != nil {
@@ -425,6 +434,9 @@ func (d *UserService) BeginPasskey(ctx context.Context, _ *connect.Request[proto
 func (d *UserService) FinishPasskey(ctx context.Context, request *connect.Request[proto.FinishPasskeyReq]) (*connect.Response[proto.Passkey], error) {
 	user, err := d.passkeysFor(ctx)
 	if err != nil {
+		return nil, err
+	}
+	if err := refuseAPIToken(ctx); err != nil {
 		return nil, err
 	}
 
@@ -459,6 +471,9 @@ func (d *UserService) RenamePasskey(ctx context.Context, request *connect.Reques
 	if err != nil {
 		return nil, err
 	}
+	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
+	}
 
 	passkey, err := d.Passkeys.Rename(user.Subject, request.Msg.GetId(), request.Msg.GetName())
 	if err != nil {
@@ -483,6 +498,9 @@ func (d *UserService) RenamePasskey(ctx context.Context, request *connect.Reques
 func (d *UserService) DeletePasskey(ctx context.Context, request *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error) {
 	user, err := d.passkeysFor(ctx)
 	if err != nil {
+		return nil, err
+	}
+	if err := refuseAPIToken(ctx); err != nil {
 		return nil, err
 	}
 
@@ -513,6 +531,17 @@ func (d *UserService) passkeysFor(ctx context.Context) (*authsession.Identity, e
 		return nil, errNoSecondFactorHere()
 	}
 	return user, nil
+}
+
+// refuseAPIToken refuses a request made with an API token what is the
+// account's own business: the password, the second factors and the sessions.
+// A token is for scripts, and one that leaked must not become the account.
+func refuseAPIToken(ctx context.Context) error {
+	if authsession.APIToken(ctx) != "" {
+		return connect.NewError(connect.CodePermissionDenied,
+			errors.New("an API token cannot manage the account: do this in the web UI"))
+	}
+	return nil
 }
 
 // errTooManyWrongPasswords answers a password that was not checked, because

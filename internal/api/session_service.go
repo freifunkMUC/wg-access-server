@@ -44,6 +44,9 @@ func (s *SessionService) DeleteSession(ctx context.Context, request *connect.Req
 	if err != nil {
 		return nil, errNotAuthenticated()
 	}
+	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
+	}
 
 	if err := s.Sessions.Delete(user.Subject, request.Msg.GetId()); err != nil {
 		if errors.Is(err, websessions.ErrInvalid) {
@@ -65,11 +68,14 @@ func (s *SessionService) DeleteOtherSessions(ctx context.Context, _ *connect.Req
 	if err != nil {
 		return nil, errNotAuthenticated()
 	}
+	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
+	}
 
 	current := s.currentID(ctx)
 	if current == "" {
-		// An API token has no session to keep, and ending every session of
-		// its owner from a script is not what this is for.
+		// Without a session there is none to keep, and ending every session
+		// of somebody is not what this is for.
 		return nil, connect.NewError(connect.CodeFailedPrecondition,
 			errors.New("this needs a browser session: there is none to keep"))
 	}
