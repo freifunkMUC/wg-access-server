@@ -63,11 +63,13 @@ func (c *OIDCConfig) Provider() *authruntime.Provider {
 		panic(errors.Wrapf(err, "redirect URL is not valid: %s", c.RedirectURL))
 	}
 
+	pkce := supportsPKCE(provider)
+
 	return &authruntime.Provider{
 		Type: OIDCAuthProvider,
 		Name: c.Name,
 		Invoke: func(w http.ResponseWriter, r *http.Request, runtime *authruntime.ProviderRuntime) {
-			c.loginHandler(runtime, oauthConfig)(w, r)
+			c.loginHandler(runtime, oauthConfig, pkce)(w, r)
 		},
 		RegisterRoutes: func(router *mux.Router, runtime *authruntime.ProviderRuntime) error {
 			router.HandleFunc(redirectURL.Path, c.callbackHandler(runtime, oauthConfig, provider, verifier))
@@ -76,23 +78,59 @@ func (c *OIDCConfig) Provider() *authruntime.Provider {
 	}
 }
 
-func (c *OIDCConfig) loginHandler(runtime *authruntime.ProviderRuntime, oauthConfig *oauth2.Config) http.HandlerFunc {
+// supportsPKCE says whether the provider takes a PKCE code challenge. It is
+// only sent to one that says so, so that a provider without PKCE keeps
+// working.
+func supportsPKCE(provider *oidc.Provider) bool {
+	var metadata struct {
+		CodeChallengeMethods []string `json:"code_challenge_methods_supported"`
+	}
+	if err := provider.Claims(&metadata); err != nil {
+		return false
+	}
+	for _, method := range metadata.CodeChallengeMethods {
+		if method == "S256" {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *OIDCConfig) loginHandler(runtime *authruntime.ProviderRuntime, oauthConfig *oauth2.Config, pkce bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// 1. Client prepares an Authentication Request containing the desired request parameters.
 		oauthStateString := authutil.RandomString(32)
 		oidcNonce := authutil.RandomString(32)
-		err := runtime.SetSession(w, r, &authsession.AuthSession{
+		session := &authsession.AuthSession{
 			State: &oauthStateString,
 			Nonce: &oidcNonce,
-		})
+		}
+		options := []oauth2.AuthCodeOption{oidc.Nonce(oidcNonce)}
+		// PKCE binds the code to this browser: a code that leaks - into the
+		// logs of a proxy, or the browser history - cannot be redeemed by
+		// anybody else. The nonce does not do that when the claims come from
+		// the UserInfo endpoint, where no ID token is checked.
+		if pkce {
+			verifier := oauth2.GenerateVerifier()
+			session.Verifier = &verifier
+			options = append(options, oauth2.S256ChallengeOption(verifier))
+		}
+		err := runtime.SetSession(w, r, session)
 		if err != nil {
 			http.Error(w, "No session", http.StatusUnauthorized)
 			return
 		}
 		// 2. Client sends the request to the Authorization Server.
-		authCodeURL := oauthConfig.AuthCodeURL(oauthStateString, oidc.Nonce(oidcNonce))
+		authCodeURL := oauthConfig.AuthCodeURL(oauthStateString, options...)
 		http.Redirect(w, r, authCodeURL, http.StatusTemporaryRedirect)
 	}
+}
+
+// signInFailed answers a sign-in the identity provider did not complete. What
+// went wrong goes to the log; the browser is not told the details.
+func signInFailed(w http.ResponseWriter, err error) {
+	logrus.Warn(errors.Wrap(err, "OIDC sign-in failed"))
+	http.Error(w, "The sign-in with the identity provider failed", http.StatusBadGateway)
 }
 
 func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauthConfig *oauth2.Config,
@@ -123,9 +161,14 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 
 		// 6. Client requests a response using the Authorization Code at the Token Endpoint.
 		// 7. Client receives a response that contains an ID Token and Access Token in the response body.
-		oauth2Token, err := oauthConfig.Exchange(r.Context(), authCode)
+		var exchangeOptions []oauth2.AuthCodeOption
+		if s.Verifier != nil {
+			exchangeOptions = append(exchangeOptions, oauth2.VerifierOption(*s.Verifier))
+		}
+		oauth2Token, err := oauthConfig.Exchange(r.Context(), authCode, exchangeOptions...)
 		if err != nil {
-			panic(errors.Wrap(err, "unable to exchange tokens"))
+			signInFailed(w, errors.Wrap(err, "unable to exchange tokens"))
+			return
 		}
 
 		// 8. Client validates the ID token and retrieves the End-User's Subject Identifier.
@@ -135,25 +178,29 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 			logrus.Debug("Retrieving claims from UserInfo endpoint")
 			info, err := provider.UserInfo(r.Context(), oauthConfig.TokenSource(r.Context(), oauth2Token))
 			if err != nil {
-				panic(errors.Wrap(err, "unable to get UserInfo"))
+				signInFailed(w, errors.Wrap(err, "unable to get UserInfo"))
+				return
 			}
 
 			// Dump the claims
 			err = info.Claims(&oidcClaims)
 			if err != nil {
-				panic(errors.Wrap(err, "unable to unmarshal claims from UserInfo JSON"))
+				signInFailed(w, errors.Wrap(err, "unable to unmarshal claims from UserInfo JSON"))
+				return
 			}
 		} else {
 			// Extract and parse the ID token to retrieve the claims
 			logrus.Debug("Retrieving claims from ID Token")
 			rawIDToken, ok := oauth2Token.Extra("id_token").(string)
 			if !ok {
-				panic(errors.New("No id_token field in OAuth2 token"))
+				signInFailed(w, errors.New("no id_token field in OAuth2 token"))
+				return
 			}
 			// Parse and verify ID Token payload
 			idToken, err := verifier.Verify(r.Context(), rawIDToken)
 			if err != nil {
-				panic(errors.Wrap(err, "failed to verify ID token"))
+				signInFailed(w, errors.Wrap(err, "failed to verify ID token"))
+				return
 			}
 
 			// Verify the nonce in the ID token matches the one stored in the session
@@ -169,7 +216,8 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 			// Dump the claims
 			err = idToken.Claims(&oidcClaims)
 			if err != nil {
-				panic(errors.Wrap(err, "unable to unmarshal claims from ID token JSON"))
+				signInFailed(w, errors.Wrap(err, "unable to unmarshal claims from ID token JSON"))
+				return
 			}
 		}
 
@@ -190,7 +238,8 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 		if sub, ok := oidcClaims["sub"].(string); ok {
 			subject = sub
 		} else {
-			panic(errors.New("No 'sub' claim returned from authorization provider"))
+			signInFailed(w, errors.New("no 'sub' claim returned from authorization provider"))
+			return
 		}
 		identity := &authsession.Identity{
 			Provider: c.Name,
@@ -208,7 +257,9 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 			Identity: identity,
 		})
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			// the details are the database's, not the browser's business
+			logrus.Error(errors.Wrap(err, "failed to start the session after the OIDC sign-in"))
+			http.Error(w, "Could not sign in", http.StatusInternalServerError)
 			return
 		}
 
