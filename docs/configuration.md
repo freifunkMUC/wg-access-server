@@ -145,6 +145,11 @@ Two things every member keeps whatever their policy says: the **server's own add
 that is where the embedded DNS proxy answers, and whatever `vpn.allowedIPs` reaches is *not* among
 them - a policy replaces that list rather than adding to it.
 
+**A policy restricts per address family.** On a server with IPv4 and IPv6, a policy that names IPv4
+networks only lets its members reach those over IPv4, and over IPv6 nothing but the server - not
+what `vpn.allowedIPs` opens over IPv6. To let them out over IPv6 too, name IPv6 networks in the
+policy.
+
 The rules are rebuilt when a device is added, changed or removed, and when somebody signs in, since
 that is when their policies can change. On Postgres every replica hears about both. A device that
 may not connect - blocked, or past its expiry - is in no set: it has no peer, so nothing can come

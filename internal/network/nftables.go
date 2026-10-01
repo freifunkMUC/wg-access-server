@@ -147,8 +147,12 @@ func nftSet(name string, f family, addresses []string) string {
 }
 
 // policiesOfFamily reduces the policies to one address family: their networks
-// and their members of that family, in the order they were given, and only
-// those that have anything to say about it.
+// and their members of that family, in the order they were given.
+//
+// A policy that names no networks of the family is kept all the same. Its
+// members are still in it, and leaving it out would hand them whatever
+// vpn.allowedIPs opens in that family - the opposite of a policy. Kept, it
+// lets them reach the server there and nothing else.
 func policiesOfFamily(policies []Policy, f family) ([]Policy, error) {
 	reduced := make([]Policy, 0, len(policies))
 	for _, policy := range policies {
@@ -159,9 +163,6 @@ func policiesOfFamily(policies []Policy, f family) ([]Policy, error) {
 		networks, err := prefixesOfFamily(policy.AllowedIPs, f)
 		if err != nil {
 			return nil, fmt.Errorf("policy %q: %w", policy.Name, err)
-		}
-		if len(networks) == 0 {
-			continue
 		}
 		reduced = append(reduced, Policy{
 			Name:       policy.Name,
