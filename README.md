@@ -131,6 +131,11 @@ Both are admin-only on purpose. A user can see on their own device why it cannot
 lift a block or push an expiry out - a block they could lift would be no block. They can still delete
 the device.
 
+**A block or an expiry belongs to the device, not to the person.** Somebody who can still sign in can
+delete a blocked or expired device and add a new one, which is neither. Blocking is for a device -
+one that was lost, or that should be off for a while. To keep a person out, use
+[Revoke access](#taking-somebodys-access-away) and stop them from signing in.
+
 **Several at once.** Every row in the device list has a tick box, and the one in the header takes
 everything the search and the filter leave - not only the page in view, which matters when the
 search narrows three hundred devices down to the twelve of one person. A bar above the table then
@@ -183,8 +188,10 @@ recorded in the [audit log](https://www.freie-netze.org/wg-access-server/audit/)
 with what it took.
 
 What it does **not** do is stop them from signing in again. If their identity provider still lets
-them in, they get a new session - and their devices stay blocked, which is the part that matters.
-Removing them at the provider, or deleting the user here, is what ends that.
+them in, they get a new session, and with it they can delete a blocked device and add a new one: a
+block belongs to the device, not to the person. Deleting the user here does not stop that either.
+What keeps them out is the sign-in: removing them at their identity provider, from the `users` of
+basic or simple auth, or from what `accessClaim` or the GitHub organizations, teams and users allow.
 
 ## Networks behind a device
 
