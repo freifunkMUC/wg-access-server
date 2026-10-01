@@ -73,6 +73,8 @@ auth:
     # A name for the backend (is shown on the login page and possibly in the devices list of the 'all devices' admin page)
     # Every identity provider needs a name of its own, and none may be called "basic" or "simple":
     # the name tells the users of different providers apart, so the server refuses to start otherwise.
+    # Do not rename it once people have signed in: the name is remembered with them, and a sign-in
+    # through a provider of another name is refused (see "One identifier, one provider").
     name: "My OIDC Backend"
     # Should point to the OIDC Issuer (excluding /.well-known/openid-configuration)
     issuer: "https://identity.example.com"
@@ -357,6 +359,21 @@ Two things follow from it:
 
 Name and email address were already stored with every device, so nothing is kept that was not kept
 before - except for a person who has no device at all.
+
+### One identifier, one provider
+
+Devices, the row above, the access policies and the DNS names all name a person by the identifier
+their provider uses - nothing else. Two providers that hand out the same identifier would make two
+people one: whoever signs in second would get the devices of the first. So **a sign-in is refused
+when its identifier already belongs to somebody of another provider**, with a `403` that says so and
+a warning in the log naming both providers.
+
+- Which provider somebody belongs to is the one in that row. For somebody who has not signed in
+  since the row was introduced, it is the provider their devices were added through.
+- Basic and Simple Auth count as one: both check the users the configuration lists.
+- **Renaming a provider** - the `name` of an `oidc`, `gitlab` or `github` backend - makes everybody
+  who signed in through it somebody of another provider. Keep the name. Deleting a user in the web
+  UI frees their identifier, along with their devices and their API tokens.
 
 ## API tokens
 

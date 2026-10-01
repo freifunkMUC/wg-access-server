@@ -638,6 +638,9 @@ func (s *SQLStorage) SetUserPassword(subject string, hash string, from string) e
 func (s *SQLStorage) GetUser(subject string) (*User, error) {
 	user := &User{}
 	if err := s.db.Where("subject = ?", subject).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
+		}
 		return nil, fmt.Errorf("failed to read user: %w", err)
 	}
 	return user, nil

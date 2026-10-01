@@ -57,6 +57,15 @@ func WithLoginRecorder(record func(*authsession.Identity)) Option {
 	}
 }
 
+// WithLoginCheck registers what may refuse a sign-in that a provider
+// accepted, before it becomes a session. Return an *authruntime.RefusedError
+// to refuse it with a reason the person is shown.
+func WithLoginCheck(check func(*authsession.Identity) error) Option {
+	return func(runtime *authruntime.ProviderRuntime) {
+		runtime.OnLoginCheck(check)
+	}
+}
+
 // WithPasswords registers where a password somebody set for themselves is
 // looked up. Only the built-in providers ask; for everybody else the password
 // belongs to their identity provider.

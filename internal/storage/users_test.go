@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -35,8 +36,11 @@ func TestUserStorage(t *testing.T) {
 			subject := "users-test-" + name
 			t.Cleanup(func() { _ = s.DeleteUser(subject) })
 
-			if _, err := s.GetUser(subject); err == nil {
-				t.Fatal("somebody who never signed in was found")
+			// told apart from a database that cannot be read: a sign-in
+			// is checked against the user, and an error that says nothing
+			// must not let it through
+			if _, err := s.GetUser(subject); !errors.Is(err, ErrUserNotFound) {
+				t.Fatalf("GetUser of somebody who never signed in = %v, want %v", err, ErrUserNotFound)
 			}
 
 			// the seconds are what every backend keeps: MySQL stores no

@@ -21,6 +21,7 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/audit"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
+	"github.com/freifunkMUC/wg-access-server/internal/authnz/authruntime"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
@@ -113,6 +114,53 @@ func recordLogin(storageBackend storage.Storage, deviceManager *devices.DeviceMa
 	}
 }
 
+// checkLogin refuses a sign-in whose subject is already somebody else's: a
+// person who signed in through another provider. A device names its owner by
+// the subject alone, and so do the users row, the policies and the DNS names,
+// so two providers handing out the same subject would make two people one -
+// whoever signs in second would get the devices of the first.
+//
+// The users row says which provider a subject came from. Somebody who signed
+// in before the users were remembered has only their devices to say so. Basic
+// and simple auth check the same configured users, so they count as one.
+func checkLogin(storageBackend storage.Storage) func(*authsession.Identity) error {
+	return func(identity *authsession.Identity) error {
+		var known []string
+		user, err := storageBackend.GetUser(identity.Subject)
+		switch {
+		case err == nil:
+			known = append(known, user.Provider)
+		case errors.Is(err, storage.ErrUserNotFound):
+			devices, err := storageBackend.List(identity.Subject)
+			if err != nil {
+				return fmt.Errorf("failed to read the devices of %q to check the sign-in: %w", identity.Subject, err)
+			}
+			for _, device := range devices {
+				known = append(known, device.OwnerProvider)
+			}
+		default:
+			return fmt.Errorf("failed to read the user %q to check the sign-in: %w", identity.Subject, err)
+		}
+
+		for _, provider := range known {
+			// a device from before devices named their provider says
+			// nothing either way
+			if provider == "" || sameProvider(provider, identity.Provider) {
+				continue
+			}
+			return &authruntime.RefusedError{
+				Reason: "This account already signs in another way here. Sign in the way you did before, or ask an admin.",
+				Detail: fmt.Sprintf("the subject %q signed in through %q belongs to a user of %q", identity.Subject, identity.Provider, provider),
+			}
+		}
+		return nil
+	}
+}
+
+func sameProvider(a string, b string) bool {
+	return a == b || (authconfig.HasPassword(a) && authconfig.HasPassword(b))
+}
+
 func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, storageBackend storage.Storage, wg wgembed.WireGuardInterface, browserSessions *websessions.Manager) (http.Handler, error) {
 	router := mux.NewRouter()
 	// First of all, so that everything after it - the traces, the audit
@@ -170,6 +218,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	}
 
 	options := []authnz.Option{
+		authnz.WithLoginCheck(checkLogin(storageBackend)),
 		authnz.WithLoginRecorder(recordLogin(storageBackend, deviceManager)),
 		authnz.WithPasswords(storedPasswords{storage: storageBackend}),
 	}
