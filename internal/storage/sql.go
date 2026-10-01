@@ -28,7 +28,8 @@ func (*GormLogger) Print(v ...interface{}) {
 				"type":    "sql",
 				"rows":    v[5],
 				"src_ref": v[1],
-				"values":  v[4],
+				// not the values: they are preshared keys, and the
+				// statement is what helps, not what went into it
 			},
 		).Debug(v[3])
 	case "logrus":
@@ -81,14 +82,29 @@ func pgconn(u *url.URL) string {
 		logrus.Warnf("failed to unescape connection string query parameters - they will be ignored")
 		decodedQuery = ""
 	}
-	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s %s",
-		u.Hostname(),
-		u.Port(),
-		u.User.Username(),
-		password,
-		strings.TrimLeft(u.Path, "/"),
+	// lib/pq refuses an empty port rather than using the default, so a
+	// URI without one leaves it out
+	port := ""
+	if u.Port() != "" {
+		port = "port=" + pgQuote(u.Port()) + " "
+	}
+	return fmt.Sprintf("host=%s %suser=%s password=%s dbname=%s %s",
+		pgQuote(u.Hostname()),
+		port,
+		pgQuote(u.User.Username()),
+		pgQuote(password),
+		pgQuote(strings.TrimLeft(u.Path, "/")),
 		decodedQuery,
 	)
+}
+
+// pgQuote quotes a value of a keyword/value connection string. Unquoted, a
+// space ends the value: a password with one broke the connection string, and
+// the rest of it ended up in the error message.
+func pgQuote(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, `'`, `\'`)
+	return "'" + value + "'"
 }
 
 func mysqlconn(u *url.URL) string {

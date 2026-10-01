@@ -46,7 +46,7 @@ require (
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/lib/pq v1.12.3 // indirect
+	github.com/lib/pq v1.12.3
 	github.com/mattn/go-sqlite3 v1.14.52 // indirect
 	github.com/mdlayher/genetlink v1.4.0 // indirect
 	github.com/mdlayher/netlink v1.11.2 // indirect
