@@ -427,7 +427,7 @@ Some things worth knowing:
 - The primary email address is shown in the web UI if GitHub verified it.
 - As with every provider, membership is checked when signing in. Removing somebody from the
   organization takes effect when their web session ends (`sessionStore.maxAge`). Deleting the user in
-  the web UI removes their devices and API tokens at once, but not a session they still have.
+  the web UI removes their devices and API tokens and ends their sessions at once.
 
 ## Login throttling
 
