@@ -165,13 +165,16 @@ export const AllDevices = observer(function AllDevices() {
 
   // revokeAccess takes every way in from somebody at once, without deleting
   // anything: their devices keep their keys and addresses, so lifting the
-  // blocks gives the access back without them setting up a client anew.
+  // blocks gives the access back without them setting up a client anew. It
+  // does not keep them from signing in, and the question says so: a block is
+  // the device's, and whoever signs in can replace a blocked device.
   const revokeAccess = async (user: User.AsObject) => {
     const whom = user.displayName || user.name;
     if (
       !(await confirm(
         `Take ${whom}'s access away? Their devices stop connecting, their API tokens are revoked and ` +
-          'they are signed out everywhere. Nothing is deleted - you can unblock the devices later.',
+          'they are signed out everywhere. Nothing is deleted - you can unblock the devices later. ' +
+          'If they can still sign in, they can add a new device: remove them where they sign in, too.',
       ))
     ) {
       return;
