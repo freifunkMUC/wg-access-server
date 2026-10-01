@@ -121,6 +121,8 @@ export const Passkeys = observer(function Passkeys() {
         A passkey is held by this device or your phone and can only be used on this site - a page pretending to be this
         one cannot ask for it, and there is nothing to read out to somebody on the telephone. It is asked for after your
         password.
+        {passkeys?.length === 0 &&
+          ' Adding your first one signs out every other browser you are signed in with and revokes your API tokens.'}
       </Typography>
 
       {error && (

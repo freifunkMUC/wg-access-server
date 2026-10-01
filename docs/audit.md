@@ -22,11 +22,11 @@ level=info msg=device.delete audit=device.delete actor=admin actor_is_admin=true
 | `device.rotate` | Somebody gave their device a new key                | `device`, `owner`              |
 | `user.delete`   | An admin deleted a user, their devices and tokens  | `target_user`                  |
 | `user.revoke`   | An admin took somebody's access away               | `target_user`, `devices_blocked`, `tokens_deleted`, `sessions_ended` |
-| `user.password` | Somebody changed their own password                | `sessions_ended`               |
-| `user.two_factor` | Somebody turned their own second factor on or off | `enabled`                    |
+| `user.password` | Somebody changed their own password                | `sessions_ended`, `tokens_deleted` |
+| `user.two_factor` | Somebody turned their own second factor on or off | `enabled`, `sessions_ended`\*\*\*\*, `tokens_deleted`\*\*\*\* |
 | `user.two_factor_reset` | An admin removed somebody's second factor  | `target_user`                  |
 | `user.recovery_codes` | Somebody replaced their own recovery codes | `codes_left_before`            |
-| `user.passkey_add` | Somebody registered a passkey of their own     | `passkey` (its name)           |
+| `user.passkey_add` | Somebody registered a passkey of their own     | `passkey` (its name), `sessions_ended`\*\*\*\*, `tokens_deleted`\*\*\*\* |
 | `user.passkey_rename` | Somebody renamed a passkey of their own     | `passkey` (its new name)       |
 | `user.passkey_delete` | Somebody removed a passkey of their own     | `passkey` (its id)             |
 | `session.delete` | Somebody ended a browser session of theirs        | `session`, or `sessions` and `reason`\*\*\* |
@@ -43,12 +43,15 @@ device grace period.
 once and records `sessions` as how many that was, with `reason=all others`; the ids are not worth a
 record each, they are gone.
 
+\*\*\*\* Only for confirming the code from the app and for the first passkey. Both end the person's
+other sessions and revoke their API tokens, and these say how many.
+
 `user.two_factor`, `user.two_factor_reset` and `user.recovery_codes` record that it happened, never
 the secret, a code or a recovery code. `codes_left_before` is how many unused codes there were when
 the set was replaced, which is what says whether somebody was running out or had lost the paper.
 
-`user.password` records that the password changed and how many other sessions that ended. Neither
-the old nor the new password is recorded, in any form.
+`user.password` records that the password changed and how many other sessions and API tokens that
+ended. Neither the old nor the new password is recorded, in any form.
 
 `device.rotate` records that the key changed, not the keys: the new public key says nothing an
 operator needs, and key material does not belong in a log.

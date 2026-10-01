@@ -172,13 +172,17 @@ const minPasswordLength = 10
 // theirs - and only the person themselves can: an admin who wants somebody out
 // revokes their access, which does not need their password.
 //
-// The other sessions end with it. Whoever knew the old password may have one,
-// and a password change that leaves them signed in changes nothing for them.
+// The other sessions end with it, and the API tokens are revoked. Whoever knew
+// the old password may have made either, and a password change that leaves
+// them signed in changes nothing for them.
 func (d *UserService) ChangePassword(ctx context.Context, request *connect.Request[proto.ChangePasswordReq]) (*connect.Response[proto.ChangePasswordRes], error) {
 	req := request.Msg
 	user, err := authsession.CurrentUser(ctx)
 	if err != nil {
 		return nil, errNotAuthenticated()
+	}
+	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
 	}
 
 	if d.Passwords == nil || !authconfig.HasPassword(user.Provider) {
@@ -205,25 +209,41 @@ func (d *UserService) ChangePassword(ctx context.Context, request *connect.Reque
 		return nil, internalError(ctx, err, "failed to change the password")
 	}
 
-	// Whoever knew the old password may be holding a session made with it.
-	// The one asking stays: signing somebody out of the page they are on to
-	// tell them their password changed helps nobody.
-	ended := 0
+	// Whoever knew the old password may be holding a session or a token
+	// made with it.
+	ended, deleted := d.signOutElsewhere(ctx, user.Subject, "a password change")
+
+	audit.Log(ctx, audit.UserPassword, logrus.Fields{"sessions_ended": ended, "tokens_deleted": deleted})
+
+	return connect.NewResponse(&proto.ChangePasswordRes{SessionsEnded: int32(ended)}), nil
+}
+
+// signOutElsewhere ends the other sessions of whoever is asking and revokes
+// their API tokens: what the password alone opened, once the password changed
+// or stopped being enough. The session asking stays - signing somebody out of
+// the page they are on to tell them it worked helps nobody.
+//
+// The sessions go first, so that none of them is left to make a token after
+// the tokens are gone. The change itself is done by the time this runs, so a
+// failure is logged rather than returned: saying it failed would be worse than
+// saying that one part of it did not.
+func (d *UserService) signOutElsewhere(ctx context.Context, subject string, after string) (ended int, deleted int) {
+	var err error
 	if d.Sessions != nil {
 		keep := ""
 		if session, err := d.Sessions.Find(authsession.CurrentSessionID(ctx)); err == nil {
 			keep = session.ID
 		}
-		if ended, err = d.Sessions.EndOthers(user.Subject, keep); err != nil {
-			// The password did change; saying it failed would be worse than
-			// saying that one part of it did not.
-			logrus.Error(fmt.Errorf("failed to end the other sessions after a password change: %w", err))
+		if ended, err = d.Sessions.EndOthers(subject, keep); err != nil {
+			logrus.Error(fmt.Errorf("failed to end the other sessions after %s: %w", after, err))
 		}
 	}
-
-	audit.Log(ctx, audit.UserPassword, logrus.Fields{"sessions_ended": ended})
-
-	return connect.NewResponse(&proto.ChangePasswordRes{SessionsEnded: int32(ended)}), nil
+	if d.Tokens != nil {
+		if deleted, err = d.Tokens.DeleteForOwner(subject); err != nil {
+			logrus.Error(fmt.Errorf("failed to revoke the API tokens after %s: %w", after, err))
+		}
+	}
+	return ended, deleted
 }
 
 // twoFactorFor returns the second factor of whoever is asking, or the reason
@@ -232,6 +252,9 @@ func (d *UserService) twoFactorFor(ctx context.Context) (*authsession.Identity, 
 	user, err := authsession.CurrentUser(ctx)
 	if err != nil {
 		return nil, errNotAuthenticated()
+	}
+	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
 	}
 	if d.TwoFactor == nil || !authconfig.HasPassword(user.Provider) {
 		return nil, connect.NewError(connect.CodeFailedPrecondition,
@@ -272,6 +295,10 @@ func (d *UserService) StartTwoFactor(ctx context.Context, _ *connect.Request[pro
 // ConfirmTwoFactor turns it on, once a code from the app proves the app has
 // the secret, and returns the recovery codes - the only time they exist
 // outside the person's own hands.
+//
+// Whoever turns it on wants the password to be not enough, so the other
+// sessions end and the API tokens are revoked: they were opened with the
+// password alone.
 func (d *UserService) ConfirmTwoFactor(ctx context.Context, request *connect.Request[proto.ConfirmTwoFactorReq]) (*connect.Response[proto.ConfirmTwoFactorRes], error) {
 	user, err := d.twoFactorFor(ctx)
 	if err != nil {
@@ -292,7 +319,13 @@ func (d *UserService) ConfirmTwoFactor(ctx context.Context, request *connect.Req
 		return nil, internalError(ctx, err, "failed to turn the second factor on")
 	}
 
-	audit.Log(ctx, audit.UserTwoFactor, logrus.Fields{"enabled": true})
+	ended, deleted := d.signOutElsewhere(ctx, user.Subject, "turning the second factor on")
+
+	audit.Log(ctx, audit.UserTwoFactor, logrus.Fields{
+		"enabled":        true,
+		"sessions_ended": ended,
+		"tokens_deleted": deleted,
+	})
 
 	return connect.NewResponse(&proto.ConfirmTwoFactorRes{RecoveryCodes: codes}), nil
 }
@@ -412,6 +445,9 @@ func (d *UserService) BeginPasskey(ctx context.Context, _ *connect.Request[proto
 	if err != nil {
 		return nil, err
 	}
+	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
+	}
 
 	options, err := d.Passkeys.BeginRegistration(users.RequestFrom(ctx), user.Subject)
 	if err != nil {
@@ -421,12 +457,19 @@ func (d *UserService) BeginPasskey(ctx context.Context, _ *connect.Request[proto
 	return connect.NewResponse(&proto.BeginPasskeyRes{Options: string(options)}), nil
 }
 
-// FinishPasskey stores what the browser made.
+// FinishPasskey stores what the browser made. The first passkey ends the other
+// sessions and revokes the API tokens, as turning on the code from an app
+// does: from now on the password alone is not enough.
 func (d *UserService) FinishPasskey(ctx context.Context, request *connect.Request[proto.FinishPasskeyReq]) (*connect.Response[proto.Passkey], error) {
 	user, err := d.passkeysFor(ctx)
 	if err != nil {
 		return nil, err
 	}
+	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
+	}
+
+	first := !d.Passkeys.Has(user.Subject)
 
 	passkey, err := d.Passkeys.FinishRegistration(users.RequestFrom(ctx), user.Subject,
 		request.Msg.GetName(), []byte(request.Msg.GetCredential()))
@@ -443,7 +486,11 @@ func (d *UserService) FinishPasskey(ctx context.Context, request *connect.Reques
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("that passkey was not accepted"))
 	}
 
-	audit.Log(ctx, audit.UserPasskeyAdd, logrus.Fields{"passkey": passkey.Name})
+	fields := logrus.Fields{"passkey": passkey.Name}
+	if first {
+		fields["sessions_ended"], fields["tokens_deleted"] = d.signOutElsewhere(ctx, user.Subject, "the first passkey")
+	}
+	audit.Log(ctx, audit.UserPasskeyAdd, fields)
 
 	return connect.NewResponse(&proto.Passkey{
 		Id:        passkey.ID,
@@ -457,6 +504,9 @@ func (d *UserService) FinishPasskey(ctx context.Context, request *connect.Reques
 func (d *UserService) RenamePasskey(ctx context.Context, request *connect.Request[proto.RenamePasskeyReq]) (*connect.Response[proto.Passkey], error) {
 	user, err := d.passkeysFor(ctx)
 	if err != nil {
+		return nil, err
+	}
+	if err := refuseAPIToken(ctx); err != nil {
 		return nil, err
 	}
 
@@ -483,6 +533,9 @@ func (d *UserService) RenamePasskey(ctx context.Context, request *connect.Reques
 func (d *UserService) DeletePasskey(ctx context.Context, request *connect.Request[proto.DeletePasskeyReq]) (*connect.Response[emptypb.Empty], error) {
 	user, err := d.passkeysFor(ctx)
 	if err != nil {
+		return nil, err
+	}
+	if err := refuseAPIToken(ctx); err != nil {
 		return nil, err
 	}
 
@@ -513,6 +566,17 @@ func (d *UserService) passkeysFor(ctx context.Context) (*authsession.Identity, e
 		return nil, errNoSecondFactorHere()
 	}
 	return user, nil
+}
+
+// refuseAPIToken refuses a request made with an API token what is the
+// account's own business: the password, the second factors and the sessions.
+// A token is for scripts, and one that leaked must not become the account.
+func refuseAPIToken(ctx context.Context) error {
+	if authsession.APIToken(ctx) != "" {
+		return connect.NewError(connect.CodePermissionDenied,
+			errors.New("an API token cannot manage the account: do this in the web UI"))
+	}
+	return nil
 }
 
 // errTooManyWrongPasswords answers a password that was not checked, because
