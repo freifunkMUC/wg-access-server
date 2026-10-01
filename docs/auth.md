@@ -147,8 +147,10 @@ auth:
       - my-org
     teams:
       - my-org/vpn-users
+    # Users as "login:id". Only the id counts - see below for why, and
+    # where to look it up.
     users:
-      - octocat
+      - octocat:583231
     # Who is an admin.
     adminTeams:
       - my-org/vpn-admins
@@ -444,14 +446,20 @@ Some things worth knowing:
   they are configured. Only an *active* membership counts, a pending invitation does not. If the
   organization restricts third-party access, an owner has to approve the OAuth app first - until then
   GitHub does not show the memberships to it, and signing in fails.
-- **Users** are matched by their login, ignoring case. A GitHub user can rename their account, and
-  somebody else can then register the old login. Prefer organizations or teams where you can.
+- **Users** in `users` and `adminUsers` are written as `login:id`, and only the numeric id is
+  matched. A GitHub user can rename their account or delete it, and somebody else can then register
+  the old login - with a login alone they would get the access, or the admin rights, of the person
+  it was meant for. The id of a login is at `https://api.github.com/users/<login>` (for GitHub
+  Enterprise Server `<baseURL>/api/v3/users/<login>`). The login is only there for whoever reads the
+  configuration: somebody who renamed their account keeps their access, and the server warns that
+  the configuration names them by their old login. An entry without an id stops the server at
+  startup.
 - **Devices belong to the GitHub account id**, not the login, so they stay with the account across
   a rename. Accounts of a GitHub Enterprise Server are kept apart from github.com ones.
 - The primary email address is shown in the web UI if GitHub verified it.
 - As with every provider, membership is checked when signing in. Removing somebody from the
   organization takes effect when their web session ends (`sessionStore.maxAge`). Deleting the user in
-  the web UI removes their devices and API tokens at once, but not a session they still have.
+  the web UI removes their devices and API tokens and ends their sessions at once.
 
 ## Login throttling
 

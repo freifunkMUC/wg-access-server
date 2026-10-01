@@ -12,6 +12,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/sirupsen/logrus"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -144,6 +146,12 @@ func TestGithubConfigValidation(t *testing.T) {
 		"team without org":      func(c *GithubConfig) { c.Teams = []string{"vpn"} },
 		"admin team too nested": func(c *GithubConfig) { c.AdminTeams = []string{"ffmuc/a/b"} },
 		"base URL without host": func(c *GithubConfig) { c.BaseURL = "github.example.com" },
+		// a login alone can be registered by somebody else once it is free
+		"user without id":       func(c *GithubConfig) { c.Users = []string{"octocat"} },
+		"admin user without id": func(c *GithubConfig) { c.AdminUsers = []string{"octocat"} },
+		"id that is no number":  func(c *GithubConfig) { c.Users = []string{"octocat:abc"} },
+		"id that is no id":      func(c *GithubConfig) { c.AdminUsers = []string{"octocat:0"} },
+		"id without login":      func(c *GithubConfig) { c.Users = []string{":42"} },
 	} {
 		config := valid()
 		change(config)
@@ -165,9 +173,9 @@ func TestGithubAsksForTheScopesItNeeds(t *testing.T) {
 		configure func(*GithubConfig)
 		scope     string
 	}{
-		{func(c *GithubConfig) { c.Users = []string{"octocat"} }, "user:email"},
+		{func(c *GithubConfig) { c.Users = []string{"octocat:42"} }, "user:email"},
 		{func(c *GithubConfig) { c.Organizations = []string{"ffmuc"} }, "user:email read:org"},
-		{func(c *GithubConfig) { c.Users = []string{"x"}; c.AdminTeams = []string{"ffmuc/admins"} }, "user:email read:org"},
+		{func(c *GithubConfig) { c.Users = []string{"x:1"}; c.AdminTeams = []string{"ffmuc/admins"} }, "user:email read:org"},
 	} {
 		config := gh.config()
 		tc.configure(config)
@@ -226,7 +234,7 @@ func TestGithubOutsiderIsRefused(t *testing.T) {
 	config := gh.config()
 	config.Organizations = []string{"ffmuc"}
 	config.Teams = []string{"ffmuc/vpn"}
-	config.Users = []string{"somebody-else"}
+	config.Users = []string{"somebody-else:7"}
 
 	rec, identity := signIn(t, config)
 
@@ -253,12 +261,12 @@ func TestGithubAdminTeamOnALaterPage(t *testing.T) {
 	assert.True(t, identity.Claims.IsAdmin())
 }
 
-func TestGithubUsersAreMatchedCaseInsensitively(t *testing.T) {
+func TestGithubUsersAreMatchedByID(t *testing.T) {
 	gh := newFakeGithub(t)
 	gh.name = ""
 	config := gh.config()
-	config.Users = []string{"OctoCat"}
-	config.AdminUsers = []string{"OCTOCAT"}
+	config.Users = []string{"octocat:42"}
+	config.AdminUsers = []string{"octocat:42"}
 
 	rec, identity := signIn(t, config)
 
@@ -266,6 +274,49 @@ func TestGithubUsersAreMatchedCaseInsensitively(t *testing.T) {
 	require.NotNil(t, identity)
 	assert.True(t, identity.Claims.IsAdmin())
 	assert.Equal(t, "octocat", identity.Name, "the login stands in for a missing name")
+}
+
+// A login is free for anybody to register once its owner renamed their
+// account or deleted it. Whoever does must not become the user the
+// configuration meant - let alone its admin.
+func TestGithubAClaimedLoginIsNotTheUser(t *testing.T) {
+	gh := newFakeGithub(t)
+	gh.id = 99 // somebody else, under the login octocat gave up
+	config := gh.config()
+	config.Users = []string{"octocat:42"}
+	config.AdminUsers = []string{"octocat:42"}
+
+	rec, identity := signIn(t, config)
+
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Nil(t, identity)
+}
+
+// The user the configuration meant keeps their access under a new login, and
+// the log says the configuration is out of date.
+func TestGithubARenamedUserIsStillTheUser(t *testing.T) {
+	hook := logrustest.NewGlobal()
+	defer hook.Reset()
+
+	gh := newFakeGithub(t)
+	gh.login = "mona"
+	config := gh.config()
+	config.Users = []string{"octocat:42"}
+	config.AdminUsers = []string{"OctoCat:42"}
+
+	rec, identity := signIn(t, config)
+
+	require.Equal(t, http.StatusSeeOther, rec.Code, rec.Body.String())
+	require.NotNil(t, identity)
+	assert.True(t, identity.Claims.IsAdmin())
+
+	warned := false
+	for _, entry := range hook.AllEntries() {
+		if entry.Level == logrus.WarnLevel && strings.Contains(entry.Message, "octocat") && strings.Contains(entry.Message, "mona") {
+			warned = true
+		}
+	}
+	assert.True(t, warned, "no warning names the configured and the current login")
 }
 
 // A failing API call must not be read as "no restriction applies".
@@ -285,7 +336,7 @@ func TestGithubUnverifiedEmailIsNotUsed(t *testing.T) {
 	gh := newFakeGithub(t)
 	gh.emails = []map[string]any{{"email": "mona@example.com", "primary": true, "verified": false}}
 	config := gh.config()
-	config.Users = []string{"octocat"}
+	config.Users = []string{"octocat:42"}
 
 	_, identity := signIn(t, config)
 
@@ -296,7 +347,7 @@ func TestGithubUnverifiedEmailIsNotUsed(t *testing.T) {
 func TestGithubCallbackChecksTheState(t *testing.T) {
 	gh := newFakeGithub(t)
 	config := gh.config()
-	config.Users = []string{"octocat"}
+	config.Users = []string{"octocat:42"}
 	provider, runtime, router := newGithubFlow(t, config)
 	_, _, cookies := doLogin(t, provider, runtime)
 
@@ -308,7 +359,7 @@ func TestGithubCallbackChecksTheState(t *testing.T) {
 func TestGithubCancelledSignIn(t *testing.T) {
 	gh := newFakeGithub(t)
 	config := gh.config()
-	config.Users = []string{"octocat"}
+	config.Users = []string{"octocat:42"}
 	provider, runtime, router := newGithubFlow(t, config)
 	state, _, cookies := doLogin(t, provider, runtime)
 

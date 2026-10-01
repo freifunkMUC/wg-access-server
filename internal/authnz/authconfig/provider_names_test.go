@@ -17,7 +17,7 @@ func TestProviderNamesMustBeDistinct(t *testing.T) {
 			want:   "taken by the built-in sign-in",
 		},
 		"github named basic": {
-			config: AuthConfig{ProviderConfig: ProviderConfig{Github: &GithubConfig{Name: "basic", ClientID: "id", ClientSecret: "secret", RedirectURL: "https://vpn.example.com/callback", Users: []string{"alice"}}}},
+			config: AuthConfig{ProviderConfig: ProviderConfig{Github: &GithubConfig{Name: "basic", ClientID: "id", ClientSecret: "secret", RedirectURL: "https://vpn.example.com/callback", Users: []string{"alice:7"}}}},
 			want:   "taken by the built-in sign-in",
 		},
 		"two oidc with one name": {
@@ -30,7 +30,7 @@ func TestProviderNamesMustBeDistinct(t *testing.T) {
 		"gitlab and github defaults": {
 			config: AuthConfig{Multiple: map[string]*ProviderConfig{
 				"GitHub": {Gitlab: &GitlabConfig{Name: "GitHub"}},
-				"gh":     {Github: &GithubConfig{Name: "GitHub", ClientID: "id", ClientSecret: "secret", RedirectURL: "https://vpn.example.com/callback", Users: []string{"alice"}}},
+				"gh":     {Github: &GithubConfig{Name: "GitHub", ClientID: "id", ClientSecret: "secret", RedirectURL: "https://vpn.example.com/callback", Users: []string{"alice:7"}}},
 			}},
 			want: "share the name",
 		},
