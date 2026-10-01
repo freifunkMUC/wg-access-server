@@ -28,13 +28,47 @@ type ProviderBranding struct {
 
 type ProviderRuntime struct {
 	store sessions.Store
+	// checkLogin may refuse a sign-in the provider accepted, before it
+	// becomes a session.
+	checkLogin func(*authsession.Identity) error
 }
 
 func NewProviderRuntime(store sessions.Store) *ProviderRuntime {
-	return &ProviderRuntime{store}
+	return &ProviderRuntime{store: store}
+}
+
+// OnLoginCheck registers what decides whether a sign-in a provider accepted
+// may become a session. Every provider ends up in SetSession, so it is the
+// one place that sees all of them. An error that is a *RefusedError is the
+// sign-in being refused; anything else is the check failing, and refuses it
+// as well.
+func (p *ProviderRuntime) OnLoginCheck(check func(*authsession.Identity) error) {
+	p.checkLogin = check
+}
+
+// RefusedError is a sign-in the provider accepted and the server does not.
+// Reason is for the person signing in, Detail for the log: what the person is
+// told must not hand out more than they already know.
+type RefusedError struct {
+	Reason string
+	Detail string
+}
+
+func (e *RefusedError) Error() string {
+	if e.Detail != "" {
+		return e.Detail
+	}
+	return e.Reason
 }
 
 func (p *ProviderRuntime) SetSession(w http.ResponseWriter, r *http.Request, s *authsession.AuthSession) error {
+	// A session without an identity is a provider keeping state in the middle
+	// of its flow - the OIDC nonce, for instance. Nobody signed in yet.
+	if s.Identity != nil && p.checkLogin != nil {
+		if err := p.checkLogin(s.Identity); err != nil {
+			return err
+		}
+	}
 	return authsession.SetSession(p.store, r, w, s)
 }
 

@@ -42,7 +42,19 @@ type AuthMiddleware struct {
 	runtime          *authruntime.ProviderRuntime
 }
 
-func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware) (*AuthMiddleware, error) {
+// Option configures what the providers share.
+type Option func(*authruntime.ProviderRuntime)
+
+// WithLoginCheck registers what may refuse a sign-in that a provider
+// accepted, before it becomes a session. Return an *authruntime.RefusedError
+// to refuse it with a reason the person is shown.
+func WithLoginCheck(check func(*authsession.Identity) error) Option {
+	return func(runtime *authruntime.ProviderRuntime) {
+		runtime.OnLoginCheck(check)
+	}
+}
+
+func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware, opts ...Option) (*AuthMiddleware, error) {
 	router := mux.NewRouter()
 	var storeSecret []byte
 	if config.SessionStore == nil || config.SessionStore.Secret == "" {
@@ -74,6 +86,9 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 		SameSite: http.SameSiteLaxMode,
 	}
 	runtime := authruntime.NewProviderRuntime(store)
+	for _, opt := range opts {
+		opt(runtime)
+	}
 	providers := config.Providers()
 
 	for _, p := range providers {
@@ -124,8 +139,8 @@ func New(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddle
 	}, nil
 }
 
-func NewMiddleware(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware) (mux.MiddlewareFunc, error) {
-	authMiddleware, err := New(config, claimsMiddleware)
+func NewMiddleware(config authconfig.AuthConfig, claimsMiddleware authsession.ClaimsMiddleware, opts ...Option) (mux.MiddlewareFunc, error) {
+	authMiddleware, err := New(config, claimsMiddleware, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -111,6 +111,18 @@ auth:
       - example.com
 ```
 
+## One identifier, one provider
+
+A device names its owner by the identifier their provider uses - nothing else. Two providers that
+hand out the same identifier would make two people one: whoever signs in second would get the devices
+of the first. So **a sign-in is refused when its identifier already owns devices that were added
+through another provider**, with a `403` that says so and a warning in the log naming both providers.
+
+- Basic and Simple Auth count as one: both check the users the configuration lists.
+- **Renaming a provider** - the `name` of an `oidc` or `gitlab` backend - makes everybody who added
+  devices through it somebody of another provider. Keep the name. Deleting their devices frees their
+  identifier.
+
 ## OIDC Provider specifics
 
 ### Active Directory Federation Services (ADFS)

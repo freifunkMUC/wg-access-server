@@ -257,6 +257,9 @@ func (c *OIDCConfig) callbackHandler(runtime *authruntime.ProviderRuntime, oauth
 			Identity: identity,
 		})
 		if err != nil {
+			if refusedSignIn(w, r, err) {
+				return
+			}
 			// the details are the database's, not the browser's business
 			logrus.Error(errors.Wrap(err, "failed to start the session after the OIDC sign-in"))
 			http.Error(w, "Could not sign in", http.StatusInternalServerError)

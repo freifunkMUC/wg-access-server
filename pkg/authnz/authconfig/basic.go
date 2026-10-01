@@ -58,6 +58,9 @@ func basicAuthLogin(c *BasicAuthConfig, runtime *authruntime.ProviderRuntime) ht
 				runtime.Done(w, r)
 				return
 			}
+			if refusedSignIn(w, r, err) {
+				return
+			}
 		}
 
 		if !isBasic {
