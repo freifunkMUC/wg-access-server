@@ -7,6 +7,7 @@ import (
 
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
 	"github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
@@ -60,6 +61,10 @@ func (cmd *servecmd) startWireGuard(conf *config.AppConfig, vpn vpnAddressing) (
 	}
 
 	if err := hooks.Run(hooks.PreUp, conf.WireGuard.Interface, conf.WireGuard.PreUp); err != nil {
+		logrus.Fatal(err)
+	}
+
+	if err := removeStaleInterface(conf.WireGuard.Interface, netlink.LinkByName, netlink.LinkDel); err != nil {
 		logrus.Fatal(err)
 	}
 
