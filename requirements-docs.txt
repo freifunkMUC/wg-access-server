@@ -3,5 +3,5 @@ mkdocs~=1.6.1
 mkdocs-material~=9.7.7
 mkdocs-redirects~=1.2.2
 pygments~=2.21.0
-pymdown-extensions~=11.0
+pymdown-extensions~=12.1
 mike~=2.2.0
