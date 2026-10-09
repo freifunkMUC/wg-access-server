@@ -62,10 +62,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # The standard library this is built with is part of what gets scanned, so
+      # this job needs the newest patch release rather than whichever one the
+      # runner image happens to carry. Without check-latest it reports every
+      # standard library fix as an unfixed vulnerability until the image catches
+      # up, days after the release.
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.26"
+          check-latest: true
           cache: true
 
       - name: Run govulncheck
