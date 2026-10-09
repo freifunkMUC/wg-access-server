@@ -28,7 +28,7 @@ RUN go generate buildinfo/buildinfo.go
 RUN go build -o wg-access-server
 
 ### Server
-FROM alpine:3.24.1
+FROM alpine:3.24.2
 RUN apk add --no-cache iptables ip6tables nftables wireguard-tools curl openssl
 ENV WG_CONFIG="/config.yaml"
 # An empty config file at the path above, so that the server starts on its
