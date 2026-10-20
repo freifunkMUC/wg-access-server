@@ -29,7 +29,7 @@ RUN go build -o wg-access-server
 
 ### Server
 FROM alpine:3.24.2
-RUN apk add --no-cache iptables ip6tables nftables wireguard-tools curl openssl
+RUN apk add --no-cache ca-certificates iptables ip6tables nftables wireguard-tools curl openssl
 ENV WG_CONFIG="/config.yaml"
 # An empty config file at the path above, so that the server starts on its
 # defaults and the environment variables when no config file is mounted over
