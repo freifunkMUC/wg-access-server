@@ -3,7 +3,7 @@ module github.com/freifunkMUC/wg-access-server
 go 1.26.0
 
 require (
-	connectrpc.com/connect v1.21.0
+	connectrpc.com/connect v1.21.1
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/casbin/govaluate v1.10.0
 	github.com/coreos/go-iptables v0.8.0
