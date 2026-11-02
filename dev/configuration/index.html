@@ -1304,7 +1304,7 @@ policy becomes a set of the addresses of its members' devices and a rule per net
 
 ip saddr 10.44.0.0/24 ip daddr 10.44.0.1 accept          # the server itself, for everybody
 ip saddr @policy_contractors_ip ip daddr 10.0.5.0/24 accept
-ip saddr @policy_members_ip reject                       # a member reaches nothing else
+ip saddr @members_ip reject                              # a member reaches nothing else
 ip saddr 10.44.0.0/24 ip daddr 0.0.0.0/0 accept          # everybody who is in no policy
 </code></pre></div>
 <p>The rule count therefore follows the number of policies, not the number of devices: a thousand
