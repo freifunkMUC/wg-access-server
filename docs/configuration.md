@@ -126,10 +126,12 @@ at most 32 of them: it becomes part of a firewall set name.
 ### What the rules look like
 
 Policies need `vpn.firewall: nftables`, and the server refuses to start with any other backend. Each
-policy becomes a set of the addresses of its members' devices and a rule per network:
+policy becomes a set of the addresses of its members' devices, with the [networks behind
+them](https://github.com/freifunkMUC/wg-access-server#networks-behind-a-device), and a rule per
+network:
 
 ```
-set policy_contractors_ip { type ipv4_addr; elements = { 10.44.0.2 } }
+set policy_contractors_ip { type ipv4_addr; flags interval; auto-merge; elements = { 10.44.0.2 } }
 
 ip saddr 10.44.0.0/24 ip daddr 10.44.0.1 accept          # the server itself, for everybody
 ip saddr @policy_contractors_ip ip daddr 10.0.5.0/24 accept
