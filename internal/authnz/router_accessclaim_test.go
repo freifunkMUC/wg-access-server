@@ -1,6 +1,7 @@
 package authnz
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
@@ -42,7 +43,7 @@ func TestClaimsMiddlewareMultipleOIDCAccessClaim(t *testing.T) {
 			},
 		},
 	}
-	mw := ClaimsMiddleware(appConfig(auth))
+	mw := ClaimsMiddleware(appConfig(auth), nil)
 
 	t.Run("missing access claim is rejected", func(t *testing.T) {
 		user := &authsession.Identity{Provider: "corp", Subject: "alice"}
@@ -77,7 +78,7 @@ func TestClaimsMiddlewareMultipleOIDCAccessClaimMapKeyFallback(t *testing.T) {
 			},
 		},
 	}
-	mw := ClaimsMiddleware(appConfig(auth))
+	mw := ClaimsMiddleware(appConfig(auth), nil)
 
 	user := &authsession.Identity{Provider: "corp", Subject: "alice"}
 	expectNotAuthorized(t, mw(user))
@@ -102,7 +103,7 @@ func TestClaimsMiddlewareMultipleOIDCExplicitNameWinsOverMapKey(t *testing.T) {
 			},
 		},
 	}
-	mw := ClaimsMiddleware(appConfig(auth))
+	mw := ClaimsMiddleware(appConfig(auth), nil)
 
 	// provider "sso" is checked...
 	user := &authsession.Identity{Provider: "sso", Subject: "alice"}
@@ -125,7 +126,7 @@ func TestClaimsMiddlewareLegacyOIDCAccessClaim(t *testing.T) {
 			},
 		},
 	}
-	mw := ClaimsMiddleware(appConfig(auth))
+	mw := ClaimsMiddleware(appConfig(auth), nil)
 
 	user := &authsession.Identity{Provider: "legacy-oidc", Subject: "alice"}
 	expectNotAuthorized(t, mw(user))
@@ -151,7 +152,7 @@ func TestClaimsMiddlewareNoAccessClaimConfigured(t *testing.T) {
 			},
 		},
 	}
-	mw := ClaimsMiddleware(appConfig(auth))
+	mw := ClaimsMiddleware(appConfig(auth), nil)
 
 	t.Run("basic auth provider without OIDC config is allowed", func(t *testing.T) {
 		user := &authsession.Identity{Provider: authconfig.BasicAuthProvider, Subject: "bob"}
@@ -169,7 +170,7 @@ func TestClaimsMiddlewareNoAccessClaimConfigured(t *testing.T) {
 }
 
 func TestClaimsMiddlewareNilUserNotAuthenticated(t *testing.T) {
-	mw := ClaimsMiddleware(appConfig(authconfig.AuthConfig{}))
+	mw := ClaimsMiddleware(appConfig(authconfig.AuthConfig{}), nil)
 	err := mw(nil)
 	if err == nil {
 		t.Fatal("expected an error for nil user, got nil")
@@ -193,7 +194,7 @@ func TestClaimsMiddlewareAdminElevationUntouched(t *testing.T) {
 			},
 		},
 	}
-	mw := ClaimsMiddleware(appConfig(auth))
+	mw := ClaimsMiddleware(appConfig(auth), nil)
 
 	t.Run("basic auth admin user becomes admin", func(t *testing.T) {
 		user := &authsession.Identity{Provider: authconfig.BasicAuthProvider, Subject: "admin"}
@@ -214,4 +215,33 @@ func TestClaimsMiddlewareAdminElevationUntouched(t *testing.T) {
 			t.Error("OIDC user must not be elevated to admin by username")
 		}
 	})
+}
+
+// A session or an API token made before an admin revoked somebody's access
+// still carries its claims; the check has to ask on every request.
+func TestClaimsMiddlewareRefusesARevokedUser(t *testing.T) {
+	revoked := map[string]bool{"alice": true}
+	mw := ClaimsMiddleware(appConfig(authconfig.AuthConfig{}), func(subject string) (bool, error) {
+		return revoked[subject], nil
+	})
+
+	expectNotAuthorized(t, mw(&authsession.Identity{Provider: authconfig.SimpleAuthProvider, Subject: "alice"}))
+	if err := mw(&authsession.Identity{Provider: authconfig.SimpleAuthProvider, Subject: "bob"}); err != nil {
+		t.Errorf("somebody else was refused: %v", err)
+	}
+
+	delete(revoked, "alice")
+	if err := mw(&authsession.Identity{Provider: authconfig.SimpleAuthProvider, Subject: "alice"}); err != nil {
+		t.Errorf("alice was refused after getting access back: %v", err)
+	}
+}
+
+// Not knowing whether the access was revoked must not let the request through.
+func TestClaimsMiddlewareFailsClosedWithoutTheUsers(t *testing.T) {
+	mw := ClaimsMiddleware(appConfig(authconfig.AuthConfig{}), func(string) (bool, error) {
+		return false, errors.New("connection refused")
+	})
+	if err := mw(&authsession.Identity{Provider: authconfig.SimpleAuthProvider, Subject: "alice"}); err == nil {
+		t.Error("the request went through without knowing whether alice was revoked")
+	}
 }

@@ -123,14 +123,25 @@ func recordLogin(storageBackend storage.Storage, deviceManager *devices.DeviceMa
 // The users row says which provider a subject came from. Somebody who signed
 // in before the users were remembered has only their devices to say so. Basic
 // and simple auth check the same configured users, so they count as one.
+//
+// It also refuses somebody whose access an admin revoked, whichever provider
+// let them in; see userDisabled for the requests of a session they still have.
 func checkLogin(storageBackend storage.Storage) func(*authsession.Identity) error {
 	return func(identity *authsession.Identity) error {
 		var known []string
 		user, err := storageBackend.GetUser(identity.Subject)
+		if err == nil && user.Disabled {
+			return &authruntime.RefusedError{
+				Reason: "Your access was revoked. Ask an admin.",
+				Detail: fmt.Sprintf("the subject %q signed in through %q but an admin revoked their access", identity.Subject, identity.Provider),
+			}
+		}
 		switch {
-		case err == nil:
+		// a row an admin made for somebody who never signed in names no
+		// provider; the devices have to say, as for no row at all
+		case err == nil && user.Provider != "":
 			known = append(known, user.Provider)
-		case errors.Is(err, storage.ErrUserNotFound):
+		case err == nil || errors.Is(err, storage.ErrUserNotFound):
 			devices, err := storageBackend.List(identity.Subject)
 			if err != nil {
 				return fmt.Errorf("failed to read the devices of %q to check the sign-in: %w", identity.Subject, err)
@@ -154,6 +165,23 @@ func checkLogin(storageBackend storage.Storage) func(*authsession.Identity) erro
 			}
 		}
 		return nil
+	}
+}
+
+// userDisabled says whether an admin revoked somebody's access. It is asked on
+// every request, so that a session or an API token made before the revocation
+// stops working with it.
+func userDisabled(storageBackend storage.UserStorage) func(string) (bool, error) {
+	return func(subject string) (bool, error) {
+		user, err := storageBackend.GetUser(subject)
+		switch {
+		case err == nil:
+			return user.Disabled, nil
+		case errors.Is(err, storage.ErrUserNotFound):
+			return false, nil
+		default:
+			return false, err
+		}
 	}
 }
 
@@ -198,7 +226,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 	}))
 
 	// Authentication middleware
-	claims := authnz.ClaimsMiddleware(conf)
+	claims := authnz.ClaimsMiddleware(conf, userDisabled(storageBackend))
 	// What a person can change about their own sign-in: their password, an
 	// authenticator app, passkeys. All three need a built-in provider to
 	// belong to - with an identity provider they are its business.

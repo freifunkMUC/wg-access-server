@@ -187,12 +187,20 @@ refused: it would block your own devices and sign you out halfway through. It is
 recorded in the [audit log](https://www.freie-netze.org/wg-access-server/audit/) as `user.revoke`
 with what it took.
 
-What it does **not** do is stop them from signing in again. If their identity provider still lets
-them in, they get a new session, and with it they can delete a blocked device and add a new one: a
-block belongs to the device, not to the person. Deleting the user here does not stop that either.
-What keeps them out is the sign-in: removing them at their identity provider, from the `users` of
-basic or simple auth, or from what `accessClaim` or the GitHub organizations, teams and users allow.
-Removing them there does not end a session they already have: that lasts until `sessionStore.maxAge`
+It also **keeps them from signing in again**, whichever provider lets them in: the server remembers
+that their access was revoked, refuses the sign-in, and refuses any session or API token of theirs
+that is still around. Lifting the block on one of their devices (under _admin_ → _Devices_) is what
+gives the sign-in back. This is what stops them from deleting a blocked device and adding a new one.
+It is a record kept here, in the server's database; it does not replace removing them at their
+identity provider.
+
+**Deleting the user does not do this.** It forgets them, including that their access was revoked, so
+whoever the provider still lets in signs in again as a new user. Revoke first and delete only when the
+person is gone from the provider as well.
+
+What keeps somebody out for good is the sign-in: removing them at their identity provider, from the
+`users` of basic or simple auth, or from what `accessClaim` or the GitHub organizations, teams and
+users allow. Removing them there does not end a session they already have: that lasts until `sessionStore.maxAge`
 (30 days by default), and an API token until it expires - see
 [How long access outlasts a removal](https://www.freie-netze.org/wg-access-server/auth/#how-long-access-outlasts-a-removal).
 

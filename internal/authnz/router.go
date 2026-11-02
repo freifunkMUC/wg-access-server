@@ -235,12 +235,28 @@ func NewMiddleware(config authconfig.AuthConfig, claimsMiddleware authsession.Cl
 	return authMiddleware.Middleware, nil
 }
 
-func ClaimsMiddleware(conf *config.AppConfig) authsession.ClaimsMiddleware {
+// ClaimsMiddleware checks an identity against the current configuration and
+// state on every request, for web sessions and API tokens alike. disabled says
+// whether an admin revoked somebody's access; it may be nil. A failure to
+// tell refuses the request: the check must not fail open.
+func ClaimsMiddleware(conf *config.AppConfig, disabled func(subject string) (bool, error)) authsession.ClaimsMiddleware {
 	return func(user *authsession.Identity) error {
 		if user == nil {
 			return &LoginError{
 				msg:  "User is not logged in",
 				code: NotAuthenticated,
+			}
+		}
+		if disabled != nil {
+			revoked, err := disabled(user.Subject)
+			if err != nil {
+				return fmt.Errorf("failed to check whether the access of %q was revoked: %w", user.Subject, err)
+			}
+			if revoked {
+				return &LoginError{
+					msg:  "User has no access",
+					code: NotAuthorized,
+				}
 			}
 		}
 		// restrict privilege elevation by username to basic and simple auth users only

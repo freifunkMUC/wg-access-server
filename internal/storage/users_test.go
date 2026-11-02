@@ -119,3 +119,75 @@ func TestUserStorage(t *testing.T) {
 		})
 	}
 }
+
+// Whether an admin revoked somebody's access has to survive a restart, and a
+// sign-in must not clear it: the provider has not changed its mind.
+func TestUserDisabled(t *testing.T) {
+	backends := map[string]string{
+		"memory":   "memory://",
+		"sqlite3":  "sqlite3://" + filepath.Join(t.TempDir(), "disabled.db"),
+		"postgres": os.Getenv("WG_TEST_POSTGRES_URI"),
+		"mysql":    os.Getenv("WG_TEST_MYSQL_URI"),
+	}
+
+	for name, uri := range backends {
+		if uri == "" {
+			continue
+		}
+		t.Run(name, func(t *testing.T) {
+			s, err := NewStorage(uri)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := s.Open(); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = s.Close() })
+
+			known, never := "disabled-test-known-"+name, "disabled-test-never-"+name
+			t.Cleanup(func() { _ = s.DeleteUser(known); _ = s.DeleteUser(never) })
+
+			// enabling somebody who is not there creates nothing
+			if err := s.SetUserDisabled(never, false); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := s.GetUser(never); !errors.Is(err, ErrUserNotFound) {
+				t.Fatalf("GetUser after enabling a stranger = %v, want %v", err, ErrUserNotFound)
+			}
+
+			if err := s.SaveUser(&User{Subject: known, Provider: "simple", Name: "Alice", LastLogin: time.Now()}); err != nil {
+				t.Fatal(err)
+			}
+			if user, err := s.GetUser(known); err != nil || user.Disabled {
+				t.Fatalf("a new user = %+v, %v, want one who may sign in", user, err)
+			}
+
+			// somebody who signed in, and somebody who never did
+			for _, subject := range []string{known, never} {
+				if err := s.SetUserDisabled(subject, true); err != nil {
+					t.Fatal(err)
+				}
+				if user, err := s.GetUser(subject); err != nil || !user.Disabled {
+					t.Fatalf("GetUser(%s) after disabling = %+v, %v, want a disabled user", subject, user, err)
+				}
+			}
+			if user, _ := s.GetUser(known); user.Provider != "simple" || user.Name != "Alice" {
+				t.Errorf("disabling changed more than the flag: %+v", user)
+			}
+
+			if err := s.SaveUser(&User{Subject: known, Provider: "simple", Name: "Alice", LastLogin: time.Now()}); err != nil {
+				t.Fatal(err)
+			}
+			if user, _ := s.GetUser(known); !user.Disabled {
+				t.Error("a sign-in cleared the flag")
+			}
+
+			if err := s.SetUserDisabled(known, false); err != nil {
+				t.Fatal(err)
+			}
+			if user, _ := s.GetUser(known); user.Disabled {
+				t.Error("the user is still disabled after being enabled")
+			}
+		})
+	}
+}

@@ -154,6 +154,17 @@ var migrations = []migration{
 			return db.Exec("UPDATE devices SET disabled = ? WHERE disabled IS NULL", false).Error
 		},
 	},
+	{
+		// Whether an admin took somebody's access away, so that revoking it
+		// outlasts the sessions and tokens it ended: the person could
+		// otherwise sign in again at once. The default is spelled out so
+		// that the users from before it are false rather than NULL, which
+		// 0003 failed to do for devices.disabled.
+		id: "0014_user_disabled",
+		apply: func(db *gorm.DB) error {
+			return db.AutoMigrate(&userV7{})
+		},
+	},
 }
 
 type migration struct {
@@ -423,6 +434,29 @@ type userV6 struct {
 }
 
 func (userV6) TableName() string {
+	return "users"
+}
+
+// userV7 is the users table as 0014_user_disabled left it.
+type userV7 struct {
+	Subject                string `gorm:"type:varchar(100);primaryKey"`
+	Provider               string
+	Name                   string
+	Email                  string
+	Policies               string
+	LastLogin              time.Time
+	PasswordHash           string
+	PasswordFrom           string
+	TotpSecret             string
+	TotpEnabledAt          *time.Time
+	TotpRecovery           string
+	TotpLastStep           int64
+	WebauthnChallenge      string
+	WebauthnChallengeUntil *time.Time
+	Disabled               bool `gorm:"not null;default:false"`
+}
+
+func (userV7) TableName() string {
 	return "users"
 }
 

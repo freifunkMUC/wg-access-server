@@ -102,8 +102,8 @@ func (d *UserService) DeleteUser(ctx context.Context, request *connect.Request[p
 // devices are blocked, their API tokens revoked and their sessions ended. It
 // is what an admin reaches for when a person leaves or a laptop is lost and
 // deleting the user would be too much - the devices keep their keys and
-// addresses, so lifting the blocks gives the access back without anybody
-// setting up their client anew.
+// addresses, so lifting a block gives the access back without anybody
+// setting up their client anew. The person is kept from signing in until then.
 func (d *UserService) RevokeAccess(ctx context.Context, request *connect.Request[proto.RevokeAccessReq]) (*connect.Response[proto.RevokeAccessRes], error) {
 	req := request.Msg
 	user, err := authsession.CurrentUser(ctx)
@@ -128,6 +128,12 @@ func (d *UserService) RevokeAccess(ctx context.Context, request *connect.Request
 	// while tokens are disabled, so that enabling them again cannot hand a
 	// revoked user a way in.
 	res := &proto.RevokeAccessRes{}
+
+	// The sign-in first of all: without it the person gets a new session the
+	// moment this one ends, and with it new devices.
+	if err := d.DeviceManager.DisableUser(req.GetName()); err != nil {
+		return nil, internalError(ctx, err, "failed to revoke the access of the user")
+	}
 
 	if d.Tokens != nil {
 		deleted, err := d.Tokens.DeleteForOwner(req.GetName())

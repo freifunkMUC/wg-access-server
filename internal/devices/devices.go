@@ -721,6 +721,16 @@ func (d *DeviceManager) SetDeviceAccess(user string, name string, change AccessC
 		expiresAt = change.ExpiresAt
 	}
 
+	// Lifting a block gives access back, and that includes signing in:
+	// RevokeAccess says that unblocking a device is the way back. If the
+	// device then cannot be changed, they may sign in again while it stays
+	// blocked, and the admin's retry finishes it.
+	if change.Disabled != nil && !*change.Disabled {
+		if err := d.storage.SetUserDisabled(user, false); err != nil {
+			return nil, fmt.Errorf("failed to let the user '%s' sign in again: %w", user, err)
+		}
+	}
+
 	changed, err := d.storage.SetAccess(device, disabled, expiresAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to change the access of the device: %w", err)
@@ -831,11 +841,15 @@ func (d *DeviceManager) ListUsers() ([]*User, error) {
 	users := []*User{}
 	byName := map[string]*User{}
 	for _, user := range stored {
-		lastLogin := user.LastLogin
 		listed := &User{
 			Name: user.Subject, DisplayName: user.Name,
-			LastLogin: &lastLogin, Policies: user.PolicyList(),
+			Policies:  user.PolicyList(),
 			TwoFactor: user.TwoFactorEnabled(),
+		}
+		// a user an admin disabled before they ever signed in has no login
+		if user.SignedIn() {
+			lastLogin := user.LastLogin
+			listed.LastLogin = &lastLogin
 		}
 		users = append(users, listed)
 		byName[user.Subject] = listed
@@ -884,6 +898,16 @@ func (d *DeviceManager) DeleteDevicesForUser(user string) error {
 	}
 
 	logrus.Infof("Deleted %d devices of user '%s'", len(deleted), user)
+	return nil
+}
+
+// DisableUser keeps somebody from signing in until an admin lifts a block on
+// one of their devices (SetDeviceAccess). Sessions and tokens they have are
+// refused as well; ending them is up to the caller.
+func (d *DeviceManager) DisableUser(subject string) error {
+	if err := d.storage.SetUserDisabled(subject, true); err != nil {
+		return fmt.Errorf("failed to disable the user '%s': %w", subject, err)
+	}
 	return nil
 }
 
