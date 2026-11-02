@@ -20,8 +20,8 @@ const nftTable = "wg_access_server"
 // into the ruleset as text, so it must not be able to end the string.
 var interfaceName = regexp.MustCompile(`^[A-Za-z0-9_.@:-]{1,15}$`)
 
-// nftablesRuleset returns the ruleset for options: the same rules the
-// iptables backend sets up, in the same order. It starts by declaring and
+// nftablesRuleset returns the ruleset for options: what the iptables backend
+// sets up, plus the access policies. It starts by declaring and
 // deleting the table, so that applying it replaces whatever an earlier start
 // left behind - in one transaction, with no moment without rules.
 func nftablesRuleset(options ForwardingOptions) (string, error) {
@@ -37,10 +37,19 @@ func nftablesRuleset(options ForwardingOptions) (string, error) {
 		}
 		cidr := prefix.Masked().String()
 		ip := f.keyword
+		// what a client sends comes from its VPN address or from a network
+		// behind its device
+		clients := nftAddresses(append([]string{cidr}, f.routed...))
+
+		// Answers from a network behind a device to a client that reached
+		// into it. Everything else from there is a client's own traffic.
+		if len(f.routed) > 0 {
+			forward = append(forward, fmt.Sprintf("%s saddr %s ct state established,related accept", ip, nftAddresses(f.routed)))
+		}
 
 		if options.ClientIsolation {
 			// reject traffic between devices
-			forward = append(forward, fmt.Sprintf("%s saddr %s %s daddr %s reject", ip, cidr, ip, cidr))
+			forward = append(forward, fmt.Sprintf("%s saddr %s %s daddr %s reject", ip, clients, ip, cidr))
 		}
 
 		policies, err := policiesOfFamily(options.Policies, f)
@@ -52,7 +61,7 @@ func nftablesRuleset(options ForwardingOptions) (string, error) {
 			// that is where the DNS proxy answers, and a policy is about the
 			// networks behind the server, not about the server itself.
 			for _, address := range addressesOfFamily(options.ServerAddresses, f) {
-				forward = append(forward, fmt.Sprintf("%s saddr %s %s daddr %s accept", ip, cidr, ip, address))
+				forward = append(forward, fmt.Sprintf("%s saddr %s %s daddr %s accept", ip, clients, ip, address))
 			}
 
 			var members []string
@@ -79,18 +88,19 @@ func nftablesRuleset(options ForwardingOptions) (string, error) {
 			forward = append(forward, fmt.Sprintf("%s saddr @%s reject", ip, all))
 		}
 
-		// accept client traffic to the allowed networks
-		for _, network := range f.allowed {
-			forward = append(forward, fmt.Sprintf("%s saddr %s %s daddr %s accept", ip, cidr, ip, network))
+		// accept client traffic to the allowed networks and to the ones
+		// behind the devices
+		for _, network := range f.destinations() {
+			forward = append(forward, fmt.Sprintf("%s saddr %s %s daddr %s accept", ip, clients, ip, network))
 		}
 		// without NAT, the answers come back to the clients' own addresses
 		if !f.nat {
 			for _, network := range f.allowed {
-				forward = append(forward, fmt.Sprintf("%s saddr %s %s daddr %s accept", ip, network, ip, cidr))
+				forward = append(forward, fmt.Sprintf("%s saddr %s %s daddr %s accept", ip, network, ip, clients))
 			}
 		}
 		// and reject everything else the clients send
-		forward = append(forward, fmt.Sprintf("%s saddr %s reject", ip, cidr))
+		forward = append(forward, fmt.Sprintf("%s saddr %s reject", ip, clients))
 
 		if options.GatewayIface != "" && f.nat {
 			postrouting = append(postrouting, fmt.Sprintf("%s saddr %s oifname %q masquerade", ip, cidr, options.GatewayIface))
@@ -117,6 +127,15 @@ func nftablesRuleset(options ForwardingOptions) (string, error) {
 	return b.String(), nil
 }
 
+// nftAddresses writes networks as one match: a single one as it is, several
+// as an anonymous set.
+func nftAddresses(networks []string) string {
+	if len(networks) == 1 {
+		return networks[0]
+	}
+	return "{ " + strings.Join(networks, ", ") + " }"
+}
+
 // policySetName is the set holding the devices of one policy's members.
 func policySetName(policy string, f family) string {
 	return fmt.Sprintf("policy_%s_%s", policy, f.keyword)
@@ -130,9 +149,11 @@ func policyMembersSetName(f family) string {
 	return fmt.Sprintf("members_%s", f.keyword)
 }
 
-// nftSet declares a set of addresses. An empty one is declared all the same -
-// a policy nobody is in must exist as a set, or the rules naming it do not
-// load.
+// nftSet declares a set of addresses and networks: the devices of a policy's
+// members and the networks behind them. An empty one is declared all the same
+// - a policy nobody is in must exist as a set, or the rules naming it do not
+// load. auto-merge lets elements overlap instead of failing the whole
+// ruleset, should storage ever hold such routes.
 func nftSet(name string, f family, addresses []string) string {
 	kind := "ipv4_addr"
 	if f.keyword == "ip6" {
@@ -140,7 +161,7 @@ func nftSet(name string, f family, addresses []string) string {
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "\tset %s {\n\t\ttype %s\n", name, kind)
+	fmt.Fprintf(&b, "\tset %s {\n\t\ttype %s\n\t\tflags interval\n\t\tauto-merge\n", name, kind)
 	if len(addresses) > 0 {
 		fmt.Fprintf(&b, "\t\telements = { %s }\n", strings.Join(addresses, ", "))
 	}
@@ -169,7 +190,7 @@ func policiesOfFamily(policies []Policy, f family) ([]Policy, error) {
 		reduced = append(reduced, Policy{
 			Name:       policy.Name,
 			AllowedIPs: networks,
-			Members:    addressesOfFamily(policy.Members, f),
+			Members:    networksOfFamily(policy.Members, f),
 		})
 	}
 	return reduced, nil
@@ -189,6 +210,41 @@ func prefixesOfFamily(networks []string, f family) ([]string, error) {
 		}
 	}
 	return kept, nil
+}
+
+// networksOfFamily keeps the addresses and networks of one address family: a
+// device's address as a bare address, a network behind it as a network.
+// Unparsable entries are left out, like in addressesOfFamily.
+func networksOfFamily(networks []string, f family) []string {
+	kept := make([]string, 0, len(networks))
+	for _, network := range networks {
+		prefix, err := netip.ParsePrefix(strings.TrimSpace(network))
+		if err != nil {
+			addr, err := netip.ParseAddr(strings.TrimSpace(network))
+			if err != nil {
+				continue
+			}
+			prefix = netip.PrefixFrom(addr, addr.BitLen())
+		}
+		addr := prefix.Addr().Unmap()
+		if addr.Is4() != (f.keyword == "ip") {
+			continue
+		}
+		bits := prefix.Bits()
+		if prefix.Addr().Is4In6() {
+			// an IPv4 network written in IPv6
+			if bits < 96 {
+				continue
+			}
+			bits -= 96
+		}
+		if bits == addr.BitLen() {
+			kept = append(kept, addr.String())
+		} else {
+			kept = append(kept, netip.PrefixFrom(addr, bits).Masked().String())
+		}
+	}
+	return kept
 }
 
 // addressesOfFamily keeps the addresses of one address family, as bare

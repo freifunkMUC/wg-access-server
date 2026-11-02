@@ -167,3 +167,35 @@ func TestFirewallIsToldOnlyAboutRealChanges(t *testing.T) {
 		t.Error("the new policy did not reach the firewall")
 	}
 }
+
+// What comes from the networks behind a device is the device's traffic, so a
+// policy has to apply to those networks as well as to the device's address.
+func TestFirewallStateAddsTheNetworksBehindAMembersDevice(t *testing.T) {
+	manager, s, states := policyManager(t)
+
+	if err := s.SaveUser(&storage.User{Subject: "alice", Policies: "staff"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveUser(&storage.User{Subject: "carol"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, device := range []*storage.Device{
+		{Owner: "alice", Name: "site", PublicKey: testDeviceKey(t, 1), Address: "10.44.0.2/32", Routes: "192.168.5.0/24, 2001:db8:5::/48"},
+		{Owner: "carol", Name: "site", PublicKey: testDeviceKey(t, 2), Address: "10.44.0.3/32", Routes: "192.168.6.0/24"},
+	} {
+		if err := s.Save(device); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := manager.sync(); err != nil {
+		t.Fatal(err)
+	}
+
+	state := lastState(t, states)
+	if got := strings.Join(state.Policies["staff"], " "); got != "10.44.0.2/32 192.168.5.0/24 2001:db8:5::/48" {
+		t.Errorf("staff = %q, want alice's device and the networks behind it", got)
+	}
+	if got := strings.Join(state.Routed, " "); got != "192.168.5.0/24 192.168.6.0/24 2001:db8:5::/48" {
+		t.Errorf("routed = %q, want the networks behind both devices", got)
+	}
+}

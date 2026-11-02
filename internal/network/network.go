@@ -102,6 +102,13 @@ type ForwardingOptions struct {
 	AllowedIPs      []string
 	allowedIPv4s    []string
 	allowedIPv6s    []string
+	// Routed are the networks behind devices. Every client may reach them,
+	// on top of AllowedIPs. Traffic from them is the traffic of the device
+	// they are behind: client isolation, the device's policy or AllowedIPs,
+	// and the final reject apply to it as to the device's own address.
+	Routed      []string
+	routedIPv4s []string
+	routedIPv6s []string
 	// Policies restrict what the devices of the people in them may reach,
 	// instead of AllowedIPs. A device whose owner is in no policy keeps
 	// AllowedIPs. Only the nftables backend has them.
@@ -137,9 +144,12 @@ func ValidPolicyName(name string) bool {
 	return policyNamePattern.MatchString(name)
 }
 
-// The chains wg-access-server owns in the iptables backend.
+// The chains wg-access-server owns in the iptables backend. The forward chain
+// sends whatever comes from a client - from the VPN network or from a network
+// behind a device - to the clients chain, which says where it may go.
 const (
 	forwardChain     = "WG_ACCESS_SERVER_FORWARD"
+	clientsChain     = "WG_ACCESS_SERVER_CLIENTS"
 	postroutingChain = "WG_ACCESS_SERVER_POSTROUTING"
 )
 
@@ -177,7 +187,7 @@ func ConfigureForwarding(options ForwardingOptions) error {
 		return nil
 	}
 
-	options, err := splitAllowedIPs(options)
+	options, err := splitByFamily(options)
 	if err != nil {
 		return err
 	}
@@ -201,14 +211,27 @@ type family struct {
 	keyword string
 	cidr    string
 	allowed []string
+	routed  []string
 	nat     bool
+}
+
+// sources are the networks a client's traffic comes from: the VPN network
+// and the networks behind the devices.
+func (f family) sources() []string {
+	return append([]string{f.cidr}, f.routed...)
+}
+
+// destinations are the networks every client may reach unless a policy says
+// otherwise: the allowed ones and the ones behind the devices.
+func (f family) destinations() []string {
+	return append(append([]string{}, f.allowed...), f.routed...)
 }
 
 // families returns the address families the server hands out addresses in.
 func (options ForwardingOptions) families() []family {
 	all := []family{
-		{iptables.ProtocolIPv4, "ip", options.CIDR, options.allowedIPv4s, options.NAT44},
-		{iptables.ProtocolIPv6, "ip6", options.CIDRv6, options.allowedIPv6s, options.NAT66},
+		{iptables.ProtocolIPv4, "ip", options.CIDR, options.allowedIPv4s, options.routedIPv4s, options.NAT44},
+		{iptables.ProtocolIPv6, "ip6", options.CIDRv6, options.allowedIPv6s, options.routedIPv6s, options.NAT66},
 	}
 	configured := make([]family, 0, len(all))
 	for _, f := range all {
@@ -234,23 +257,36 @@ func configureIPTablesFamily(options ForwardingOptions, f family) error {
 		return fmt.Errorf("failed to init iptables: %w", err)
 	}
 
-	var forward [][]string
-	if options.ClientIsolation {
-		// Reject inter-device traffic
-		forward = append(forward, []string{"-s", f.cidr, "-d", f.cidr, "-j", "REJECT"})
+	var forward, clients [][]string
+	// Answers from a network behind a device to a client that reached into
+	// it. Everything else from there is a client's own traffic, below.
+	for _, routed := range f.routed {
+		forward = append(forward, []string{"-s", routed, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"})
 	}
-	// Accept client traffic for given allowed ips
-	for _, allowedCIDR := range f.allowed {
-		forward = append(forward, []string{"-s", f.cidr, "-d", allowedCIDR, "-j", "ACCEPT"})
+	// Whatever a client sends - from its VPN address or from a network
+	// behind its device - goes through the same rules
+	for _, source := range f.sources() {
+		forward = append(forward, []string{"-s", source, "-j", clientsChain})
 	}
 	// Accept return traffic when NAT is disabled
 	if !f.nat {
 		for _, allowedCIDR := range f.allowed {
-			forward = append(forward, []string{"-s", allowedCIDR, "-d", f.cidr, "-j", "ACCEPT"})
+			for _, client := range f.sources() {
+				forward = append(forward, []string{"-s", allowedCIDR, "-d", client, "-j", "ACCEPT"})
+			}
 		}
 	}
+
+	if options.ClientIsolation {
+		// Reject inter-device traffic
+		clients = append(clients, []string{"-d", f.cidr, "-j", "REJECT"})
+	}
+	// Accept client traffic for given allowed ips
+	for _, destination := range f.destinations() {
+		clients = append(clients, []string{"-d", destination, "-j", "ACCEPT"})
+	}
 	// And reject everything else
-	forward = append(forward, []string{"-s", f.cidr, "-j", "REJECT"})
+	clients = append(clients, []string{"-j", "REJECT"})
 
 	var postrouting [][]string
 	if options.GatewayIface != "" && f.nat {
@@ -263,6 +299,7 @@ func configureIPTablesFamily(options ForwardingOptions, f family) error {
 	// without its rejects for a moment on every rebuild, and open for good
 	// if one of the additions failed.
 	if err := restoreChains(ipt.Proto(), []chainRules{
+		{"filter", clientsChain, clients},
 		{"filter", forwardChain, forward},
 		{"nat", postroutingChain, postrouting},
 	}); err != nil {
@@ -309,54 +346,82 @@ func restoreChains(protocol iptables.Protocol, chains []chainRules) error {
 	return nil
 }
 
-// restoreInput writes the chains in the format of iptables-restore. A rule
-// that is already there is left out, as AppendUnique did.
+// restoreInput writes the chains in the format of iptables-restore, the
+// chains of one table in one commit: a chain and the rules that jump to it
+// arrive together. A rule that is already there is left out, as AppendUnique
+// did.
 func restoreInput(chains []chainRules) (string, error) {
-	var b strings.Builder
+	var tables []string
+	byTable := map[string][]chainRules{}
 	for _, c := range chains {
-		fmt.Fprintf(&b, "*%s\n:%s - [0:0]\n", c.table, c.chain)
-		seen := make(map[string]bool, len(c.rules))
-		for _, rule := range c.rules {
-			for _, arg := range rule {
-				// one line per rule: an argument must not start another one
-				if arg == "" || strings.ContainsAny(arg, " \t\r\n\"'") {
-					return "", fmt.Errorf("invalid argument %q for an iptables rule", arg)
+		if _, ok := byTable[c.table]; !ok {
+			tables = append(tables, c.table)
+		}
+		byTable[c.table] = append(byTable[c.table], c)
+	}
+
+	var b strings.Builder
+	for _, table := range tables {
+		fmt.Fprintf(&b, "*%s\n", table)
+		for _, c := range byTable[table] {
+			fmt.Fprintf(&b, ":%s - [0:0]\n", c.chain)
+		}
+		for _, c := range byTable[table] {
+			seen := make(map[string]bool, len(c.rules))
+			for _, rule := range c.rules {
+				for _, arg := range rule {
+					// one line per rule: an argument must not start another one
+					if arg == "" || strings.ContainsAny(arg, " \t\r\n\"'") {
+						return "", fmt.Errorf("invalid argument %q for an iptables rule", arg)
+					}
 				}
+				line := "-A " + c.chain + " " + strings.Join(rule, " ")
+				if seen[line] {
+					continue
+				}
+				seen[line] = true
+				b.WriteString(line + "\n")
 			}
-			line := "-A " + c.chain + " " + strings.Join(rule, " ")
-			if seen[line] {
-				continue
-			}
-			seen[line] = true
-			b.WriteString(line + "\n")
 		}
 		b.WriteString("COMMIT\n")
 	}
 	return b.String(), nil
 }
 
-// splitAllowedIPs sorts the allowed networks into IPv4 and IPv6 ones.
-func splitAllowedIPs(options ForwardingOptions) (ForwardingOptions, error) {
-	allowedIPv4s := make([]string, 0, len(options.AllowedIPs)/2)
-	allowedIPv6s := make([]string, 0, len(options.AllowedIPs)/2)
+// splitByFamily sorts the allowed and the routed networks into IPv4 and IPv6
+// ones.
+func splitByFamily(options ForwardingOptions) (ForwardingOptions, error) {
+	var err error
+	options.allowedIPv4s, options.allowedIPv6s, err = splitNetworks(options.AllowedIPs)
+	if err != nil {
+		return options, fmt.Errorf("invalid cidr in AllowedIPs: %w", err)
+	}
+	options.routedIPv4s, options.routedIPv6s, err = splitNetworks(options.Routed)
+	if err != nil {
+		return options, fmt.Errorf("invalid routed network: %w", err)
+	}
+	return options, nil
+}
 
-	for _, allowedCIDR := range options.AllowedIPs {
-		parsedAddress, parsedNetwork, err := net.ParseCIDR(allowedCIDR)
+// splitNetworks sorts networks into IPv4 and IPv6 ones.
+func splitNetworks(networks []string) (ipv4s, ipv6s []string, err error) {
+	ipv4s = make([]string, 0, len(networks))
+	ipv6s = make([]string, 0, len(networks))
+	for _, cidr := range networks {
+		parsedAddress, parsedNetwork, err := net.ParseCIDR(cidr)
 		if err != nil {
-			return options, fmt.Errorf("invalid cidr in AllowedIPs: %w", err)
+			return nil, nil, err
 		}
 		if as4 := parsedAddress.To4(); as4 != nil {
 			// Handle IPv4-mapped IPv6 addresses, if they go into ip6tables they don't get hit
 			// and go-iptables can't convert them (whereas commandline iptables can).
 			parsedNetwork.IP = as4
-			allowedIPv4s = append(allowedIPv4s, parsedNetwork.String())
+			ipv4s = append(ipv4s, parsedNetwork.String())
 		} else {
-			allowedIPv6s = append(allowedIPv6s, parsedNetwork.String())
+			ipv6s = append(ipv6s, parsedNetwork.String())
 		}
 	}
-	options.allowedIPv4s = allowedIPv4s
-	options.allowedIPv6s = allowedIPv6s
-	return options, nil
+	return ipv4s, ipv6s, nil
 }
 
 // removeIPTables takes out the chains a start with the iptables backend left
@@ -367,17 +432,21 @@ func removeIPTables() {
 		if err != nil {
 			continue
 		}
+		// The forward chain before the clients chain: it holds the jumps to it.
 		for _, chain := range []struct{ table, parent, name string }{
 			{"filter", "FORWARD", forwardChain},
+			{"filter", "", clientsChain},
 			{"nat", "POSTROUTING", postroutingChain},
 		} {
 			exists, err := ipt.ChainExists(chain.table, chain.name)
 			if err != nil || !exists {
 				continue
 			}
-			if err := ipt.DeleteIfExists(chain.table, chain.parent, "-j", chain.name); err != nil {
-				logrus.Warn(fmt.Errorf("failed to remove the jump to %s: %w", chain.name, err))
-				continue
+			if chain.parent != "" {
+				if err := ipt.DeleteIfExists(chain.table, chain.parent, "-j", chain.name); err != nil {
+					logrus.Warn(fmt.Errorf("failed to remove the jump to %s: %w", chain.name, err))
+					continue
+				}
 			}
 			if err := ipt.ClearAndDeleteChain(chain.table, chain.name); err != nil {
 				logrus.Warn(fmt.Errorf("failed to remove %s: %w", chain.name, err))
