@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"os/exec"
 	"regexp"
 	"strings"
 
@@ -233,12 +234,38 @@ func configureIPTablesFamily(options ForwardingOptions, f family) error {
 		return fmt.Errorf("failed to init iptables: %w", err)
 	}
 
-	// Cleanup our chains first so that we don't leak
-	// iptable rules when the network configuration changes.
-	if err := clearOrCreateChain(ipt, "filter", forwardChain); err != nil {
-		return err
+	var forward [][]string
+	if options.ClientIsolation {
+		// Reject inter-device traffic
+		forward = append(forward, []string{"-s", f.cidr, "-d", f.cidr, "-j", "REJECT"})
 	}
-	if err := clearOrCreateChain(ipt, "nat", postroutingChain); err != nil {
+	// Accept client traffic for given allowed ips
+	for _, allowedCIDR := range f.allowed {
+		forward = append(forward, []string{"-s", f.cidr, "-d", allowedCIDR, "-j", "ACCEPT"})
+	}
+	// Accept return traffic when NAT is disabled
+	if !f.nat {
+		for _, allowedCIDR := range f.allowed {
+			forward = append(forward, []string{"-s", allowedCIDR, "-d", f.cidr, "-j", "ACCEPT"})
+		}
+	}
+	// And reject everything else
+	forward = append(forward, []string{"-s", f.cidr, "-j", "REJECT"})
+
+	var postrouting [][]string
+	if options.GatewayIface != "" && f.nat {
+		postrouting = append(postrouting, []string{"-s", f.cidr, "-o", options.GatewayIface, "-j", "MASQUERADE"})
+	}
+
+	// Both chains are replaced in one iptables-restore: each table is
+	// swapped at once, and a rebuild that fails leaves the previous rules in
+	// place. Flushing the chain and adding the rules one by one left it
+	// without its rejects for a moment on every rebuild, and open for good
+	// if one of the additions failed.
+	if err := restoreChains(ipt.Proto(), []chainRules{
+		{"filter", forwardChain, forward},
+		{"nat", postroutingChain, postrouting},
+	}); err != nil {
 		return err
 	}
 
@@ -248,60 +275,64 @@ func configureIPTablesFamily(options ForwardingOptions, f family) error {
 	if err := ipt.AppendUnique("nat", "POSTROUTING", "-j", postroutingChain); err != nil {
 		return fmt.Errorf("failed to append POSTROUTING rule to nat chain: %w", err)
 	}
+	return nil
+}
 
-	if options.ClientIsolation {
-		// Reject inter-device traffic
-		if err := ipt.AppendUnique("filter", forwardChain, "-s", f.cidr, "-d", f.cidr, "-j", "REJECT"); err != nil {
-			return fmt.Errorf("failed to set ip tables rule: %w", err)
-		}
-	}
-	// Accept client traffic for given allowed ips
-	for _, allowedCIDR := range f.allowed {
-		if err := ipt.AppendUnique("filter", forwardChain, "-s", f.cidr, "-d", allowedCIDR, "-j", "ACCEPT"); err != nil {
-			return fmt.Errorf("failed to set ip tables rule: %w", err)
-		}
-	}
+// chainRules is the whole content of one of our chains.
+type chainRules struct {
+	table, chain string
+	rules        [][]string
+}
 
-	// Accept return traffic when NAT is disabled
-	if !f.nat {
-		for _, allowedCIDR := range f.allowed {
-			if err := ipt.AppendUnique("filter", forwardChain, "-s", allowedCIDR, "-d", f.cidr, "-j", "ACCEPT"); err != nil {
-				return fmt.Errorf("failed to set ip tables rule for return traffic: %w", err)
-			}
-		}
+// restoreChains replaces the content of the given chains, creating the ones
+// that do not exist yet. With --noflush, iptables-restore leaves everything
+// else alone and empties only the chains it declares.
+func restoreChains(protocol iptables.Protocol, chains []chainRules) error {
+	input, err := restoreInput(chains)
+	if err != nil {
+		return err
 	}
 
-	// And reject everything else
-	if err := ipt.AppendUnique("filter", forwardChain, "-s", f.cidr, "-j", "REJECT"); err != nil {
-		return fmt.Errorf("failed to set ip tables rule: %w", err)
+	command := "iptables-restore"
+	if protocol == iptables.ProtocolIPv6 {
+		command = "ip6tables-restore"
 	}
-
-	if options.GatewayIface != "" && f.nat {
-		if err := ipt.AppendUnique("nat", postroutingChain, "-s", f.cidr, "-o", options.GatewayIface, "-j", "MASQUERADE"); err != nil {
-			return fmt.Errorf("failed to set ip tables rule: %w", err)
-		}
+	path, err := exec.LookPath(command)
+	if err != nil {
+		return fmt.Errorf("failed to find %s: %w", command, err)
+	}
+	cmd := exec.Command(path, "--noflush", "--wait")
+	cmd.Stdin = strings.NewReader(input)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to set the iptables rules with %s: %w: %s", command, err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }
 
-func clearOrCreateChain(ipt *iptables.IPTables, table, chain string) error {
-	exists, err := ipt.ChainExists(table, chain)
-	if err != nil {
-		return fmt.Errorf("failed to read table %s: %w", table, err)
-	}
-	if exists {
-		err = ipt.ClearChain(table, chain)
-		if err != nil {
-			return fmt.Errorf("failed to clear chain %s in table %s: %w", chain, table, err)
+// restoreInput writes the chains in the format of iptables-restore. A rule
+// that is already there is left out, as AppendUnique did.
+func restoreInput(chains []chainRules) (string, error) {
+	var b strings.Builder
+	for _, c := range chains {
+		fmt.Fprintf(&b, "*%s\n:%s - [0:0]\n", c.table, c.chain)
+		seen := make(map[string]bool, len(c.rules))
+		for _, rule := range c.rules {
+			for _, arg := range rule {
+				// one line per rule: an argument must not start another one
+				if arg == "" || strings.ContainsAny(arg, " \t\r\n\"'") {
+					return "", fmt.Errorf("invalid argument %q for an iptables rule", arg)
+				}
+			}
+			line := "-A " + c.chain + " " + strings.Join(rule, " ")
+			if seen[line] {
+				continue
+			}
+			seen[line] = true
+			b.WriteString(line + "\n")
 		}
-	} else {
-		// Create our own chain for forwarding rules
-		err = ipt.NewChain(table, chain)
-		if err != nil {
-			return fmt.Errorf("failed to create chain %s in table %s: %w", chain, table, err)
-		}
+		b.WriteString("COMMIT\n")
 	}
-	return nil
+	return b.String(), nil
 }
 
 // splitAllowedIPs sorts the allowed networks into IPv4 and IPv6 ones.
