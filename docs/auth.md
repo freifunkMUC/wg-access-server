@@ -46,12 +46,15 @@ auth:
     # if not present. Need to be set when running in HA setup (more than one replica)
     secret: "<session store secret>"
     # How long a web session stays valid, as a duration such as "24h".
-    # Defaults to 720h (30 days). The claims of a session - whether the user
-    # is an admin and whether they still have access - are taken from the
-    # identity provider at login and are not re-checked afterwards, and there
-    # is no server-side session store to invalidate. This value is therefore
-    # also how long it takes for access revoked at the provider to take
-    # effect, so shorten it if that matters to you.
+    # Defaults to 720h (30 days). Sessions are kept in the server's storage,
+    # but the identity of a session - its claims, such as whether the user is
+    # an admin or has the `accessClaim` - is the one from sign-in and is not
+    # asked of the identity provider again. A session ends when its user is
+    # deleted or has their access revoked in the web UI, when they sign out,
+    # and when this time has passed. This value is therefore also how long it
+    # takes for access revoked or reduced at the provider to take effect, so
+    # shorten it if that matters to you. See "How long access outlasts a
+    # removal" below.
     maxAge: "720h"
     # Mark the session cookie as Secure so browsers only send it over HTTPS.
     # Defaults to false, because the web UI is also served over plain HTTP on
@@ -389,6 +392,21 @@ a warning in the log naming both providers.
   who signed in through it somebody of another provider. Keep the name. Deleting a user in the web
   UI frees their identifier, along with their devices and their API tokens.
 
+### How long access outlasts a removal
+
+Revoking or deleting a user in the web UI ends their sessions and tokens at once, but it does not stop
+them from signing in again: nothing is recorded per user, so whoever the provider still lets in gets a
+new session. What reaches a session or an API token that already exists, from outside the web UI:
+
+| Change | Web session | API token |
+| --- | --- | --- |
+| Removed from `simple.users`/`basic.users` | Stays valid until `sessionStore.maxAge` (30 days by default) | Stays valid until it expires, or for ever if created without an expiry |
+| Admin rights taken away: `adminUsername` changed (Simple/Basic) | At the next request after the server was restarted with the new value | Same |
+| Demoted, removed from a group or `accessClaim` withdrawn at an OIDC provider, GitHub organization or team | Stays valid until `sessionStore.maxAge`, with the claims it had at sign-in (`accessClaim` is checked against those) | Stays valid until it expires, with the claims of the session that created it |
+
+Until the session ends, the user stays signed in with those rights. To end them sooner, delete the user
+or revoke their access in the web UI, and remove them at the provider so that they cannot sign in again.
+
 ## API tokens
 
 With `enableApiTokens: true`, users can create tokens on the *API tokens* page of the web UI (the key
@@ -465,8 +483,10 @@ Some things worth knowing:
   a rename. Accounts of a GitHub Enterprise Server are kept apart from github.com ones.
 - The primary email address is shown in the web UI if GitHub verified it.
 - As with every provider, membership is checked when signing in. Removing somebody from the
-  organization takes effect when their web session ends (`sessionStore.maxAge`). Deleting the user in
-  the web UI removes their devices and API tokens and ends their sessions at once.
+  organization takes effect when their web session ends (`sessionStore.maxAge`), and their API tokens
+  keep working until they expire. Deleting the user in the web UI removes their devices and API tokens
+  and ends their sessions at once; it does not stop them from signing in again while GitHub still lets
+  them in.
 
 ## Login throttling
 
