@@ -117,7 +117,7 @@ export const Sessions = observer(function Sessions() {
     <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5" sx={{ flexGrow: 1 }}>
-          Signed in
+          Sessions
         </Typography>
         <Button variant="contained" startIcon={<LogoutIcon />} disabled={others === 0} onClick={endOthers}>
           Sign out everywhere else

@@ -193,7 +193,7 @@ what the provider actually sends.
 ## Changing your password
 
 With `basic` or `simple` auth the password comes from the config file, which only an admin can edit.
-Somebody signed in that way can now set their own instead, under the key icon in the navigation:
+Somebody signed in that way can now set their own instead, under *Account settings* in the account menu (the round button with your initials), tab *Password and two-factor*:
 
 - The **config file stays the list of who may sign in.** A password is only ever stored for a user it
   lists, so a stored password can never create an account.
@@ -227,7 +227,7 @@ so rather than pretending otherwise.
 A passkey is a credential the browser holds - in a laptop's own authenticator, on a phone, on a
 security key - and it is the better second factor, because it is bound to this site. A page
 pretending to be this one cannot ask for it, and there is nothing a person can be talked into reading
-out over the telephone. Somebody signing in with `simple` auth can register one under the key icon,
+out over the telephone. Somebody signing in with `simple` auth can register one under *Account settings*, *Password and two-factor*,
 as many as they like: one to carry, one in a drawer.
 
 - A credential id that is already registered is refused, whoever is asking. An authenticator picks
@@ -265,7 +265,7 @@ sign-in page will not ask for.
 ## Two-factor authentication
 
 Somebody signing in with `simple` auth can ask for a code from an authenticator app on top of their
-password, under the same key icon. It works anywhere, including over plain HTTP, which is why it is
+password, on the same tab. It works anywhere, including over plain HTTP, which is why it is
 here beside the passkeys. It is TOTP - RFC 6238, six digits, thirty seconds - so every
 authenticator app does it, and the server checks the step before and after the current one, because
 phones and servers rarely agree on the second.
@@ -285,7 +285,7 @@ phones and servers rarely agree on the second.
   their hashes are kept, so nothing here can show them again - and they are hashed with SHA-256
   rather than bcrypt, because they are long random strings and ten slow hashes per attempt would be
   a way to hold the server up.
-- **A fresh set can be asked for at any time**, under the same key icon, and it asks for the
+- **A fresh set can be asked for at any time**, on the same tab, and it asks for the
   password for the same reason turning it off does. The old codes stop working the moment the new
   ones are made. The authenticator app is not touched - the shared secret stays, so nothing has to
   be scanned again, and a code that has just signed somebody in stays used up. It is recorded as
@@ -338,9 +338,9 @@ hash, so whoever reads the database learns which sessions exist, not how to use 
     longer reads - it wants a session id, and there is none. They sign in again and are on the new
     scheme.
 
-### Where you are signed in
+### Sessions
 
-The shield in the navigation lists every browser that is signed in as you: what it said it was,
+The *Sessions* tab of *Account settings* (`/account/sessions`) lists every browser that is signed in as you: what it said it was,
 the address it came from, when it signed in and when it was last used. The one asking is marked
 **This browser**.
 
@@ -415,8 +415,7 @@ them sooner, revoke their access in the web UI, and remove them at the provider 
 
 ## API tokens
 
-With `enableApiTokens: true`, users can create tokens on the *API tokens* page of the web UI (the key
-icon) and use the API from scripts without a browser session:
+With `enableApiTokens: true`, users can create tokens on the *API tokens* tab of *Account settings* (`/account/tokens`) in the web UI and use the API from scripts without a browser session:
 
 ```sh
 curl -H "Authorization: Bearer wgas_..." -H 'Content-Type: application/json' -d '{}' \

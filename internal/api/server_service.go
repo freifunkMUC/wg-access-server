@@ -106,6 +106,8 @@ func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoR
 		TwoFactorEnabled:                s.TwoFactor != nil && s.TwoFactor.Enabled(user.Subject),
 		RecoveryCodesLeft:               recoveryCodesLeft(s.TwoFactor, user.Subject),
 		Passkeys:                        passkeyCount(s.Passkeys, user.Subject),
+		UserDisplayName:                 user.Name,
+		UserProvider:                    user.Provider,
 	}), nil
 }
 

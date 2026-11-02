@@ -91,7 +91,14 @@ type InfoRes struct {
 	// how many recovery codes it has left, so the UI can say when they run low
 	RecoveryCodesLeft int32 `protobuf:"varint,23,opt,name=recovery_codes_left,json=recoveryCodesLeft,proto3" json:"recovery_codes_left,omitempty"`
 	// how many passkeys this session's account has registered
-	Passkeys      int32 `protobuf:"varint,24,opt,name=passkeys,proto3" json:"passkeys,omitempty"`
+	Passkeys int32 `protobuf:"varint,24,opt,name=passkeys,proto3" json:"passkeys,omitempty"`
+	// the name the identity provider gave this account, for the account menu to
+	// greet them with. It may be empty (the built-in sign-in has none); the UI
+	// then falls back to subject.
+	UserDisplayName string `protobuf:"bytes,26,opt,name=user_display_name,json=userDisplayName,proto3" json:"user_display_name,omitempty"`
+	// the configured name of the provider this session signed in with, e.g.
+	// "simple" or the name of an OIDC provider
+	UserProvider  string `protobuf:"bytes,27,opt,name=user_provider,json=userProvider,proto3" json:"user_provider,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -287,12 +294,26 @@ func (x *InfoRes) GetPasskeys() int32 {
 	return 0
 }
 
+func (x *InfoRes) GetUserDisplayName() string {
+	if x != nil {
+		return x.UserDisplayName
+	}
+	return ""
+}
+
+func (x *InfoRes) GetUserProvider() string {
+	if x != nil {
+		return x.UserProvider
+	}
+	return ""
+}
+
 var File_server_proto protoreflect.FileDescriptor
 
 const file_server_proto_rawDesc = "" +
 	"\n" +
 	"\fserver.proto\x12\x05proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x0fbuildinfo.proto\"\t\n" +
-	"\aInfoReq\"\xa2\b\n" +
+	"\aInfoReq\"\xf3\b\n" +
 	"\aInfoRes\x12\x1d\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\tR\tpublicKey\x120\n" +
@@ -322,7 +343,9 @@ const file_server_proto_rawDesc = "" +
 	"\x17password_change_enabled\x18\x15 \x01(\bR\x15passwordChangeEnabled\x12,\n" +
 	"\x12two_factor_enabled\x18\x16 \x01(\bR\x10twoFactorEnabled\x12.\n" +
 	"\x13recovery_codes_left\x18\x17 \x01(\x05R\x11recoveryCodesLeft\x12\x1a\n" +
-	"\bpasskeys\x18\x18 \x01(\x05R\bpasskeysJ\x04\b\x04\x10\x05R\vhost_vpn_ip22\n" +
+	"\bpasskeys\x18\x18 \x01(\x05R\bpasskeys\x12*\n" +
+	"\x11user_display_name\x18\x1a \x01(\tR\x0fuserDisplayName\x12#\n" +
+	"\ruser_provider\x18\x1b \x01(\tR\fuserProviderJ\x04\b\x04\x10\x05R\vhost_vpn_ip22\n" +
 	"\x06Server\x12(\n" +
 	"\x04Info\x12\x0e.proto.InfoReq\x1a\x0e.proto.InfoRes\"\x00B5Z3github.com/freifunkMUC/wg-access-server/proto/protob\x06proto3"
 
