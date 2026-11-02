@@ -170,6 +170,42 @@ func TestUpgradeFromBeforeMigrations(t *testing.T) {
 	}
 }
 
+// A device from before 0003 has no value in disabled. Taking its owner's
+// access away has to block it all the same.
+func TestBlockForOwnerAfterUpgrade(t *testing.T) {
+	for backend, uri := range freshDatabases(t) {
+		t.Run(backend, func(t *testing.T) {
+			old := openRaw(t, uri)
+			if err := old.AutoMigrate(&deviceV1{}); err != nil {
+				t.Fatal(err)
+			}
+			if err := old.Create(&deviceV1{
+				Owner: "alice", Name: "laptop", PublicKey: testKey("old-device"),
+				Address: "10.44.0.2/32", CreatedAt: time.Now(),
+			}).Error; err != nil {
+				t.Fatal(err)
+			}
+
+			s := openStorage(t, uri)
+
+			blocked, err := s.BlockForOwner("alice")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(blocked) != 1 {
+				t.Fatalf("blocked %d devices, want the one from before the upgrade", len(blocked))
+			}
+			device, err := s.Get("alice", "laptop")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !device.Disabled {
+				t.Error("the device from before the upgrade is not blocked")
+			}
+		})
+	}
+}
+
 // Starting a second time finds nothing to do.
 func TestMigrationsRunOnce(t *testing.T) {
 	db := openRaw(t, "sqlite3://"+filepath.Join(t.TempDir(), "once.db"))

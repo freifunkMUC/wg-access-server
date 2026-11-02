@@ -3,6 +3,7 @@ package storage
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -68,12 +69,13 @@ func TestUpgradeWidensTheSessionID(t *testing.T) {
 		t.Run(backend, func(t *testing.T) {
 			db := openRaw(t, uri)
 
-			// the world as it was before this fix: every migration up to and
-			// including 0011, which is where the column was varchar(32)
-			old := migrations[:len(migrations)-1]
-			if old[len(old)-1].id != "0011_totp_last_step" {
-				t.Fatalf("the migration before the widening is %q, not 0011 - this test needs updating", old[len(old)-1].id)
+			// the world as it was before this fix: every migration before
+			// 0012, which is where the column was varchar(32)
+			widening := slices.IndexFunc(migrations, func(m migration) bool { return m.id == "0012_session_id_length" })
+			if widening < 0 {
+				t.Fatal("0012_session_id_length is missing - this test needs updating")
 			}
+			old := migrations[:widening]
 			if err := runMigrations(db, old); err != nil {
 				t.Fatal(err)
 			}
