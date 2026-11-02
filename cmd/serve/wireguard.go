@@ -120,9 +120,6 @@ func (cmd *servecmd) startWireGuard(conf *config.AppConfig, vpn vpnAddressing) (
 // configuration allows them to reach, plus what changes while the server runs
 // - the networks routed through devices, and who is in which access policy.
 func forwardingOptions(conf *config.AppConfig, vpn vpnAddressing, state devices.FirewallState) network.ForwardingOptions {
-	allowed := make([]string, 0, len(conf.VPN.AllowedIPs)+len(state.Routed))
-	allowed = append(allowed, conf.VPN.AllowedIPs...)
-	allowed = append(allowed, state.Routed...)
 
 	// Every policy the configuration has, whether anybody is in it or not: a
 	// policy that loses its last member has to lose its rules, and a set that
@@ -148,7 +145,8 @@ func forwardingOptions(conf *config.AppConfig, vpn vpnAddressing, state devices.
 		NAT44:           conf.VPN.NAT44,
 		NAT66:           conf.VPN.NAT66,
 		ClientIsolation: conf.VPN.ClientIsolation,
-		AllowedIPs:      allowed,
+		AllowedIPs:      conf.VPN.AllowedIPs,
+		Routed:          state.Routed,
 		Policies:        policies,
 		ServerAddresses: serverAddresses,
 		Firewall:        conf.VPN.Firewall,

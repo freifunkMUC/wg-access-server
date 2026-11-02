@@ -16,7 +16,8 @@ import (
 const inNetns = "WG_TEST_IN_NETNS"
 
 // netnsTest runs the test again in a network namespace of its own, where it
-// can set up firewall rules without root and without touching the machine.
+// can set up firewall rules without root and without touching the machine. A
+// mount namespace of its own lets it add network namespaces with "ip netns".
 //
 // It returns true in the inner run, where the body belongs. The CI sets
 // WG_TEST_NFTABLES, so that a runner without the tools fails the test instead
@@ -36,11 +37,11 @@ func netnsTest(t *testing.T, tools ...string) bool {
 			skip("%s is not installed", tool)
 		}
 	}
-	if err := exec.Command("unshare", "--net", "--map-root-user", "true").Run(); err != nil {
+	if err := exec.Command("unshare", "--net", "--mount", "--map-root-user", "true").Run(); err != nil {
 		skip("cannot create a network namespace: %v", err)
 	}
 
-	inner := exec.Command("unshare", "--net", "--map-root-user",
+	inner := exec.Command("unshare", "--net", "--mount", "--map-root-user",
 		os.Args[0], "-test.run", "^"+t.Name()+"$", "-test.v")
 	inner.Env = append(os.Environ(), inNetns+"=1")
 	out, err := inner.CombinedOutput()
@@ -51,6 +52,7 @@ func netnsTest(t *testing.T, tools ...string) bool {
 
 // The rules the iptables backend sets up, in the order it sets them up: an
 // accept for an allowed network only counts before the reject that follows.
+// What the clients send goes to a chain of its own, which ends in a reject.
 func TestIPTablesRules(t *testing.T) {
 	if !netnsTest(t, "iptables", "ip6tables") {
 		return
@@ -70,9 +72,10 @@ func TestIPTablesRules(t *testing.T) {
 
 	assert.Equal(t, []string{
 		"-A FORWARD -j WG_ACCESS_SERVER_FORWARD",
-		"-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -d 10.44.0.0/24 -j REJECT --reject-with icmp-port-unreachable",
-		"-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -d 192.168.1.0/24 -j ACCEPT",
-		"-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -j REJECT --reject-with icmp-port-unreachable",
+		"-A WG_ACCESS_SERVER_CLIENTS -d 10.44.0.0/24 -j REJECT --reject-with icmp-port-unreachable",
+		"-A WG_ACCESS_SERVER_CLIENTS -d 192.168.1.0/24 -j ACCEPT",
+		"-A WG_ACCESS_SERVER_CLIENTS -j REJECT --reject-with icmp-port-unreachable",
+		"-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -j WG_ACCESS_SERVER_CLIENTS",
 	}, rules(t, "iptables-save", "filter"))
 
 	assert.Equal(t, []string{
@@ -83,10 +86,11 @@ func TestIPTablesRules(t *testing.T) {
 	// without NAT the answers come back to the clients' own addresses
 	assert.Equal(t, []string{
 		"-A FORWARD -j WG_ACCESS_SERVER_FORWARD",
-		"-A WG_ACCESS_SERVER_FORWARD -s fd48:4c4:7aa9::/64 -d fd48:4c4:7aa9::/64 -j REJECT --reject-with icmp6-port-unreachable",
-		"-A WG_ACCESS_SERVER_FORWARD -s fd48:4c4:7aa9::/64 -d 2001:db8::/32 -j ACCEPT",
+		"-A WG_ACCESS_SERVER_CLIENTS -d fd48:4c4:7aa9::/64 -j REJECT --reject-with icmp6-port-unreachable",
+		"-A WG_ACCESS_SERVER_CLIENTS -d 2001:db8::/32 -j ACCEPT",
+		"-A WG_ACCESS_SERVER_CLIENTS -j REJECT --reject-with icmp6-port-unreachable",
+		"-A WG_ACCESS_SERVER_FORWARD -s fd48:4c4:7aa9::/64 -j WG_ACCESS_SERVER_CLIENTS",
 		"-A WG_ACCESS_SERVER_FORWARD -s 2001:db8::/32 -d fd48:4c4:7aa9::/64 -j ACCEPT",
-		"-A WG_ACCESS_SERVER_FORWARD -s fd48:4c4:7aa9::/64 -j REJECT --reject-with icmp6-port-unreachable",
 	}, rules(t, "ip6tables-save", "filter"))
 
 	// NAT66 is off, so nothing is masqueraded
@@ -111,9 +115,64 @@ func TestIPTablesRulesAreReplaced(t *testing.T) {
 
 	assert.Equal(t, []string{
 		"-A FORWARD -j WG_ACCESS_SERVER_FORWARD",
-		"-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -d 10.9.0.0/16 -j ACCEPT",
-		"-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -j REJECT --reject-with icmp-port-unreachable",
+		"-A WG_ACCESS_SERVER_CLIENTS -d 10.9.0.0/16 -j ACCEPT",
+		"-A WG_ACCESS_SERVER_CLIENTS -j REJECT --reject-with icmp-port-unreachable",
+		"-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -j WG_ACCESS_SERVER_CLIENTS",
 	}, rules(t, "iptables-save", "filter"))
+}
+
+// Traffic from a network behind a device is that device's traffic: it goes
+// through the same rules as the VPN network - isolation, the allowed
+// networks, the final reject - instead of past them. Only answers to a
+// client that reached into the network come back regardless. Every client
+// may still reach the network.
+func TestIPTablesRoutedNetworks(t *testing.T) {
+	if !netnsTest(t, "iptables", "ip6tables") {
+		return
+	}
+
+	err := ConfigureForwarding(ForwardingOptions{
+		Firewall:        FirewallIPTables,
+		CIDR:            "10.44.0.0/24",
+		CIDRv6:          "fd48:4c4:7aa9::/64",
+		NAT44:           false,
+		NAT66:           true,
+		ClientIsolation: true,
+		AllowedIPs:      []string{"192.168.1.0/24", "2001:db8::/32"},
+		Routed:          []string{"192.168.5.0/24", "2001:db8:5::/48"},
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{
+		"-A FORWARD -j WG_ACCESS_SERVER_FORWARD",
+		"-A WG_ACCESS_SERVER_CLIENTS -d 10.44.0.0/24 -j REJECT --reject-with icmp-port-unreachable",
+		"-A WG_ACCESS_SERVER_CLIENTS -d 192.168.1.0/24 -j ACCEPT",
+		"-A WG_ACCESS_SERVER_CLIENTS -d 192.168.5.0/24 -j ACCEPT",
+		"-A WG_ACCESS_SERVER_CLIENTS -j REJECT --reject-with icmp-port-unreachable",
+		"-A WG_ACCESS_SERVER_FORWARD -s 192.168.5.0/24 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT",
+		"-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -j WG_ACCESS_SERVER_CLIENTS",
+		"-A WG_ACCESS_SERVER_FORWARD -s 192.168.5.0/24 -j WG_ACCESS_SERVER_CLIENTS",
+		// without NAT the answers come back to the clients' own addresses,
+		// and to the networks behind their devices
+		"-A WG_ACCESS_SERVER_FORWARD -s 192.168.1.0/24 -d 10.44.0.0/24 -j ACCEPT",
+		"-A WG_ACCESS_SERVER_FORWARD -s 192.168.1.0/24 -d 192.168.5.0/24 -j ACCEPT",
+	}, rules(t, "iptables-save", "filter"))
+
+	assert.Equal(t, []string{
+		"-A FORWARD -j WG_ACCESS_SERVER_FORWARD",
+		"-A WG_ACCESS_SERVER_CLIENTS -d fd48:4c4:7aa9::/64 -j REJECT --reject-with icmp6-port-unreachable",
+		"-A WG_ACCESS_SERVER_CLIENTS -d 2001:db8::/32 -j ACCEPT",
+		"-A WG_ACCESS_SERVER_CLIENTS -d 2001:db8:5::/48 -j ACCEPT",
+		"-A WG_ACCESS_SERVER_CLIENTS -j REJECT --reject-with icmp6-port-unreachable",
+		"-A WG_ACCESS_SERVER_FORWARD -s 2001:db8:5::/48 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT",
+		"-A WG_ACCESS_SERVER_FORWARD -s fd48:4c4:7aa9::/64 -j WG_ACCESS_SERVER_CLIENTS",
+		"-A WG_ACCESS_SERVER_FORWARD -s 2001:db8:5::/48 -j WG_ACCESS_SERVER_CLIENTS",
+	}, rules(t, "ip6tables-save", "filter"))
+
+	// switching to nftables takes all three chains away
+	removeIPTables()
+	assert.Empty(t, rules(t, "iptables-save", "filter"))
+	assert.Empty(t, rules(t, "ip6tables-save", "filter"))
 }
 
 // rules returns the rules of one table, in order.
@@ -142,22 +201,22 @@ func TestIPTablesRebuildKeepsTheRejects(t *testing.T) {
 
 	options := ForwardingOptions{
 		Firewall: FirewallIPTables, GatewayIface: "eth0", CIDR: "10.44.0.0/24",
-		NAT44: true, ClientIsolation: true,
+		NAT44: true, ClientIsolation: true, AllowedIPs: []string{"192.168.1.0/24"},
 	}
 	routes := func(n int) []string {
-		allowed := []string{"192.168.1.0/24"}
+		var routed []string
 		for i := range n {
-			allowed = append(allowed, fmt.Sprintf("10.%d.0.0/16", 100+i))
+			routed = append(routed, fmt.Sprintf("10.%d.0.0/16", 100+i))
 		}
-		return allowed
+		return routed
 	}
-	options.AllowedIPs = routes(20)
+	options.Routed = routes(20)
 	require.NoError(t, ConfigureForwarding(options))
 
 	done := make(chan error)
 	go func() {
 		for i := range 30 {
-			options.AllowedIPs = routes(20 + i%2)
+			options.Routed = routes(20 + i%2)
 			if err := ConfigureForwarding(options); err != nil {
 				done <- err
 				return
@@ -166,8 +225,10 @@ func TestIPTablesRebuildKeepsTheRejects(t *testing.T) {
 		done <- nil
 	}()
 
-	isolation := "-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -d 10.44.0.0/24 -j REJECT --reject-with icmp-port-unreachable"
-	final := "-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -j REJECT --reject-with icmp-port-unreachable"
+	jump := "-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -j WG_ACCESS_SERVER_CLIENTS"
+	routedJump := "-A WG_ACCESS_SERVER_FORWARD -s 10.100.0.0/16 -j WG_ACCESS_SERVER_CLIENTS"
+	isolation := "-A WG_ACCESS_SERVER_CLIENTS -d 10.44.0.0/24 -j REJECT --reject-with icmp-port-unreachable"
+	final := "-A WG_ACCESS_SERVER_CLIENTS -j REJECT --reject-with icmp-port-unreachable"
 	snapshots, open := 0, 0
 	for {
 		select {
@@ -180,7 +241,8 @@ func TestIPTablesRebuildKeepsTheRejects(t *testing.T) {
 		}
 		found := rules(t, "iptables-save", "filter")
 		snapshots++
-		if !slices.Contains(found, isolation) || !slices.Contains(found, final) {
+		if !slices.Contains(found, jump) || !slices.Contains(found, routedJump) ||
+			!slices.Contains(found, isolation) || !slices.Contains(found, final) {
 			open++
 		}
 	}

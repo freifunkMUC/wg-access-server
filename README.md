@@ -205,7 +205,22 @@ Three things follow from a route, and wg-access-server sets up all of them:
 - The networks become part of the device's WireGuard peer, so the tunnel carries them.
 - The kernel gets a route for each of them to the WireGuard interface, the way `wg-quick`'s
   `Table = auto` does it. Without that nothing would ever be sent there.
-- The firewall rules are extended by them, on top of `vpn.allowedIPs`.
+- The firewall lets the clients reach them, and treats traffic from them as the device's own
+  traffic (below). Members of an [access
+  policy](https://www.freie-netze.org/wg-access-server/configuration/#access-policies) reach them
+  only if the policy's `allowedIPs` cover them, as for any other network.
+
+Traffic that comes from a network behind a device is subject to the same rules as the device
+itself: client isolation, `vpn.allowedIPs` or the device owner's [access
+policies](https://www.freie-netze.org/wg-access-server/configuration/#access-policies), and the
+final reject. A host in a routed network can therefore not reach other clients when client
+isolation is on, and not reach anything the device could not reach. Answers to connections that a
+client opened into the network come back through connection tracking, so the clients can still
+reach it.
+
+Masquerading applies to the VPN network only. Traffic from a routed network leaves the server with
+its own source address, so whatever it talks to beyond the server needs a route back to it through
+the server.
 
 The device on the other end has to be set up for it as well: it needs to forward between its LAN and
 the tunnel, and its own `AllowedIPs` must cover the VPN network. Client configurations downloaded

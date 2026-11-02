@@ -13,7 +13,7 @@ import (
 
 func ruleset(t *testing.T, options ForwardingOptions) string {
 	t.Helper()
-	options, err := splitAllowedIPs(options)
+	options, err := splitByFamily(options)
 	require.NoError(t, err)
 	rules, err := nftablesRuleset(options)
 	require.NoError(t, err)
@@ -71,6 +71,62 @@ func TestNftablesRulesetIsolatedWithoutNAT(t *testing.T) {
 	assert.NotContains(t, rules, "ip6")
 }
 
+// Traffic from a network behind a device is that device's traffic: it goes
+// through isolation, the allowed networks and the final reject like the VPN
+// network does. Only answers to a client that reached into the network come
+// back regardless, and every client may still reach it.
+func TestNftablesRulesetRoutedNetworks(t *testing.T) {
+	rules := ruleset(t, ForwardingOptions{
+		GatewayIface:    "eth0",
+		CIDR:            "10.44.0.0/24",
+		CIDRv6:          "fd48:4c4:7aa9::/64",
+		ClientIsolation: true,
+		NAT44:           false,
+		NAT66:           true,
+		AllowedIPs:      []string{"192.168.1.0/24", "2001:db8::/32"},
+		Routed:          []string{"192.168.5.0/24", "192.168.6.0/24", "2001:db8:5::/48"},
+	})
+
+	assert.Contains(t, rules, `		ip saddr { 192.168.5.0/24, 192.168.6.0/24 } ct state established,related accept
+		ip saddr { 10.44.0.0/24, 192.168.5.0/24, 192.168.6.0/24 } ip daddr 10.44.0.0/24 reject
+		ip saddr { 10.44.0.0/24, 192.168.5.0/24, 192.168.6.0/24 } ip daddr 192.168.1.0/24 accept
+		ip saddr { 10.44.0.0/24, 192.168.5.0/24, 192.168.6.0/24 } ip daddr 192.168.5.0/24 accept
+		ip saddr { 10.44.0.0/24, 192.168.5.0/24, 192.168.6.0/24 } ip daddr 192.168.6.0/24 accept
+		ip saddr 192.168.1.0/24 ip daddr { 10.44.0.0/24, 192.168.5.0/24, 192.168.6.0/24 } accept
+		ip saddr { 10.44.0.0/24, 192.168.5.0/24, 192.168.6.0/24 } reject
+		ip6 saddr 2001:db8:5::/48 ct state established,related accept
+		ip6 saddr { fd48:4c4:7aa9::/64, 2001:db8:5::/48 } ip6 daddr fd48:4c4:7aa9::/64 reject
+		ip6 saddr { fd48:4c4:7aa9::/64, 2001:db8:5::/48 } ip6 daddr 2001:db8::/32 accept
+		ip6 saddr { fd48:4c4:7aa9::/64, 2001:db8:5::/48 } ip6 daddr 2001:db8:5::/48 accept
+		ip6 saddr { fd48:4c4:7aa9::/64, 2001:db8:5::/48 } reject
+`)
+	// no accept from a routed network to the clients but the answers
+	assert.NotContains(t, rules, "ip saddr 192.168.5.0/24 ip daddr 10.44.0.0/24 accept")
+	// the masquerading stays with the VPN network
+	assert.Contains(t, rules, `ip6 saddr fd48:4c4:7aa9::/64 oifname "eth0" masquerade`)
+}
+
+// The networks behind a policy member's device are in the policy's set, so the
+// policy restricts what comes from them, as it does for the device itself.
+func TestNftablesRulesetPolicyMemberWithRoutedNetwork(t *testing.T) {
+	rules := ruleset(t, ForwardingOptions{
+		CIDR:       "10.44.0.0/24",
+		NAT44:      true,
+		AllowedIPs: []string{"0.0.0.0/0"},
+		Routed:     []string{"192.168.5.0/24"},
+		Policies: []Policy{
+			{Name: "staff", AllowedIPs: []string{"10.0.5.0/24"}, Members: []string{"10.44.0.2/32", "192.168.5.0/24"}},
+		},
+	})
+
+	assert.Contains(t, rules, "elements = { 10.44.0.2, 192.168.5.0/24 }")
+	assert.Contains(t, rules, `		ip saddr 192.168.5.0/24 ct state established,related accept
+		ip saddr @policy_staff_ip ip daddr 10.0.5.0/24 accept
+		ip saddr @members_ip reject
+		ip saddr { 10.44.0.0/24, 192.168.5.0/24 } ip daddr 0.0.0.0/0 accept
+`)
+}
+
 func TestNftablesRulesetIPv6Only(t *testing.T) {
 	rules := ruleset(t, ForwardingOptions{
 		GatewayIface: "eth0",
@@ -104,7 +160,7 @@ func TestNftablesRulesetNormalizesTheVPNNetwork(t *testing.T) {
 // close the string and add rules of its own.
 func TestNftablesRulesetRejectsBadInterfaceNames(t *testing.T) {
 	for _, name := range []string{`eth0" accept; #`, "eth0 eth1", "an-interface-name-too-long", "eth0\n"} {
-		options, err := splitAllowedIPs(ForwardingOptions{GatewayIface: name, CIDR: "10.44.0.0/24", NAT44: true})
+		options, err := splitByFamily(ForwardingOptions{GatewayIface: name, CIDR: "10.44.0.0/24", NAT44: true})
 		require.NoError(t, err)
 		_, err = nftablesRuleset(options)
 		assert.Error(t, err, "%q", name)
@@ -178,7 +234,23 @@ func TestNftablesRulesetApplies(t *testing.T) {
 			{Name: "guests", AllowedIPs: []string{"192.168.9.0/24"}},
 		},
 	})
+	// networks behind devices: anonymous sets, conntrack, networks in a
+	// policy's set, and two members' entries that overlap
+	fourth := ruleset(t, ForwardingOptions{
+		GatewayIface: "eth1", CIDR: "10.77.0.0/24", CIDRv6: "fd48:4c4:7aa9::/64",
+		ClientIsolation: true,
+		AllowedIPs:      []string{"192.168.1.0/24", "2001:db8::/32"},
+		Routed:          []string{"192.168.5.0/24", "192.168.7.0/24", "2001:db8:5::/48"},
+		Policies: []Policy{
+			{
+				Name:       "staff",
+				AllowedIPs: []string{"10.0.5.0/24"},
+				Members:    []string{"10.77.0.2/32", "192.168.5.0/24", "192.168.5.7/32", "2001:db8:5::/48"},
+			},
+		},
+	})
 	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "fourth.nft"), []byte(fourth), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "first.nft"), []byte(first), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "second.nft"), []byte(second), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "third.nft"), []byte(third), 0o600))
@@ -206,6 +278,18 @@ func TestNftablesRulesetApplies(t *testing.T) {
 	assert.Contains(t, listed, "ip6 saddr @policy_contractors_ip6 ip6 daddr 2001:db8:5::/48 accept")
 	assert.Contains(t, listed, "ip saddr @members_ip reject")
 	assert.Contains(t, listed, "set policy_guests_ip", "a policy nobody is in still has its set")
+
+	out, err = exec.Command("unshare", "--net", "--map-root-user", "sh", "-c",
+		`nft -f "$1/fourth.nft" && nft list ruleset`, "sh", dir).CombinedOutput()
+	require.NoError(t, err, string(out))
+
+	listed = string(out)
+	// nft lists the members of an anonymous set sorted
+	assert.Contains(t, listed, "ip saddr { 192.168.5.0/24, 192.168.7.0/24 } ct state established,related accept")
+	assert.Contains(t, listed, "ip saddr { 10.77.0.0/24, 192.168.5.0/24, 192.168.7.0/24 } ip daddr 10.77.0.0/24 reject")
+	assert.Contains(t, listed, "ip6 saddr { 2001:db8:5::/48, fd48:4c4:7aa9::/64 } reject")
+	assert.Contains(t, listed, "elements = { 10.77.0.2, 192.168.5.0/24 }", "the overlapping member is merged")
+	assert.Contains(t, listed, "elements = { 2001:db8:5::/48 }")
 }
 
 // A policy restricts its members to its own networks: their devices are in a
@@ -230,15 +314,21 @@ delete table inet wg_access_server
 table inet wg_access_server {
 	set policy_contractors_ip {
 		type ipv4_addr
+		flags interval
+		auto-merge
 		elements = { 10.44.0.2, 10.44.0.3 }
 	}
 
 	set policy_guests_ip {
 		type ipv4_addr
+		flags interval
+		auto-merge
 	}
 
 	set members_ip {
 		type ipv4_addr
+		flags interval
+		auto-merge
 		elements = { 10.44.0.2, 10.44.0.3 }
 	}
 

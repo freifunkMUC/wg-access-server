@@ -193,7 +193,9 @@ type FirewallState struct {
 	// Routed are the networks that live behind devices.
 	Routed []string
 	// Policies maps the name of an access policy to the addresses of the
-	// devices of the people in it.
+	// devices of the people in it and to the networks behind those devices:
+	// what comes from there is the device's traffic, and the policy applies
+	// to it as well.
 	Policies map[string][]string
 }
 
@@ -252,7 +254,8 @@ func (d *DeviceManager) syncFirewallState(devices []*storage.Device) {
 }
 
 // firewallState collects what the rules are made of: the networks behind the
-// devices, and the devices of the people in each access policy.
+// devices, and the devices of the people in each access policy with the
+// networks behind them.
 //
 // A device that may not connect is left out of the policies: it has no peer,
 // so nothing can come from its address, and listing it would say otherwise.
@@ -278,6 +281,7 @@ func (d *DeviceManager) firewallState(devices []*storage.Device) (FirewallState,
 		}
 		for _, policy := range policiesOf[device.Owner] {
 			state.Policies[policy] = append(state.Policies[policy], network.SplitAddresses(device.Address)...)
+			state.Policies[policy] = append(state.Policies[policy], device.RouteList()...)
 		}
 	}
 
