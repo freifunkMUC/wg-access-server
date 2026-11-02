@@ -133,7 +133,7 @@ set policy_contractors_ip { type ipv4_addr; elements = { 10.44.0.2 } }
 
 ip saddr 10.44.0.0/24 ip daddr 10.44.0.1 accept          # the server itself, for everybody
 ip saddr @policy_contractors_ip ip daddr 10.0.5.0/24 accept
-ip saddr @policy_members_ip reject                       # a member reaches nothing else
+ip saddr @members_ip reject                              # a member reaches nothing else
 ip saddr 10.44.0.0/24 ip daddr 0.0.0.0/0 accept          # everybody who is in no policy
 ```
 

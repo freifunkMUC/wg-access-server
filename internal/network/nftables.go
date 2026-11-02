@@ -123,9 +123,11 @@ func policySetName(policy string, f family) string {
 }
 
 // policyMembersSetName is the set holding the devices of everybody who is in
-// any policy at all.
+// any policy at all. It must not start with "policy_": a policy called
+// "members" would get the same set, and nft merges two declarations of a set
+// into one, so every member of any policy would reach that policy's networks.
 func policyMembersSetName(f family) string {
-	return fmt.Sprintf("policy_members_%s", f.keyword)
+	return fmt.Sprintf("members_%s", f.keyword)
 }
 
 // nftSet declares a set of addresses. An empty one is declared all the same -

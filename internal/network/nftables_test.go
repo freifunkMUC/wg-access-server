@@ -204,7 +204,7 @@ func TestNftablesRulesetApplies(t *testing.T) {
 	assert.Contains(t, listed, "elements = { 10.66.0.2 }")
 	assert.Contains(t, listed, "ip saddr @policy_contractors_ip ip daddr 10.0.5.0/24 accept")
 	assert.Contains(t, listed, "ip6 saddr @policy_contractors_ip6 ip6 daddr 2001:db8:5::/48 accept")
-	assert.Contains(t, listed, "ip saddr @policy_members_ip reject")
+	assert.Contains(t, listed, "ip saddr @members_ip reject")
 	assert.Contains(t, listed, "set policy_guests_ip", "a policy nobody is in still has its set")
 }
 
@@ -237,7 +237,7 @@ table inet wg_access_server {
 		type ipv4_addr
 	}
 
-	set policy_members_ip {
+	set members_ip {
 		type ipv4_addr
 		elements = { 10.44.0.2, 10.44.0.3 }
 	}
@@ -247,7 +247,7 @@ table inet wg_access_server {
 		ip saddr 10.44.0.0/24 ip daddr 10.44.0.1 accept
 		ip saddr @policy_contractors_ip ip daddr 10.0.5.0/24 accept
 		ip saddr @policy_guests_ip ip daddr 192.168.9.0/24 accept
-		ip saddr @policy_members_ip reject
+		ip saddr @members_ip reject
 		ip saddr 10.44.0.0/24 ip daddr 0.0.0.0/0 accept
 		ip saddr 10.44.0.0/24 reject
 	}
@@ -336,7 +336,7 @@ func TestNftablesRulesetPolicyWithoutNetworksOfAFamily(t *testing.T) {
 	}
 
 	server := at("ip6 saddr fd48:4c4:7aa9::/64 ip6 daddr fd48:4c4:7aa9::1 accept")
-	reject := at("ip6 saddr @policy_members_ip6 reject")
+	reject := at("ip6 saddr @members_ip6 reject")
 	everything := at("ip6 saddr fd48:4c4:7aa9::/64 ip6 daddr ::/0 accept")
 	assert.Less(t, server, reject, "the server is reachable before the members are turned away")
 	assert.Less(t, reject, everything, "the members are turned away before what everybody may reach")
@@ -354,4 +354,33 @@ func TestNftablesRulesetRejectsBadPolicyNames(t *testing.T) {
 		})
 		assert.Error(t, err, "policy name %q was accepted", name)
 	}
+}
+
+// Every set gets a name of its own, whatever the policies are called. nft
+// merges two declarations of the same set: a policy called "members" used to
+// share its set with the one of everybody in any policy, and every member of
+// any policy reached its networks.
+func TestNftablesRulesetSetNamesAreUnique(t *testing.T) {
+	rules := ruleset(t, ForwardingOptions{
+		CIDR:     "10.44.0.0/24",
+		CIDRv6:   "fd48:4c4:7aa9::/64",
+		NAT44:    true,
+		NAT66:    true,
+		Policies: []Policy{
+			{Name: "members", AllowedIPs: []string{"10.0.5.0/24", "2001:db8::/32"}, Members: []string{"10.44.0.2/32"}},
+			{Name: "staff", AllowedIPs: []string{"10.0.6.0/24"}, Members: []string{"10.44.0.3/32"}},
+		},
+	})
+
+	seen := map[string]bool{}
+	for _, line := range strings.Split(rules, "\n") {
+		name, ok := strings.CutPrefix(strings.TrimSpace(line), "set ")
+		if !ok {
+			continue
+		}
+		name = strings.TrimSuffix(name, " {")
+		assert.False(t, seen[name], "set %s is declared twice", name)
+		seen[name] = true
+	}
+	assert.Len(t, seen, 6) // members, staff and everybody in a policy, per family
 }
