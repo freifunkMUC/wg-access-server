@@ -406,12 +406,12 @@ UI - the configuration or the identity provider:
 
 | Change | Web session | API token |
 | --- | --- | --- |
-| Removed from `simple.users`/`basic.users` | Stays valid until `sessionStore.maxAge` (30 days by default) | Stays valid until it expires, or for ever if created without an expiry |
+| Removed from `simple.users`/`basic.users` | Refused at the next request after the server was restarted with the new configuration | Same |
 | Admin rights taken away: `adminUsername` changed (Simple/Basic) | At the next request after the server was restarted with the new value | Same |
 | Demoted, removed from a group or `accessClaim` withdrawn at an OIDC provider, GitHub organization or team | Stays valid until `sessionStore.maxAge`, with the claims it had at sign-in (`accessClaim` is checked against those) | Stays valid until it expires, with the claims of the session that created it |
 
-Until the session ends, the user stays signed in with those rights. To end them sooner, revoke their
-access in the web UI, and remove them at the provider as well.
+For an identity provider, the user stays signed in with those rights until the session ends. To end
+them sooner, revoke their access in the web UI, and remove them at the provider as well.
 
 ## API tokens
 

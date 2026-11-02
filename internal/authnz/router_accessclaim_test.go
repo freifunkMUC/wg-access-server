@@ -9,6 +9,10 @@ import (
 	"github.com/freifunkMUC/wg-access-server/internal/config"
 )
 
+// testEntry stands in for the hash of a configured user; nothing here checks
+// a password.
+const testEntry = "not-checked"
+
 // appConfig builds a minimal AppConfig for exercising ClaimsMiddleware.
 func appConfig(auth authconfig.AuthConfig) *config.AppConfig {
 	return &config.AppConfig{
@@ -141,7 +145,7 @@ func TestClaimsMiddlewareLegacyOIDCAccessClaim(t *testing.T) {
 func TestClaimsMiddlewareNoAccessClaimConfigured(t *testing.T) {
 	auth := authconfig.AuthConfig{
 		ProviderConfig: authconfig.ProviderConfig{
-			Basic: &authconfig.BasicAuthConfig{Users: []string{}},
+			Basic: &authconfig.BasicAuthConfig{Users: []string{"bob:" + testEntry}},
 		},
 		Multiple: map[string]*authconfig.ProviderConfig{
 			"corp": {
@@ -188,6 +192,9 @@ func TestClaimsMiddlewareNilUserNotAuthenticated(t *testing.T) {
 // matching AdminUsername become admin; OIDC users never do implicitly.
 func TestClaimsMiddlewareAdminElevationUntouched(t *testing.T) {
 	auth := authconfig.AuthConfig{
+		ProviderConfig: authconfig.ProviderConfig{
+			Basic: &authconfig.BasicAuthConfig{Users: []string{"admin:" + testEntry}},
+		},
 		Multiple: map[string]*authconfig.ProviderConfig{
 			"corp": {
 				OIDC: &authconfig.OIDCConfig{Name: "corp"},
@@ -225,13 +232,13 @@ func TestClaimsMiddlewareRefusesARevokedUser(t *testing.T) {
 		return revoked[subject], nil
 	})
 
-	expectNotAuthorized(t, mw(&authsession.Identity{Provider: authconfig.SimpleAuthProvider, Subject: "alice"}))
-	if err := mw(&authsession.Identity{Provider: authconfig.SimpleAuthProvider, Subject: "bob"}); err != nil {
+	expectNotAuthorized(t, mw(&authsession.Identity{Provider: "corp", Subject: "alice"}))
+	if err := mw(&authsession.Identity{Provider: "corp", Subject: "bob"}); err != nil {
 		t.Errorf("somebody else was refused: %v", err)
 	}
 
 	delete(revoked, "alice")
-	if err := mw(&authsession.Identity{Provider: authconfig.SimpleAuthProvider, Subject: "alice"}); err != nil {
+	if err := mw(&authsession.Identity{Provider: "corp", Subject: "alice"}); err != nil {
 		t.Errorf("alice was refused after getting access back: %v", err)
 	}
 }
@@ -241,7 +248,50 @@ func TestClaimsMiddlewareFailsClosedWithoutTheUsers(t *testing.T) {
 	mw := ClaimsMiddleware(appConfig(authconfig.AuthConfig{}), func(string) (bool, error) {
 		return false, errors.New("connection refused")
 	})
-	if err := mw(&authsession.Identity{Provider: authconfig.SimpleAuthProvider, Subject: "alice"}); err == nil {
+	if err := mw(&authsession.Identity{Provider: "corp", Subject: "alice"}); err == nil {
 		t.Error("the request went through without knowing whether alice was revoked")
+	}
+}
+
+// A session and an API token keep the identity from sign-in. For the built-in
+// providers the configuration is the only thing that says who may come in, so
+// a user who was taken out of it must be refused on the requests that follow,
+// not when the session ends 30 days later.
+func TestClaimsMiddlewareRefusesAUserRemovedFromTheConfiguration(t *testing.T) {
+	for _, provider := range []string{authconfig.SimpleAuthProvider, authconfig.BasicAuthProvider} {
+		t.Run(provider, func(t *testing.T) {
+			auth := authconfig.AuthConfig{
+				Multiple: map[string]*authconfig.ProviderConfig{
+					// the other built-in provider's list counts as well
+					"a": {Simple: &authconfig.SimpleAuthConfig{Users: []string{"alice:" + testEntry}}},
+					"b": {Basic: &authconfig.BasicAuthConfig{Users: []string{"carol:" + testEntry}}},
+				},
+			}
+			mw := ClaimsMiddleware(appConfig(auth), nil)
+
+			for _, listed := range []string{"alice", "carol"} {
+				if err := mw(&authsession.Identity{Provider: provider, Subject: listed}); err != nil {
+					t.Errorf("%s is in the configuration and was refused: %v", listed, err)
+				}
+			}
+			expectNotAuthorized(t, mw(&authsession.Identity{Provider: provider, Subject: "bob"}))
+		})
+	}
+}
+
+// ... and the configuration says nothing about the people who come in through
+// an identity provider.
+func TestClaimsMiddlewareLeavesIdentityProviderUsersAlone(t *testing.T) {
+	auth := authconfig.AuthConfig{
+		ProviderConfig: authconfig.ProviderConfig{
+			Simple: &authconfig.SimpleAuthConfig{Users: []string{"alice:" + testEntry}},
+		},
+		Multiple: map[string]*authconfig.ProviderConfig{
+			"corp": {OIDC: &authconfig.OIDCConfig{Name: "corp"}},
+		},
+	}
+	mw := ClaimsMiddleware(appConfig(auth), nil)
+	if err := mw(&authsession.Identity{Provider: "corp", Subject: "bob"}); err != nil {
+		t.Errorf("an OIDC user was refused for not being in simple.users: %v", err)
 	}
 }

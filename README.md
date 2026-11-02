@@ -200,8 +200,8 @@ person is gone from the provider as well.
 
 What keeps somebody out for good is the sign-in: removing them at their identity provider, from the
 `users` of basic or simple auth, or from what `accessClaim` or the GitHub organizations, teams and
-users allow. Removing them there does not end a session they already have: that lasts until `sessionStore.maxAge`
-(30 days by default), and an API token until it expires - see
+users allow. For an identity provider, removing them there does not end a session they already have:
+that lasts until `sessionStore.maxAge` (30 days by default), and an API token until it expires - see
 [How long access outlasts a removal](https://www.freie-netze.org/wg-access-server/auth/#how-long-access-outlasts-a-removal).
 
 ## Networks behind a device
