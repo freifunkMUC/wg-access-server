@@ -28,6 +28,7 @@ func Register(app *kingpin.Application) *servecmd {
 	cli.Flag("metrics-max-device-series", "Maximum number of devices exported as individual series on /metrics (negative: unlimited, 0: aggregates only)").Envar("WG_METRICS_MAX_DEVICE_SERIES").Default(strconv.Itoa(metrics.DefaultMaxDeviceSeries)).IntVar(&cmd.AppConfig.Metrics.MaxDeviceSeries)
 	cli.Flag("enable-inactive-device-deletion", "Enable inactive device deletion").Envar("WG_ENABLE_INACTIVE_DEVICE_DELETION").Default("false").BoolVar(&cmd.AppConfig.EnableInactiveDeviceDeletion)
 	cli.Flag("inactive-device-grace-period", "Duration after inactive device are deleted").Envar("WG_INACTIVE_DEVICE_GRACE_PERIOD").Default((1 * config.Year).String()).DurationVar(&cmd.AppConfig.InactiveDeviceGracePeriod)
+	cli.Flag("api-token-max-lifetime", "Longest time an API token works, counted from its creation (0: no cap)").Envar("WG_API_TOKEN_MAX_LIFETIME").Default("0").DurationVar(&cmd.AppConfig.APITokenMaxLifetime)
 	cli.Flag("max-devices-per-user", "Maximum number of devices a single user may create (0: no limit)").Envar("WG_MAX_DEVICES_PER_USER").Default("0").IntVar(&cmd.AppConfig.MaxDevicesPerUser)
 	cli.Flag("enable-api-tokens", "Let users create tokens for using the API from scripts").Envar("WG_ENABLE_API_TOKENS").Default("false").BoolVar(&cmd.AppConfig.EnableAPITokens)
 	cli.Flag("filename", "The configuration filename (e.g. WireGuard-Home)").Envar("WG_FILENAME").StringVar(&cmd.AppConfig.Filename)

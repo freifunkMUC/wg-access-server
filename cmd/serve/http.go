@@ -262,7 +262,7 @@ func newRouter(conf *config.AppConfig, deviceManager *devices.DeviceManager, sto
 
 	// API tokens, after the session: a request that names a token acts as it
 	// (and the middleware refuses every token while they are disabled)
-	tokens := apitokens.New(storageBackend, claims)
+	tokens := apitokens.New(storageBackend, claims, apitokens.WithMaxLifetime(conf.APITokenMaxLifetime))
 	var acceptedTokens *apitokens.Manager
 	if conf.EnableAPITokens {
 		acceptedTokens = tokens

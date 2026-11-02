@@ -11,6 +11,7 @@ import (
 
 	"github.com/freifunkMUC/wg-access-server/internal/apitokens"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authsession"
+	"github.com/freifunkMUC/wg-access-server/internal/config"
 	"github.com/freifunkMUC/wg-access-server/internal/devices"
 	"github.com/freifunkMUC/wg-access-server/internal/storage"
 	"github.com/freifunkMUC/wg-access-server/proto/proto"
@@ -160,5 +161,34 @@ func TestDeletingAUserRevokesTheirTokens(t *testing.T) {
 
 	if _, _, err := tokens.Authenticate(secret); err == nil {
 		t.Error("the token of the deleted user still works")
+	}
+}
+
+func TestCreateTokenRefusesBeyondTheCap(t *testing.T) {
+	tokens := apitokens.New(storage.NewMemoryStorage(), nil, apitokens.WithMaxLifetime(24*time.Hour))
+	service := &TokenService{Tokens: tokens, Enabled: true}
+
+	for name, req := range map[string]*proto.CreateTokenReq{
+		"no expiry": {Name: "forever"},
+		"too far":   {Name: "later", ExpiresAt: timestamppb.New(time.Now().Add(48 * time.Hour))},
+	} {
+		_, err := service.CreateToken(userContext("alice", false), connect.NewRequest(req))
+		if connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Errorf("%s: code = %v (%v), want InvalidArgument", name, connect.CodeOf(err), err)
+		}
+	}
+	if _, err := service.CreateToken(userContext("alice", false), connect.NewRequest(&proto.CreateTokenReq{
+		Name: "ok", ExpiresAt: timestamppb.New(time.Now().Add(12 * time.Hour)),
+	})); err != nil {
+		t.Errorf("within the cap: %v", err)
+	}
+}
+
+func TestServerInfoReportsTheTokenCap(t *testing.T) {
+	if got := apiTokenMaxLifetime(&config.AppConfig{}); got != nil {
+		t.Errorf("without a cap: %v, want nil", got)
+	}
+	if got := apiTokenMaxLifetime(&config.AppConfig{APITokenMaxLifetime: 24 * time.Hour}); got.AsDuration() != 24*time.Hour {
+		t.Errorf("with a cap of 24h: %v", got)
 	}
 }

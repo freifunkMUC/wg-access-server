@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -346,4 +348,152 @@ func TestMiddleware(t *testing.T) {
 			t.Errorf("status %d, reached handler %v", w.Code, seen != nil)
 		}
 	})
+}
+
+func TestMaxLifetimeRefusesTokensBeyondTheCap(t *testing.T) {
+	const day = 24 * time.Hour
+	within, at, beyond, far := time.Now().Add(time.Hour), time.Now().Add(day), time.Now().Add(2*day), time.Now().Add(10*365*day)
+
+	capped := New(storage.NewMemoryStorage(), nil, WithMaxLifetime(day))
+	for name, expiresAt := range map[string]*time.Time{"never": nil, "beyond the cap": &beyond, "far beyond": &far} {
+		_, _, err := capped.Create(alice(), name, expiresAt)
+		var validation *ValidationError
+		if !errors.As(err, &validation) {
+			t.Errorf("%s: err = %v, want a ValidationError", name, err)
+		} else if !strings.Contains(err.Error(), "limits API tokens to 24h0m0s") {
+			t.Errorf("%s: the message %q does not say what the limit is", name, err)
+		}
+	}
+	for name, expiresAt := range map[string]*time.Time{"within the cap": &within, "at the cap": &at} {
+		if _, _, err := capped.Create(alice(), name, expiresAt); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+
+	// the minute given for the browser's clock is accepted, but the token
+	// says the expiry that applies, as the list does
+	slack := time.Now().Add(day + 30*time.Second)
+	_, token, err := capped.Create(alice(), "a little past the cap", &slack)
+	if err != nil {
+		t.Fatalf("a little past the cap: %v", err)
+	}
+	if limit := token.CreatedAt.Add(day); token.ExpiresAt == nil || token.ExpiresAt.After(limit) {
+		t.Errorf("the token says it expires at %v, after the cap at %v", token.ExpiresAt, limit)
+	}
+
+	// without a cap nothing changes: no expiry, or one far away, is fine
+	for _, m := range []*Manager{New(storage.NewMemoryStorage(), nil), New(storage.NewMemoryStorage(), nil, WithMaxLifetime(0))} {
+		for name, expiresAt := range map[string]*time.Time{"never": nil, "far": &far} {
+			if _, _, err := m.Create(alice(), name, expiresAt); err != nil {
+				t.Errorf("no cap, %s: %v", name, err)
+			}
+		}
+	}
+}
+
+// Setting the cap has to reach the tokens that exist: they are refused once
+// created_at + cap has passed, whatever expiry they carry. Every backend that
+// keeps tokens, since the check works on what the storage returns.
+func TestMaxLifetimeAppliesToExistingTokens(t *testing.T) {
+	const cap = 24 * time.Hour
+	backends := map[string]string{
+		"memory":   "memory://",
+		"sqlite3":  "sqlite3://" + filepath.Join(t.TempDir(), "tokens.db"),
+		"postgres": os.Getenv("WG_TEST_POSTGRES_URI"),
+		"mysql":    os.Getenv("WG_TEST_MYSQL_URI"),
+	}
+	for name, uri := range backends {
+		if uri == "" {
+			continue
+		}
+		t.Run(name, func(t *testing.T) {
+			s, err := storage.NewStorage(uri)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := s.Open(); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = s.Close() })
+			owner := alice()
+			owner.Subject = "cap-owner-" + name
+			t.Cleanup(func() { _, _ = s.DeleteTokensForOwner(owner.Subject) })
+
+			// made before the cap existed: one that never expires, one that
+			// expires in a year, one that expires within the cap
+			created := time.Now().Truncate(time.Second)
+			before := New(s, nil)
+			before.now = func() time.Time { return created }
+			year, soon := created.Add(365*cap), created.Add(time.Hour)
+			never, _, err := before.Create(owner, "never", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			yearly, _, err := before.Create(owner, "yearly", &year)
+			if err != nil {
+				t.Fatal(err)
+			}
+			short, _, err := before.Create(owner, "short", &soon)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			at := func(when time.Time) func() time.Time { return func() time.Time { return when } }
+
+			// no cap: both work long after
+			if _, _, err := before.Authenticate(never); err != nil {
+				t.Errorf("without a cap, a token that never expires: %v", err)
+			}
+
+			capped := New(s, nil, WithMaxLifetime(cap))
+			capped.now = at(created.Add(cap - time.Minute))
+			for name, secret := range map[string]string{"never": never, "yearly": yearly} {
+				if _, _, err := capped.Authenticate(secret); err != nil {
+					t.Errorf("%s, just before created_at + cap: %v", name, err)
+				}
+			}
+			capped.now = at(created.Add(cap + time.Minute))
+			for name, secret := range map[string]string{"never": never, "yearly": yearly, "short": short} {
+				if _, _, err := capped.Authenticate(secret); !errors.Is(err, ErrExpired) {
+					t.Errorf("%s, after created_at + cap: err = %v, want ErrExpired", name, err)
+				}
+			}
+			// the same tokens work without the cap, apart from the one that
+			// expired by itself
+			before.now = at(created.Add(cap + time.Minute))
+			for name, secret := range map[string]string{"never": never, "yearly": yearly} {
+				if _, _, err := before.Authenticate(secret); err != nil {
+					t.Errorf("%s without the cap, a day later: %v", name, err)
+				}
+			}
+
+			// listings show the expiry that applies
+			capped.now = time.Now
+			listed, err := capped.List(owner.Subject)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(listed) != 3 {
+				t.Fatalf("%d tokens listed, want 3", len(listed))
+			}
+			for _, token := range listed {
+				want := token.CreatedAt.Add(cap)
+				if token.Name == "short" {
+					want = token.CreatedAt.Add(time.Hour)
+				}
+				if token.ExpiresAt == nil || !token.ExpiresAt.Equal(want) {
+					t.Errorf("%s: listed expiry %v, want %v", token.Name, token.ExpiresAt, want)
+				}
+			}
+			plain, err := New(s, nil).List(owner.Subject)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, token := range plain {
+				if token.Name == "never" && token.ExpiresAt != nil {
+					t.Errorf("without a cap, the listed expiry of a token that never expires is %v", token.ExpiresAt)
+				}
+			}
+		})
+	}
 }

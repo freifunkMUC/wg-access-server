@@ -139,6 +139,7 @@ export declare namespace InfoRes {
 		twoFactorEnabled: boolean,
 		recoveryCodesLeft: number,
 		passkeys: number,
+		apiTokenMaxLifetime?: googleProtobufDuration.Duration.AsObject,
 		userDisplayName: string,
 		userProvider: string,
 	}
@@ -320,6 +321,14 @@ export class InfoRes extends jspb.Message {
 		(jspb.Message as any).setProto3IntField(this, 24, value);
 	}
 
+	getApiTokenMaxLifetime(): googleProtobufDuration.Duration {
+		return jspb.Message.getWrapperField(this, googleProtobufDuration.Duration, 25);
+	}
+
+	setApiTokenMaxLifetime(value?: googleProtobufDuration.Duration): void {
+		(jspb.Message as any).setWrapperField(this, 25, value);
+	}
+
 	getUserDisplayName(): string {return jspb.Message.getFieldWithDefault(this, 26, "");
 	}
 
@@ -366,6 +375,7 @@ export class InfoRes extends jspb.Message {
 			twoFactorEnabled: this.getTwoFactorEnabled(),
 			recoveryCodesLeft: this.getRecoveryCodesLeft(),
 			passkeys: this.getPasskeys(),
+			apiTokenMaxLifetime: (f = this.getApiTokenMaxLifetime()) && f.toObject(),
 			userDisplayName: this.getUserDisplayName(),
 			userProvider: this.getUserProvider(),
 		};
@@ -463,6 +473,10 @@ export class InfoRes extends jspb.Message {
 		const field24 = message.getPasskeys();
 		if (field24 != 0) {
 			writer.writeInt32(24, field24);
+		}
+		const field25 = message.getApiTokenMaxLifetime();
+		if (field25 != null) {
+			writer.writeMessage(25, field25, googleProtobufDuration.Duration.serializeBinaryToWriter);
 		}
 		const field26 = message.getUserDisplayName();
 		if (field26.length > 0) {
@@ -582,6 +596,11 @@ export class InfoRes extends jspb.Message {
 				const field24 = reader.readInt32()
 				message.setPasskeys(field24);
 				break;
+			case 25:
+				const field25 = new googleProtobufDuration.Duration();
+				reader.readMessage(field25, googleProtobufDuration.Duration.deserializeBinaryFromReader);
+				message.setApiTokenMaxLifetime(field25);
+				break;
 			case 26:
 				const field26 = reader.readString()
 				message.setUserDisplayName(field26);
@@ -637,6 +656,7 @@ function InfoResFromObject(obj: InfoRes.AsObject | undefined): InfoRes | undefin
 	message.setTwoFactorEnabled(obj.twoFactorEnabled);
 	message.setRecoveryCodesLeft(obj.recoveryCodesLeft);
 	message.setPasskeys(obj.passkeys);
+	message.setApiTokenMaxLifetime(DurationFromObject(obj.apiTokenMaxLifetime));
 	message.setUserDisplayName(obj.userDisplayName);
 	message.setUserProvider(obj.userProvider);
 	return message;

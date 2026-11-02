@@ -54,6 +54,9 @@ message InfoRes {
   int32 recovery_codes_left = 23;
   // how many passkeys this session's account has registered
   int32 passkeys = 24;
+  // the longest an API token may live, counted from its creation. Unset: no
+  // cap. The UI offers no expiry beyond it.
+  google.protobuf.Duration api_token_max_lifetime = 25;
   // the name the identity provider gave this account, for the account menu to
   // greet them with. It may be empty (the built-in sign-in has none); the UI
   // then falls back to subject.
