@@ -33,7 +33,10 @@ type User struct {
 	// Empty: their devices may reach what vpn.allowedIPs says.
 	Policies []string `protobuf:"bytes,4,rep,name=policies,proto3" json:"policies,omitempty"`
 	// whether they are asked for a second factor when they sign in
-	TwoFactor     bool `protobuf:"varint,5,opt,name=two_factor,json=twoFactor,proto3" json:"two_factor,omitempty"`
+	TwoFactor bool `protobuf:"varint,5,opt,name=two_factor,json=twoFactor,proto3" json:"two_factor,omitempty"`
+	// whether an admin revoked their access, which keeps them from signing in
+	// until a block on one of their devices is lifted
+	AccessRevoked bool `protobuf:"varint,6,opt,name=access_revoked,json=accessRevoked,proto3" json:"access_revoked,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -99,6 +102,13 @@ func (x *User) GetPolicies() []string {
 func (x *User) GetTwoFactor() bool {
 	if x != nil {
 		return x.TwoFactor
+	}
+	return false
+}
+
+func (x *User) GetAccessRevoked() bool {
+	if x != nil {
+		return x.AccessRevoked
 	}
 	return false
 }
@@ -1198,7 +1208,7 @@ var File_users_proto protoreflect.FileDescriptor
 
 const file_users_proto_rawDesc = "" +
 	"\n" +
-	"\vusers.proto\x12\x05proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb2\x01\n" +
+	"\vusers.proto\x12\x05proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd9\x01\n" +
 	"\x04User\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdisplayName\x18\x02 \x01(\tR\vdisplayName\x129\n" +
@@ -1206,7 +1216,8 @@ const file_users_proto_rawDesc = "" +
 	"last_login\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tlastLogin\x12\x1a\n" +
 	"\bpolicies\x18\x04 \x03(\tR\bpolicies\x12\x1d\n" +
 	"\n" +
-	"two_factor\x18\x05 \x01(\bR\ttwoFactor\"\x0e\n" +
+	"two_factor\x18\x05 \x01(\bR\ttwoFactor\x12%\n" +
+	"\x0eaccess_revoked\x18\x06 \x01(\bR\raccessRevoked\"\x0e\n" +
 	"\fListUsersReq\"1\n" +
 	"\fListUsersRes\x12!\n" +
 	"\x05items\x18\x01 \x03(\v2\v.proto.UserR\x05items\"#\n" +

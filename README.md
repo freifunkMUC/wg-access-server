@@ -190,7 +190,8 @@ with what it took.
 It also **keeps them from signing in again**, whichever provider lets them in: the server remembers
 that their access was revoked, refuses the sign-in, and refuses any session or API token of theirs
 that is still around. Lifting the block on one of their devices (under _admin_ → _Devices_) is what
-gives the sign-in back. This is what stops them from deleting a blocked device and adding a new one.
+gives the sign-in back. The user list shows who is in this state: an **Access revoked** mark next
+to their name, with that hint. This is what stops them from deleting a blocked device and adding a new one.
 It is a record kept here, in the server's database; it does not replace removing them at their
 identity provider.
 

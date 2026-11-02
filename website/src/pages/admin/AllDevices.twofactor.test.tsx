@@ -51,8 +51,20 @@ const resetTwoFactor = vi.mocked(grpc.users.resetTwoFactor);
 const asked = vi.mocked(confirm);
 const toasted = vi.mocked(toast);
 
-const withTwoFactor = { name: 'alice', displayName: 'Alice Example', policies: [], twoFactor: true } as User.AsObject;
-const without = { name: 'bob', displayName: 'Bob Roe', policies: [], twoFactor: false } as User.AsObject;
+const withTwoFactor = {
+  name: 'alice',
+  displayName: 'Alice Example',
+  policies: [],
+  twoFactor: true,
+  accessRevoked: false,
+} as User.AsObject;
+const without = {
+  name: 'bob',
+  displayName: 'Bob Roe',
+  policies: [],
+  twoFactor: false,
+  accessRevoked: false,
+} as User.AsObject;
 
 const rowOf = (name: string) => {
   const row = screen.getAllByRole('row').find((r) => within(r).queryByText(name));

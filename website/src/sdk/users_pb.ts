@@ -430,6 +430,7 @@ export declare namespace User {
 		lastLogin?: googleProtobufTimestamp.Timestamp.AsObject,
 		policies: Array<string>,
 		twoFactor: boolean,
+		accessRevoked: boolean,
 	}
 }
 
@@ -485,6 +486,13 @@ export class User extends jspb.Message {
 		(jspb.Message as any).setProto3BooleanField(this, 5, value);
 	}
 
+	getAccessRevoked(): boolean {return jspb.Message.getFieldWithDefault(this, 6, false);
+	}
+
+	setAccessRevoked(value: boolean): void {
+		(jspb.Message as any).setProto3BooleanField(this, 6, value);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		User.serializeBinaryToWriter(this, writer);
@@ -499,6 +507,7 @@ export class User extends jspb.Message {
 			lastLogin: (f = this.getLastLogin()) && f.toObject(),
 			policies: this.getPolicies(),
 			twoFactor: this.getTwoFactor(),
+			accessRevoked: this.getAccessRevoked(),
 		};
 	}
 
@@ -522,6 +531,10 @@ export class User extends jspb.Message {
 		const field5 = message.getTwoFactor();
 		if (field5 != false) {
 			writer.writeBool(5, field5);
+		}
+		const field6 = message.getAccessRevoked();
+		if (field6 != false) {
+			writer.writeBool(6, field6);
 		}
 	}
 
@@ -558,6 +571,10 @@ export class User extends jspb.Message {
 			case 5:
 				const field5 = reader.readBool()
 				message.setTwoFactor(field5);
+				break;
+			case 6:
+				const field6 = reader.readBool()
+				message.setAccessRevoked(field6);
 				break;
 			default:
 				reader.skipField();
@@ -2357,6 +2374,7 @@ function UserFromObject(obj: User.AsObject | undefined): User | undefined {
 	(obj.policies || [])
 		.forEach((item) => message.addPolicies(item));
 	message.setTwoFactor(obj.twoFactor);
+	message.setAccessRevoked(obj.accessRevoked);
 	return message;
 }
 

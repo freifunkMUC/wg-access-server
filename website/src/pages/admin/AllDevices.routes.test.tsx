@@ -79,7 +79,9 @@ describe('AllDevices routes', () => {
   beforeEach(() => {
     AppState.clearLoadingError();
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    listUsers.mockResolvedValue({ items: [{ name: 'alice', displayName: 'Alice', policies: [], twoFactor: false }] });
+    listUsers.mockResolvedValue({
+      items: [{ name: 'alice', displayName: 'Alice', policies: [], twoFactor: false, accessRevoked: false }],
+    });
   });
 
   afterEach(() => {

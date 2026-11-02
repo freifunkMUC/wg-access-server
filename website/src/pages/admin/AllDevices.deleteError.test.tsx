@@ -93,7 +93,9 @@ describe('AllDevices deletion', () => {
   });
 
   it('removes the device row after a successful delete', async () => {
-    listUsers.mockResolvedValue({ items: [{ name: 'alice', displayName: 'Alice', policies: [], twoFactor: false }] });
+    listUsers.mockResolvedValue({
+      items: [{ name: 'alice', displayName: 'Alice', policies: [], twoFactor: false, accessRevoked: false }],
+    });
     listAllDevices.mockResolvedValueOnce({ items: [deviceA, deviceB] }).mockResolvedValue({ items: [deviceB] });
     deleteDevice.mockResolvedValue({});
 
@@ -111,7 +113,9 @@ describe('AllDevices deletion', () => {
   });
 
   it('tells the admin and keeps the device row when the delete fails', async () => {
-    listUsers.mockResolvedValue({ items: [{ name: 'alice', displayName: 'Alice', policies: [], twoFactor: false }] });
+    listUsers.mockResolvedValue({
+      items: [{ name: 'alice', displayName: 'Alice', policies: [], twoFactor: false, accessRevoked: false }],
+    });
     listAllDevices.mockResolvedValue({ items: [deviceA, deviceB] });
     deleteDevice.mockRejectedValue(new Error('permission denied'));
 
@@ -134,11 +138,13 @@ describe('AllDevices deletion', () => {
     listUsers
       .mockResolvedValueOnce({
         items: [
-          { name: 'alice', displayName: 'Alice Doe', policies: [], twoFactor: false },
-          { name: 'bob', displayName: 'Bob Roe', policies: [], twoFactor: false },
+          { name: 'alice', displayName: 'Alice Doe', policies: [], twoFactor: false, accessRevoked: false },
+          { name: 'bob', displayName: 'Bob Roe', policies: [], twoFactor: false, accessRevoked: false },
         ],
       })
-      .mockResolvedValue({ items: [{ name: 'bob', displayName: 'Bob Roe', policies: [], twoFactor: false }] });
+      .mockResolvedValue({
+        items: [{ name: 'bob', displayName: 'Bob Roe', policies: [], twoFactor: false, accessRevoked: false }],
+      });
     listAllDevices.mockResolvedValue({ items: [deviceB] });
     deleteUser.mockResolvedValue({});
 
@@ -157,7 +163,7 @@ describe('AllDevices deletion', () => {
 
   it('tells the admin and keeps the user row when the user delete fails', async () => {
     listUsers.mockResolvedValue({
-      items: [{ name: 'alice', displayName: 'Alice Doe', policies: [], twoFactor: false }],
+      items: [{ name: 'alice', displayName: 'Alice Doe', policies: [], twoFactor: false, accessRevoked: false }],
     });
     listAllDevices.mockResolvedValue({ items: [deviceB] });
     deleteUser.mockRejectedValue(new Error('backend down'));

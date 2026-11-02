@@ -166,15 +166,14 @@ export const AllDevices = observer(function AllDevices() {
   // revokeAccess takes every way in from somebody at once, without deleting
   // anything: their devices keep their keys and addresses, so lifting the
   // blocks gives the access back without them setting up a client anew. It
-  // does not keep them from signing in, and the question says so: a block is
-  // the device's, and whoever signs in can replace a blocked device.
+  // also keeps them from signing in until a block is lifted again.
   const revokeAccess = async (user: User.AsObject) => {
     const whom = user.displayName || user.name;
     if (
       !(await confirm(
         `Take ${whom}'s access away? Their devices stop connecting, their API tokens are revoked and ` +
-          'they are signed out everywhere. Nothing is deleted - you can unblock the devices later. ' +
-          'If they can still sign in, they can add a new device: remove them where they sign in, too.',
+          'they are signed out everywhere, and they cannot sign in again. Nothing is deleted - ' +
+          'unblocking one of their devices gives the access back.',
       ))
     ) {
       return;
@@ -188,6 +187,7 @@ export const AllDevices = observer(function AllDevices() {
         )} revoked, ${count(res.sessionsEnded, 'session')} ended`,
         intent: 'success',
       });
+      await userResource.refresh();
       await deviceResource.refresh();
     } catch (error) {
       console.error('Failed to revoke access:', error);
@@ -230,6 +230,8 @@ export const AllDevices = observer(function AllDevices() {
         ...change,
       });
       toast({ text: done, intent: 'success' });
+      // lifting a block can also lift the user's revocation
+      await userResource.refresh();
       await deviceResource.refresh();
     } catch (error) {
       console.error('Failed to change the access of the device:', error);
@@ -304,6 +306,7 @@ export const AllDevices = observer(function AllDevices() {
         intent: result.failed ? 'error' : 'success',
       });
       setSelected(new Set());
+      await userResource.refresh();
       await deviceResource.refresh();
     } finally {
       setWorking(false);
@@ -663,6 +666,14 @@ export const AllDevices = observer(function AllDevices() {
               <TableRow key={i}>
                 <TableCell component="th" scope="row">
                   {user.displayName || user.name}
+                  {user.accessRevoked && (
+                    <Stack spacing={0.5} sx={{ mt: 0.5, alignItems: 'flex-start' }}>
+                      <Chip label="Access revoked" color="error" size="small" />
+                      <Typography variant="caption" color="text.secondary">
+                        They cannot sign in. Lift the block on one of their devices to give access back.
+                      </Typography>
+                    </Stack>
+                  )}
                 </TableCell>
                 <TableCell>{lastSeen(user.lastLogin)}</TableCell>
                 <TableCell>{user.policies?.length ? user.policies.join(', ') : '-'}</TableCell>

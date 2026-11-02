@@ -251,3 +251,48 @@ func TestRevokedUserWithoutALoginIsListedWithoutOne(t *testing.T) {
 		t.Errorf("users = %+v, want carol without a last login", listed)
 	}
 }
+
+// The admin list is where a revocation becomes visible: it says who may not
+// sign in, for somebody with devices and for the placeholder row of somebody
+// who never did, and stops saying it once a block on a device is lifted.
+func TestListUsersShowsWhoseAccessWasRevoked(t *testing.T) {
+	service, _, _, _ := revokeService(t,
+		&storage.Device{Owner: "alice", Name: "laptop", PublicKey: "key-1", Address: "10.44.0.2/32", CreatedAt: time.Now()},
+		&storage.Device{Owner: "bob", Name: "laptop", PublicKey: "key-3", Address: "10.44.0.4/32", CreatedAt: time.Now()},
+	)
+	admin := userContext("admin", true)
+	revoked := func() map[string]bool {
+		t.Helper()
+		res, err := service.ListUsers(admin, connect.NewRequest(&proto.ListUsersReq{}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := map[string]bool{}
+		for _, u := range res.Msg.GetItems() {
+			got[u.GetName()] = u.GetAccessRevoked()
+		}
+		return got
+	}
+
+	if got := revoked(); got["alice"] || got["bob"] {
+		t.Fatalf("access_revoked before any revocation = %v", got)
+	}
+
+	if _, err := service.RevokeAccess(admin, connect.NewRequest(&proto.RevokeAccessReq{Name: "alice"})); err != nil {
+		t.Fatal(err)
+	}
+	// carol never signed in and has no device: only the placeholder row says so
+	if err := service.DeviceManager.DisableUser("carol"); err != nil {
+		t.Fatal(err)
+	}
+	if got := revoked(); !got["alice"] || got["bob"] || !got["carol"] {
+		t.Errorf("access_revoked = %v, want alice and carol only", got)
+	}
+
+	if _, err := service.DeviceManager.SetDeviceAccess("alice", "laptop", devices.AccessChange{Disabled: new(bool)}); err != nil {
+		t.Fatal(err)
+	}
+	if got := revoked(); got["alice"] || !got["carol"] {
+		t.Errorf("access_revoked after lifting the block = %v, want carol only", got)
+	}
+}
