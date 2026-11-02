@@ -37,7 +37,7 @@ Since the upstream is currently unmaintained, we try to add new features and kee
 - An [audit log](https://www.freie-netze.org/wg-access-server/audit/) and Prometheus [metrics](#metrics)
 - Commands to run when the WireGuard interface comes up or goes down
 - The WireGuard kernel module where available, with an embedded userspace implementation as fallback
-- Dark and light mode
+- Dark and light mode, switched with the sun/moon button in the bar
 
 ## Documentation
 
