@@ -64,14 +64,48 @@ func (e *ValidationError) Error() string {
 	return e.msg
 }
 
+// expirySlack is how far past the cap an expiry may reach when creating a
+// token: the web UI computes it from the clock of the browser, which may run
+// a little ahead of the server. It changes nothing for the token itself, which
+// is refused at created_at + cap whatever expiry it carries.
+const expirySlack = time.Minute
+
 type Manager struct {
-	storage storage.TokenStorage
-	claims  authsession.ClaimsMiddleware
-	now     func() time.Time
+	storage     storage.TokenStorage
+	claims      authsession.ClaimsMiddleware
+	now         func() time.Time
+	maxLifetime time.Duration
 }
 
-func New(s storage.TokenStorage, claims authsession.ClaimsMiddleware) *Manager {
-	return &Manager{storage: s, claims: claims, now: time.Now}
+// Option configures a Manager.
+type Option func(*Manager)
+
+// WithMaxLifetime caps how long a token works, counted from its creation. A
+// token that never expires, or expires later, can no longer be created, and
+// the tokens that already exist stop working when they are older than max.
+// Zero is no cap.
+func WithMaxLifetime(max time.Duration) Option {
+	return func(m *Manager) { m.maxLifetime = max }
+}
+
+func New(s storage.TokenStorage, claims authsession.ClaimsMiddleware, options ...Option) *Manager {
+	m := &Manager{storage: s, claims: claims, now: time.Now}
+	for _, option := range options {
+		option(m)
+	}
+	return m
+}
+
+// effective returns a copy of token whose expiry is the earlier of its own
+// and the cap.
+func (m *Manager) effective(token *storage.APIToken) *storage.APIToken {
+	copied := *token
+	if m.maxLifetime > 0 {
+		if limit := token.CreatedAt.Add(m.maxLifetime); token.ExpiresAt == nil || limit.Before(*token.ExpiresAt) {
+			copied.ExpiresAt = &limit
+		}
+	}
+	return &copied
 }
 
 // Create issues a token for owner and returns its secret, which is not
@@ -87,6 +121,14 @@ func (m *Manager) Create(owner *authsession.Identity, name string, expiresAt *ti
 	now := m.now()
 	if expiresAt != nil && !expiresAt.After(now) {
 		return "", nil, &ValidationError{"the expiry date of a token must be in the future"}
+	}
+	if m.maxLifetime > 0 {
+		switch {
+		case expiresAt == nil:
+			return "", nil, &ValidationError{fmt.Sprintf("this server limits API tokens to %s: choose an expiry", m.maxLifetime)}
+		case expiresAt.After(now.Add(m.maxLifetime + expirySlack)):
+			return "", nil, &ValidationError{fmt.Sprintf("this server limits API tokens to %s: choose an earlier expiry", m.maxLifetime)}
+		}
 	}
 
 	identity, err := json.Marshal(snapshot(owner))
@@ -116,7 +158,9 @@ func (m *Manager) Create(owner *authsession.Identity, name string, expiresAt *ti
 	if err := m.storage.SaveToken(token); err != nil {
 		return "", nil, err
 	}
-	return secret, token, nil
+	// the expiry that applies, as the list shows it: without the minute a
+	// browser's clock may be off
+	return secret, m.effective(token), nil
 }
 
 // snapshot is the identity a token acts as. The admin claim that basic and
@@ -151,7 +195,7 @@ func (m *Manager) Authenticate(secret string) (*authsession.Identity, *storage.A
 	}
 
 	now := m.now()
-	if token.Expired(now) {
+	if m.effective(token).Expired(now) {
 		return nil, nil, ErrExpired
 	}
 
@@ -175,9 +219,17 @@ func (m *Manager) Authenticate(secret string) (*authsession.Identity, *storage.A
 	return identity, token, nil
 }
 
-// List returns the tokens of one owner, or every token for "".
+// List returns the tokens of one owner, or every token for "". Their expiry
+// is the one that applies, which the cap may have brought forward.
 func (m *Manager) List(owner string) ([]*storage.APIToken, error) {
-	return m.storage.ListTokens(owner)
+	tokens, err := m.storage.ListTokens(owner)
+	if err != nil {
+		return nil, err
+	}
+	for i, token := range tokens {
+		tokens[i] = m.effective(token)
+	}
+	return tokens, nil
 }
 
 // Delete revokes a token. Users can revoke their own tokens, admins any. For

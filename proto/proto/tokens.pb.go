@@ -30,7 +30,8 @@ type Token struct {
 	Owner     string                 `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
 	OwnerName string                 `protobuf:"bytes,4,opt,name=owner_name,json=ownerName,proto3" json:"owner_name,omitempty"`
 	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	// unset: the token does not expire
+	// unset: the token does not expire. With a lifetime cap on the server this is
+	// the expiry that applies: the one chosen, or created_at + cap if that is earlier.
 	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	// unset: the token was never used
 	LastUsedAt    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
@@ -120,7 +121,7 @@ func (x *Token) GetLastUsedAt() *timestamppb.Timestamp {
 type CreateTokenReq struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// unset: the token does not expire
+	// unset: the token does not expire (refused with a lifetime cap on the server)
 	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

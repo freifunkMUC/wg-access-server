@@ -92,6 +92,9 @@ type InfoRes struct {
 	RecoveryCodesLeft int32 `protobuf:"varint,23,opt,name=recovery_codes_left,json=recoveryCodesLeft,proto3" json:"recovery_codes_left,omitempty"`
 	// how many passkeys this session's account has registered
 	Passkeys int32 `protobuf:"varint,24,opt,name=passkeys,proto3" json:"passkeys,omitempty"`
+	// the longest an API token may live, counted from its creation. Unset: no
+	// cap. The UI offers no expiry beyond it.
+	ApiTokenMaxLifetime *durationpb.Duration `protobuf:"bytes,25,opt,name=api_token_max_lifetime,json=apiTokenMaxLifetime,proto3" json:"api_token_max_lifetime,omitempty"`
 	// the name the identity provider gave this account, for the account menu to
 	// greet them with. It may be empty (the built-in sign-in has none); the UI
 	// then falls back to subject.
@@ -294,6 +297,13 @@ func (x *InfoRes) GetPasskeys() int32 {
 	return 0
 }
 
+func (x *InfoRes) GetApiTokenMaxLifetime() *durationpb.Duration {
+	if x != nil {
+		return x.ApiTokenMaxLifetime
+	}
+	return nil
+}
+
 func (x *InfoRes) GetUserDisplayName() string {
 	if x != nil {
 		return x.UserDisplayName
@@ -313,7 +323,7 @@ var File_server_proto protoreflect.FileDescriptor
 const file_server_proto_rawDesc = "" +
 	"\n" +
 	"\fserver.proto\x12\x05proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x0fbuildinfo.proto\"\t\n" +
-	"\aInfoReq\"\xf3\b\n" +
+	"\aInfoReq\"\xc3\t\n" +
 	"\aInfoRes\x12\x1d\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\tR\tpublicKey\x120\n" +
@@ -343,7 +353,8 @@ const file_server_proto_rawDesc = "" +
 	"\x17password_change_enabled\x18\x15 \x01(\bR\x15passwordChangeEnabled\x12,\n" +
 	"\x12two_factor_enabled\x18\x16 \x01(\bR\x10twoFactorEnabled\x12.\n" +
 	"\x13recovery_codes_left\x18\x17 \x01(\x05R\x11recoveryCodesLeft\x12\x1a\n" +
-	"\bpasskeys\x18\x18 \x01(\x05R\bpasskeys\x12*\n" +
+	"\bpasskeys\x18\x18 \x01(\x05R\bpasskeys\x12N\n" +
+	"\x16api_token_max_lifetime\x18\x19 \x01(\v2\x19.google.protobuf.DurationR\x13apiTokenMaxLifetime\x12*\n" +
 	"\x11user_display_name\x18\x1a \x01(\tR\x0fuserDisplayName\x12#\n" +
 	"\ruser_provider\x18\x1b \x01(\tR\fuserProviderJ\x04\b\x04\x10\x05R\vhost_vpn_ip22\n" +
 	"\x06Server\x12(\n" +
@@ -373,13 +384,14 @@ var file_server_proto_depIdxs = []int32{
 	2, // 0: proto.InfoRes.host:type_name -> google.protobuf.StringValue
 	3, // 1: proto.InfoRes.inactive_device_grace_period:type_name -> google.protobuf.Duration
 	4, // 2: proto.InfoRes.build_info:type_name -> proto.BuildInfo
-	0, // 3: proto.Server.Info:input_type -> proto.InfoReq
-	1, // 4: proto.Server.Info:output_type -> proto.InfoRes
-	4, // [4:5] is the sub-list for method output_type
-	3, // [3:4] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	3, // 3: proto.InfoRes.api_token_max_lifetime:type_name -> google.protobuf.Duration
+	0, // 4: proto.Server.Info:input_type -> proto.InfoReq
+	1, // 5: proto.Server.Info:output_type -> proto.InfoRes
+	5, // [5:6] is the sub-list for method output_type
+	4, // [4:5] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_server_proto_init() }

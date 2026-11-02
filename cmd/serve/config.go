@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/goccy/go-yaml"
 	"github.com/sirupsen/logrus"
@@ -156,6 +157,15 @@ func (cmd *servecmd) ReadConfig() *config.AppConfig {
 
 	if err := validatePolicies(cmd.AppConfig.VPN.Policies, &cmd.AppConfig.Auth); err != nil {
 		logrus.Fatal(err)
+	}
+
+	if cmd.AppConfig.APITokenMaxLifetime < 0 {
+		logrus.Fatalf("apiTokenMaxLifetime must not be negative, but is %s (0 turns the cap off)", cmd.AppConfig.APITokenMaxLifetime)
+	}
+	// Below a minute no token could be made from the web UI, which counts in
+	// whole seconds and gets a minute for its clock: that is a typo, not a cap.
+	if cmd.AppConfig.APITokenMaxLifetime > 0 && cmd.AppConfig.APITokenMaxLifetime < time.Minute {
+		logrus.Fatalf("apiTokenMaxLifetime must be at least 1m, but is %s (0 turns the cap off)", cmd.AppConfig.APITokenMaxLifetime)
 	}
 
 	if err := cmd.AppConfig.Auth.Validate(); err != nil {

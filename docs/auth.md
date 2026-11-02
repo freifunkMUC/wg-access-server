@@ -414,6 +414,11 @@ UI - the configuration or the identity provider:
 For an identity provider, the user stays signed in with those rights until the session ends. To end
 them sooner, revoke their access in the web UI, and remove them at the provider as well.
 
+If a demotion at the identity provider has to take effect within a set time, shorten
+`sessionStore.maxAge` (for example `24h`: users sign in once a day) and set `apiTokenMaxLifetime` to
+match (`24h`). Then neither a session nor a token can outlast the claims of its sign-in by more than
+that. Scripts using a token have to be given a new one that often.
+
 ## API tokens
 
 With `enableApiTokens: true`, users can create tokens on the *API tokens* tab of *Account settings* (`/account/tokens`) in the web UI and use the API from scripts without a browser session:
@@ -440,6 +445,10 @@ token has admin rights - except manage the account itself (see below). It works 
   longer. To take access away from somebody at once, revoke their access or delete the user in the web UI,
   or revoke the tokens under *All tokens*.
 - **Lifetime:** a token expires after 30 days, 90 days, a year or never, as chosen when creating it.
+  With `apiTokenMaxLifetime` set (default: no cap), no token lives longer than that after its
+  creation: creating one that never expires, or expires later, is refused, the web UI offers only
+  choices within the cap, and a token already made stops working once it is older than the cap,
+  whatever expiry it was given. The list shows the expiry that applies.
   Users can revoke their own tokens, admins every token (listed under *All tokens*). Deleting a user
   revokes their tokens too. A revoked or expired token stops working immediately, on every replica.
 - **A token cannot create further tokens.** Otherwise a leaked token could outlive its expiry

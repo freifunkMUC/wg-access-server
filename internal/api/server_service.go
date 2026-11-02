@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/freifunkMUC/wg-embed/pkg/wgembed"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/freifunkMUC/wg-access-server/buildinfo"
 	"github.com/freifunkMUC/wg-access-server/internal/authnz/authconfig"
@@ -101,6 +102,7 @@ func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoR
 		BuildInfo:                       &proto.BuildInfo{Version: buildinfo.Version(), Commit: buildinfo.ShortCommitHash()},
 		Mtu:                             int32(s.Config.WireGuard.MTU),
 		ApiTokensEnabled:                s.Config.EnableAPITokens,
+		ApiTokenMaxLifetime:             apiTokenMaxLifetime(s.Config),
 		Subject:                         user.Subject,
 		PasswordChangeEnabled:           s.PasswordChange && authconfig.HasPassword(user.Provider),
 		TwoFactorEnabled:                s.TwoFactor != nil && s.TwoFactor.Enabled(user.Subject),
@@ -109,6 +111,14 @@ func (s *ServerService) Info(ctx context.Context, _ *connect.Request[proto.InfoR
 		UserDisplayName:                 user.Name,
 		UserProvider:                    user.Provider,
 	}), nil
+}
+
+// apiTokenMaxLifetime is the cap on API tokens, unset for none.
+func apiTokenMaxLifetime(conf *config.AppConfig) *durationpb.Duration {
+	if conf.APITokenMaxLifetime <= 0 {
+		return nil
+	}
+	return durationToDurationpb(&conf.APITokenMaxLifetime)
 }
 
 // allowedIPs is what a new client configuration will tunnel: the configured

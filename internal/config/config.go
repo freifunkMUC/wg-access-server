@@ -79,6 +79,13 @@ type AppConfig struct {
 	// after the web session it was created in has ended.
 	// Defaults to false
 	EnableAPITokens bool `yaml:"enableApiTokens"`
+	// APITokenMaxLifetime caps how long an API token works, counted from
+	// its creation, whatever expiry it was given: creating a token that
+	// never expires or expires later is refused, and an existing token is
+	// refused once it is older than this. It bounds how long the claims of
+	// an OIDC sign-in outlive a change at the identity provider.
+	// Defaults to 0 (no cap)
+	APITokenMaxLifetime time.Duration `yaml:"apiTokenMaxLifetime"`
 	// The name of the WireGuard configuration file that can
 	// be downloaded through the web UI after adding a device.
 	// Do not include the '.conf' extension

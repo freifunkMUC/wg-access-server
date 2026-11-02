@@ -24,7 +24,8 @@ message Token {
   string owner = 3;
   string owner_name = 4;
   google.protobuf.Timestamp created_at = 5;
-  // unset: the token does not expire
+  // unset: the token does not expire. With a lifetime cap on the server this is
+  // the expiry that applies: the one chosen, or created_at + cap if that is earlier.
   google.protobuf.Timestamp expires_at = 6;
   // unset: the token was never used
   google.protobuf.Timestamp last_used_at = 7;
@@ -32,7 +33,7 @@ message Token {
 
 message CreateTokenReq {
   string name = 1;
-  // unset: the token does not expire
+  // unset: the token does not expire (refused with a lifetime cap on the server)
   google.protobuf.Timestamp expires_at = 2;
 }
 

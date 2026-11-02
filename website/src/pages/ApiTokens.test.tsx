@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { ApiTokens, expiryFor } from './ApiTokens';
+import { ApiTokens, expiryFor, lifetimesWithin } from './ApiTokens';
 import { grpc } from '../Api';
 import { AppState } from '../AppState';
 import { InfoRes } from '../sdk/server_pb';
@@ -49,6 +49,28 @@ describe('expiryFor', () => {
 
   it('has no expiry for "never"', () => {
     expect(expiryFor(0)).toBeUndefined();
+  });
+});
+
+describe('lifetimesWithin', () => {
+  const day = 24 * 60 * 60;
+
+  it('offers everything without a cap', () => {
+    expect(lifetimesWithin(undefined).map((l) => l.label)).toEqual(['30 days', '90 days', '1 year', 'Never']);
+    expect(lifetimesWithin(0)).toHaveLength(4);
+  });
+
+  it('drops what is beyond the cap, and never', () => {
+    expect(lifetimesWithin(100 * day).map((l) => l.label)).toEqual(['30 days', '90 days', '100 days']);
+  });
+
+  it('does not repeat a lifetime that is the cap', () => {
+    expect(lifetimesWithin(90 * day).map((l) => l.label)).toEqual(['30 days', '90 days']);
+  });
+
+  it('offers the cap alone when it is short', () => {
+    expect(lifetimesWithin(24 * 3600).map((l) => l.label)).toEqual(['1 day']);
+    expect(lifetimesWithin(12 * 3600).map((l) => l.label)).toEqual(['12 hours']);
   });
 });
 
@@ -102,6 +124,26 @@ describe('ApiTokens', () => {
 
     await screen.findByTestId('token-secret');
     expect(vi.mocked(grpc.tokens.createToken).mock.calls[0][0].expiresAt).toBeUndefined();
+  });
+
+  it('offers only lifetimes within the cap of the server', async () => {
+    AppState.setInfo({ isAdmin: false, apiTokensEnabled: true, apiTokenMaxLifetime: { seconds: 7 * 24 * 3600, nanos: 0 } } as InfoRes.AsObject);
+    vi.mocked(grpc.tokens.createToken).mockResolvedValue({ secret: 'wgas_secret', token: undefined });
+    render(<ApiTokens />);
+    await screen.findByText('backup script');
+
+    fireEvent.click(screen.getByRole('button', { name: /create token/i }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.mouseDown(within(dialog).getByRole('combobox'));
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['7 days']);
+    fireEvent.click(screen.getByRole('option', { name: '7 days' }));
+    fireEvent.change(within(dialog).getByLabelText(/name/i), { target: { value: 'ci' } });
+
+    const before = Date.now();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+    await screen.findByTestId('token-secret');
+    const request = vi.mocked(grpc.tokens.createToken).mock.calls[0][0];
+    expect(Math.round((request.expiresAt!.seconds * 1000 - before) / (24 * 3600 * 1000))).toBe(7);
   });
 
   it('keeps the dialog open and shows why creating failed', async () => {

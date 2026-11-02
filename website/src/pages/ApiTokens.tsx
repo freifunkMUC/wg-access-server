@@ -38,6 +38,33 @@ export const lifetimes = [
   { days: 0, label: 'Never' },
 ];
 
+const DAY_SECONDS = 24 * 60 * 60;
+
+function capLabel(seconds: number): string {
+  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? '' : 's'}`;
+  if (seconds % DAY_SECONDS === 0) {
+    return plural(seconds / DAY_SECONDS, 'day');
+  }
+  if (seconds % 3600 === 0) {
+    return plural(seconds / 3600, 'hour');
+  }
+  return plural(Math.max(1, Math.floor(seconds / 60)), 'minute');
+}
+
+// The lifetimes to offer when the server caps how long a token works
+// (apiTokenMaxLifetime, in seconds; unset or 0: no cap). The ones within the
+// cap stay, "never" goes, and the cap itself is offered as the longest.
+export function lifetimesWithin(capSeconds?: number): { days: number; label: string }[] {
+  if (!capSeconds || capSeconds <= 0) {
+    return lifetimes;
+  }
+  const within = lifetimes.filter((l) => l.days > 0 && l.days * DAY_SECONDS <= capSeconds);
+  if (!within.some((l) => l.days * DAY_SECONDS === capSeconds)) {
+    within.push({ days: capSeconds / DAY_SECONDS, label: capLabel(capSeconds) });
+  }
+  return within;
+}
+
 export function expiryFor(days: number, now: Date = new Date()): Date | undefined {
   if (days === 0) {
     return undefined;
@@ -197,8 +224,10 @@ interface CreateTokenDialogProps {
 }
 
 export function CreateTokenDialog({ onClose, onCreated }: CreateTokenDialogProps) {
+  const choices = lifetimesWithin(Number(AppState.info?.apiTokenMaxLifetime?.seconds ?? 0));
   const [name, setName] = useState('');
-  const [days, setDays] = useState(90);
+  // 90 days, or the longest lifetime the server allows if that is shorter
+  const [days, setDays] = useState(choices.some((l) => l.days === 90) ? 90 : choices[choices.length - 1].days);
   const [error, setError] = useState<string>();
 
   const submit = async (event: React.FormEvent) => {
@@ -244,7 +273,7 @@ export function CreateTokenDialog({ onClose, onCreated }: CreateTokenDialogProps
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
             >
-              {lifetimes.map((l) => (
+              {choices.map((l) => (
                 <MenuItem key={l.days} value={l.days}>
                   {l.label}
                 </MenuItem>
