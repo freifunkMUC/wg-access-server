@@ -139,6 +139,8 @@ export declare namespace InfoRes {
 		twoFactorEnabled: boolean,
 		recoveryCodesLeft: number,
 		passkeys: number,
+		userDisplayName: string,
+		userProvider: string,
 	}
 }
 
@@ -318,6 +320,20 @@ export class InfoRes extends jspb.Message {
 		(jspb.Message as any).setProto3IntField(this, 24, value);
 	}
 
+	getUserDisplayName(): string {return jspb.Message.getFieldWithDefault(this, 26, "");
+	}
+
+	setUserDisplayName(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 26, value);
+	}
+
+	getUserProvider(): string {return jspb.Message.getFieldWithDefault(this, 27, "");
+	}
+
+	setUserProvider(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 27, value);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		InfoRes.serializeBinaryToWriter(this, writer);
@@ -350,6 +366,8 @@ export class InfoRes extends jspb.Message {
 			twoFactorEnabled: this.getTwoFactorEnabled(),
 			recoveryCodesLeft: this.getRecoveryCodesLeft(),
 			passkeys: this.getPasskeys(),
+			userDisplayName: this.getUserDisplayName(),
+			userProvider: this.getUserProvider(),
 		};
 	}
 
@@ -445,6 +463,14 @@ export class InfoRes extends jspb.Message {
 		const field24 = message.getPasskeys();
 		if (field24 != 0) {
 			writer.writeInt32(24, field24);
+		}
+		const field26 = message.getUserDisplayName();
+		if (field26.length > 0) {
+			writer.writeString(26, field26);
+		}
+		const field27 = message.getUserProvider();
+		if (field27.length > 0) {
+			writer.writeString(27, field27);
 		}
 	}
 
@@ -556,6 +582,14 @@ export class InfoRes extends jspb.Message {
 				const field24 = reader.readInt32()
 				message.setPasskeys(field24);
 				break;
+			case 26:
+				const field26 = reader.readString()
+				message.setUserDisplayName(field26);
+				break;
+			case 27:
+				const field27 = reader.readString()
+				message.setUserProvider(field27);
+				break;
 			default:
 				reader.skipField();
 				break;
@@ -603,6 +637,8 @@ function InfoResFromObject(obj: InfoRes.AsObject | undefined): InfoRes | undefin
 	message.setTwoFactorEnabled(obj.twoFactorEnabled);
 	message.setRecoveryCodesLeft(obj.recoveryCodesLeft);
 	message.setPasskeys(obj.passkeys);
+	message.setUserDisplayName(obj.userDisplayName);
+	message.setUserProvider(obj.userProvider);
 	return message;
 }
 

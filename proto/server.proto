@@ -54,4 +54,11 @@ message InfoRes {
   int32 recovery_codes_left = 23;
   // how many passkeys this session's account has registered
   int32 passkeys = 24;
+  // the name the identity provider gave this account, for the account menu to
+  // greet them with. It may be empty (the built-in sign-in has none); the UI
+  // then falls back to subject.
+  string user_display_name = 26;
+  // the configured name of the provider this session signed in with, e.g.
+  // "simple" or the name of an OIDC provider
+  string user_provider = 27;
 }
