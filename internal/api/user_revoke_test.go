@@ -193,3 +193,61 @@ func TestRevokeAccessRefusesYourself(t *testing.T) {
 		t.Error("the refused revocation blocked a device anyway")
 	}
 }
+
+// Ending the sessions and the tokens is not enough: the person signs in again
+// at once and adds new devices. The sign-in has to be refused until an admin
+// lifts a block on one of their devices.
+func TestRevokeAccessKeepsThemFromSigningIn(t *testing.T) {
+	service, s, _, _ := revokeService(t,
+		&storage.Device{Owner: "alice", Name: "laptop", PublicKey: "key-1", Address: "10.44.0.2/32", CreatedAt: time.Now()},
+		&storage.Device{Owner: "bob", Name: "laptop", PublicKey: "key-3", Address: "10.44.0.4/32", CreatedAt: time.Now()},
+	)
+	// alice never signed in since users were remembered: only her device
+	// says she exists
+	if _, err := service.RevokeAccess(userContext("admin", true), connect.NewRequest(&proto.RevokeAccessReq{Name: "alice"})); err != nil {
+		t.Fatal(err)
+	}
+
+	alice, err := s.GetUser("alice")
+	if err != nil {
+		t.Fatalf("revoking left no record that alice may not sign in: %v", err)
+	}
+	if !alice.Disabled {
+		t.Error("alice may still sign in")
+	}
+	if bob, err := s.GetUser("bob"); err == nil && bob.Disabled {
+		t.Error("somebody else may not sign in")
+	}
+
+	// signing in again, were it let through, does not undo it
+	if err := s.SaveUser(&storage.User{Subject: "alice", Provider: "simple", LastLogin: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if alice, _ := s.GetUser("alice"); alice == nil || !alice.Disabled {
+		t.Error("a sign-in cleared the revocation")
+	}
+
+	// the way back is the one the README names: lift a block
+	if _, err := service.DeviceManager.SetDeviceAccess("alice", "laptop", devices.AccessChange{Disabled: new(bool)}); err != nil {
+		t.Fatal(err)
+	}
+	if alice, _ := s.GetUser("alice"); alice == nil || alice.Disabled {
+		t.Error("lifting the block on her device did not let her sign in again")
+	}
+}
+
+// A user nobody has seen sign in is listed without a last login rather than
+// with the year 1.
+func TestRevokedUserWithoutALoginIsListedWithoutOne(t *testing.T) {
+	service, _, _, _ := revokeService(t)
+	if err := service.DeviceManager.DisableUser("carol"); err != nil {
+		t.Fatal(err)
+	}
+	listed, err := service.DeviceManager.ListUsers()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 1 || listed[0].Name != "carol" || listed[0].LastLogin != nil {
+		t.Errorf("users = %+v, want carol without a last login", listed)
+	}
+}

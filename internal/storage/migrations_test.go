@@ -206,6 +206,58 @@ func TestBlockForOwnerAfterUpgrade(t *testing.T) {
 	}
 }
 
+// The users from before 0014 have to come out as users who may sign in: a
+// NULL there would be neither, and 0003 shows what that costs.
+func TestUsersMayStillSignInAfterUpgrade(t *testing.T) {
+	for backend, uri := range freshDatabases(t) {
+		t.Run(backend, func(t *testing.T) {
+			old := openRaw(t, uri)
+			for _, m := range migrations {
+				if m.id == "0014_user_disabled" {
+					break
+				}
+				if err := m.apply(old); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := old.AutoMigrate(&schemaMigration{}); err != nil {
+				t.Fatal(err)
+			}
+			for _, m := range migrations {
+				if m.id == "0014_user_disabled" {
+					break
+				}
+				if err := old.Create(&schemaMigration{ID: m.id, AppliedAt: time.Now()}).Error; err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := old.Create(&userV6{Subject: "alice", Provider: "simple", LastLogin: time.Now()}).Error; err != nil {
+				t.Fatal(err)
+			}
+
+			s := openStorage(t, uri)
+
+			user, err := s.GetUser("alice")
+			if err != nil {
+				t.Fatalf("the user did not survive the upgrade: %v", err)
+			}
+			if user.Disabled {
+				t.Error("a user from before the upgrade is disabled")
+			}
+			var nulls int64
+			if err := s.db.Model(&User{}).Where("disabled IS NULL").Count(&nulls).Error; err != nil || nulls != 0 {
+				t.Errorf("%d users have no value in disabled (err %v), want none", nulls, err)
+			}
+			if err := s.SetUserDisabled("alice", true); err != nil {
+				t.Fatal(err)
+			}
+			if user, _ := s.GetUser("alice"); !user.Disabled {
+				t.Error("the user from before the upgrade cannot be disabled")
+			}
+		})
+	}
+}
+
 // Starting a second time finds nothing to do.
 func TestMigrationsRunOnce(t *testing.T) {
 	db := openRaw(t, "sqlite3://"+filepath.Join(t.TempDir(), "once.db"))

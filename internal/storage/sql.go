@@ -621,6 +621,26 @@ func (s *SQLStorage) SetUserTOTP(subject string, state TOTPState) error {
 	return nil
 }
 
+// SetUserDisabled writes the disabled column of one user, and nothing else.
+func (s *SQLStorage) SetUserDisabled(subject string, disabled bool) error {
+	var err error
+	if disabled {
+		// the user may never have signed in
+		err = s.db.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "subject"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{"disabled": true}),
+		}).Create(&User{Subject: subject, Disabled: true, LastLogin: neverSignedIn}).Error
+	} else {
+		err = s.db.Model(&User{}).
+			Where("subject = ?", subject).
+			UpdateColumns(map[string]interface{}{"disabled": false}).Error
+	}
+	if err != nil {
+		return fmt.Errorf("failed to write whether user '%s' is disabled: %w", subject, err)
+	}
+	return nil
+}
+
 // SetUserPassword writes the password columns of one user, and nothing else.
 func (s *SQLStorage) SetUserPassword(subject string, hash string, from string) error {
 	q := s.db.Model(&User{}).

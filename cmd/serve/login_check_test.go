@@ -87,3 +87,76 @@ func TestCheckLoginWithoutTheUsers(t *testing.T) {
 		t.Errorf("check = %v, want a failure rather than a refusal: nobody was found to be anybody", err)
 	}
 }
+
+// Revoking somebody's access ends their sessions, but the provider still
+// lets them in: the sign-in has to be refused, whichever provider it is, until
+// an admin lifts a block on one of their devices.
+func TestCheckLoginRefusesARevokedUser(t *testing.T) {
+	for _, provider := range []string{"simple", "basic", "keycloak"} {
+		t.Run(provider, func(t *testing.T) {
+			s := storage.NewMemoryStorage()
+			if err := s.SaveUser(&storage.User{Subject: "alice", Provider: provider, LastLogin: time.Now()}); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.SetUserDisabled("alice", true); err != nil {
+				t.Fatal(err)
+			}
+
+			err := checkLogin(s)(&authsession.Identity{Subject: "alice", Provider: provider})
+			var refused *authruntime.RefusedError
+			if !errors.As(err, &refused) {
+				t.Fatalf("check = %v, want the sign-in refused", err)
+			}
+
+			if err := s.SetUserDisabled("alice", false); err != nil {
+				t.Fatal(err)
+			}
+			if err := checkLogin(s)(&authsession.Identity{Subject: "alice", Provider: provider}); err != nil {
+				t.Errorf("check = %v, want the sign-in let through once the access is back", err)
+			}
+		})
+	}
+}
+
+// An admin can revoke somebody who never signed in. That leaves a row without
+// a provider, which must not stop the devices from saying whose subject it is.
+func TestCheckLoginAfterRevokingSomebodyWhoNeverSignedIn(t *testing.T) {
+	s := storage.NewMemoryStorage()
+	if err := s.Save(&storage.Device{
+		Owner: "alice", OwnerProvider: "simple", Name: "laptop",
+		PublicKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", Address: "10.44.0.2/32",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetUserDisabled("alice", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetUserDisabled("alice", false); err != nil {
+		t.Fatal(err)
+	}
+
+	var refused *authruntime.RefusedError
+	if err := checkLogin(s)(&authsession.Identity{Subject: "alice", Provider: "keycloak"}); !errors.As(err, &refused) {
+		t.Errorf("check = %v, want a sign-in by another provider refused on the strength of the device", err)
+	}
+}
+
+// A session or an API token made before the revocation goes through the same
+// check on every request.
+func TestUserDisabled(t *testing.T) {
+	s := storage.NewMemoryStorage()
+	disabled := userDisabled(s)
+
+	if revoked, err := disabled("alice"); err != nil || revoked {
+		t.Fatalf("unknown user: revoked = %v, err = %v, want neither", revoked, err)
+	}
+	if err := s.SetUserDisabled("alice", true); err != nil {
+		t.Fatal(err)
+	}
+	if revoked, err := disabled("alice"); err != nil || !revoked {
+		t.Errorf("revoked user: revoked = %v, err = %v, want revoked", revoked, err)
+	}
+	if _, err := userDisabled(unreadableUsers{s})("alice"); err == nil {
+		t.Error("a database that cannot be read answered, want an error so the request is refused")
+	}
+}

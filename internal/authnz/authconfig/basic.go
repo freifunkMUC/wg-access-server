@@ -179,7 +179,8 @@ func PasswordMatches(entry string, password string) bool {
 func parsehtpassword(user string) (string, string, bool) {
 	username, hash, ok := strings.Cut(user, ":")
 	if !ok || username == "" || hash == "" {
-		logrus.Warnf("ignoring malformed user entry %q: expected the htpasswd format 'username:hash'", user)
+		// not the entry itself: what follows the name may be a hash
+		logrus.Warnf("ignoring a malformed user entry for %q: expected the htpasswd format 'username:hash'", username)
 		return "", "", false
 	}
 	return username, hash, true

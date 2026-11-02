@@ -109,6 +109,11 @@ type UserStorage interface {
 	// are still unused. They only ever change together. The user has to
 	// exist.
 	SetUserTOTP(subject string, state TOTPState) error
+	// SetUserDisabled says whether somebody may sign in. Disabling creates
+	// the user when they never signed in, so that an admin can keep out
+	// somebody who owns devices; enabling one that is not there does nothing.
+	// A sign-in (SaveUser) leaves it as it is.
+	SetUserDisabled(subject string, disabled bool) error
 }
 
 // TOTPState is the two-factor state of one user as it is stored. The zero
@@ -166,6 +171,13 @@ type User struct {
 	TotpRecovery  string     `json:"-"`
 	TotpLastStep  int64      `json:"-"`
 
+	// Disabled is set when an admin revoked this person's access: they are
+	// refused at sign-in, and a session or token they still have stops
+	// working. Nothing but an admin lifting a block on one of their devices
+	// clears it; it is not part of what an identity provider says, so a
+	// sign-in does not touch it.
+	Disabled bool `json:"-" gorm:"not null;default:false"`
+
 	// PasswordFrom is the configured entry that was in effect when the
 	// password was set. When the configuration names a different one now, an
 	// admin has changed it, and theirs wins: the stored password is ignored.
@@ -185,6 +197,15 @@ func (u *User) TOTP() TOTPState {
 // in: a secret alone is an enrolment nobody finished.
 func (u *User) TwoFactorEnabled() bool {
 	return u.TotpSecret != "" && u.TotpEnabledAt != nil
+}
+
+// neverSignedIn is the last login of a user an admin disabled before they
+// signed in. The zero time would do, but MySQL refuses it in a datetime column.
+var neverSignedIn = time.Unix(0, 0).UTC()
+
+// SignedIn says whether the server has seen this user sign in.
+func (u *User) SignedIn() bool {
+	return u.LastLogin.After(neverSignedIn)
 }
 
 // PolicyList returns the policies one by one, empty for a user without any.

@@ -46,12 +46,15 @@ auth:
     # if not present. Need to be set when running in HA setup (more than one replica)
     secret: "<session store secret>"
     # How long a web session stays valid, as a duration such as "24h".
-    # Defaults to 720h (30 days). The claims of a session - whether the user
-    # is an admin and whether they still have access - are taken from the
-    # identity provider at login and are not re-checked afterwards, and there
-    # is no server-side session store to invalidate. This value is therefore
-    # also how long it takes for access revoked at the provider to take
-    # effect, so shorten it if that matters to you.
+    # Defaults to 720h (30 days). Sessions are kept in the server's storage,
+    # but the identity of a session - its claims, such as whether the user is
+    # an admin or has the `accessClaim` - is the one from sign-in and is not
+    # asked of the identity provider again. A session ends when its user is
+    # deleted or has their access revoked in the web UI, when they sign out,
+    # and when this time has passed. This value is therefore also how long it
+    # takes for access revoked or reduced at the provider to take effect, so
+    # shorten it if that matters to you. See "How long access outlasts a
+    # removal" below.
     maxAge: "720h"
     # Mark the session cookie as Secure so browsers only send it over HTTPS.
     # Defaults to false, because the web UI is also served over plain HTTP on
@@ -318,7 +321,9 @@ That is what makes a session something the server can end:
 
 - **Signing out** ends it, rather than only dropping the cookie. A cookie that was copied elsewhere
   stops working with it.
-- **Deleting a user** ends every session they have, along with their devices and their API tokens.
+- **Revoking a user's access** or **deleting a user** ends every session they have, along with their API
+  tokens (and, for a deletion, their devices). A revoked user is also refused at the next request of
+  any session that somehow survives, and at sign-in.
 - It takes effect **everywhere at once**: a session is read from the storage on every request, so
   there is nothing to tell the other replicas.
 
@@ -370,6 +375,7 @@ Two things follow from it:
 - The admin page shows when somebody last signed in, and it lists people who have signed in but have
   not added a device yet.
 - Deleting a user removes that row along with their devices and their API tokens.
+- The row also records that an admin revoked somebody's access, which is what keeps them from signing in.
 
 Name and email address were already stored with every device, so nothing is kept that was not kept
 before - except for a person who has no device at all.
@@ -388,6 +394,24 @@ a warning in the log naming both providers.
 - **Renaming a provider** - the `name` of an `oidc`, `gitlab` or `github` backend - makes everybody
   who signed in through it somebody of another provider. Keep the name. Deleting a user in the web
   UI frees their identifier, along with their devices and their API tokens.
+
+### How long access outlasts a removal
+
+Revoking a user in the web UI ends their sessions and tokens at once and records that their access
+was revoked: they are refused at sign-in, and on every request of a session or token that is still
+around, until an admin lifts a block on one of their devices. Deleting a user ends their sessions and
+tokens too, but forgets that record along with the user, so whoever the provider still lets in signs in
+again as a new user. What reaches a session or an API token that already exists from *outside* the web
+UI - the configuration or the identity provider:
+
+| Change | Web session | API token |
+| --- | --- | --- |
+| Removed from `simple.users`/`basic.users` | Refused at the next request after the server was restarted with the new configuration | Same |
+| Admin rights taken away: `adminUsername` changed (Simple/Basic) | At the next request after the server was restarted with the new value | Same |
+| Demoted, removed from a group or `accessClaim` withdrawn at an OIDC provider, GitHub organization or team | Stays valid until `sessionStore.maxAge`, with the claims it had at sign-in (`accessClaim` is checked against those) | Stays valid until it expires, with the claims of the session that created it |
+
+For an identity provider, the user stays signed in with those rights until the session ends. To end
+them sooner, revoke their access in the web UI, and remove them at the provider as well.
 
 ## API tokens
 
@@ -413,8 +437,8 @@ token has admin rights - except manage the account itself (see below). It works 
   the configuration requires an `accessClaim` its identity does not have.
 - **Changes at the identity provider do not reach a token.** The claims of an OIDC user are those
   from the login the token was created in - just like a web session, only that a token can live
-  longer. To take access away from somebody at once, delete the user in the web UI, which revokes
-  their tokens, or revoke the tokens under *All tokens*.
+  longer. To take access away from somebody at once, revoke their access or delete the user in the web UI,
+  or revoke the tokens under *All tokens*.
 - **Lifetime:** a token expires after 30 days, 90 days, a year or never, as chosen when creating it.
   Users can revoke their own tokens, admins every token (listed under *All tokens*). Deleting a user
   revokes their tokens too. A revoked or expired token stops working immediately, on every replica.
@@ -465,8 +489,10 @@ Some things worth knowing:
   a rename. Accounts of a GitHub Enterprise Server are kept apart from github.com ones.
 - The primary email address is shown in the web UI if GitHub verified it.
 - As with every provider, membership is checked when signing in. Removing somebody from the
-  organization takes effect when their web session ends (`sessionStore.maxAge`). Deleting the user in
-  the web UI removes their devices and API tokens and ends their sessions at once.
+  organization takes effect when their web session ends (`sessionStore.maxAge`), and their API tokens
+  keep working until they expire. Revoking their access in the web UI ends their sessions and tokens at
+  once and keeps them from signing in again; deleting the user removes their devices and tokens too,
+  but they can sign in again while GitHub still lets them in.
 
 ## Login throttling
 

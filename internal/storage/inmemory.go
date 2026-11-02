@@ -323,6 +323,7 @@ func (s *InMemoryStorage) SaveUser(user *User) error {
 	// a login carries neither a password nor a second factor, and must not
 	// wipe what the user set
 	if previous, ok := s.users[user.Subject]; ok {
+		stored.Disabled = previous.Disabled
 		if stored.PasswordHash == "" {
 			stored.PasswordHash = previous.PasswordHash
 			stored.PasswordFrom = previous.PasswordFrom
@@ -349,6 +350,22 @@ func (s *InMemoryStorage) SetUserTOTP(subject string, state TOTPState) error {
 	changed.TotpEnabledAt = state.EnabledAt
 	changed.TotpRecovery = state.Recovery
 	changed.TotpLastStep = state.LastStep
+	s.users[subject] = &changed
+	return nil
+}
+
+func (s *InMemoryStorage) SetUserDisabled(subject string, disabled bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	user, ok := s.users[subject]
+	if !ok {
+		if !disabled {
+			return nil
+		}
+		user = &User{Subject: subject, LastLogin: neverSignedIn}
+	}
+	changed := *user
+	changed.Disabled = disabled
 	s.users[subject] = &changed
 	return nil
 }

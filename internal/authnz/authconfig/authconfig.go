@@ -158,6 +158,34 @@ func HasPassword(provider string) bool {
 // at all. Two providers listing the same username is a configuration nobody
 // should write; the first entry found wins, as it does at sign-in.
 func (c *AuthConfig) ConfiguredEntry(subject string) (string, bool) {
+	for _, users := range c.userLists() {
+		for _, user := range users {
+			if name, entry, ok := parsehtpassword(user); ok && name == subject {
+				return entry, true
+			}
+		}
+	}
+	return "", false
+}
+
+// ConfiguredUsernames returns everybody the built-in providers name. The
+// configuration is read once at start, so this is too: it is asked on every
+// request, and a malformed entry is reported once rather than each time.
+func (c *AuthConfig) ConfiguredUsernames() map[string]bool {
+	names := map[string]bool{}
+	for _, users := range c.userLists() {
+		for _, user := range users {
+			if name, _, ok := parsehtpassword(user); ok {
+				names[name] = true
+			}
+		}
+	}
+	return names
+}
+
+// userLists returns the users of every built-in provider the configuration
+// names, in the order a sign-in looks at them.
+func (c *AuthConfig) userLists() [][]string {
 	lists := [][]string{}
 	add := func(config *ProviderConfig) {
 		if config.Basic != nil {
@@ -171,15 +199,7 @@ func (c *AuthConfig) ConfiguredEntry(subject string) (string, bool) {
 	for _, provider := range c.Multiple {
 		add(provider)
 	}
-
-	for _, users := range lists {
-		for _, user := range users {
-			if name, entry, ok := parsehtpassword(user); ok && name == subject {
-				return entry, true
-			}
-		}
-	}
-	return "", false
+	return lists
 }
 
 // ConfiguredEntries is how many users the built-in providers list. None means
