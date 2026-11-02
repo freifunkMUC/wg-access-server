@@ -24,7 +24,7 @@ level=info msg=device.delete audit=device.delete actor=admin actor_is_admin=true
 | `user.revoke`   | An admin took somebody's access away               | `target_user`, `devices_blocked`, `tokens_deleted`, `sessions_ended` |
 | `user.password` | Somebody changed their own password                | `sessions_ended`, `tokens_deleted` |
 | `user.two_factor` | Somebody turned their own second factor on or off | `enabled`, `sessions_ended`\*\*\*\*, `tokens_deleted`\*\*\*\* |
-| `user.two_factor_reset` | An admin removed somebody's second factor  | `target_user`                  |
+| `user.two_factor_reset` | An admin removed somebody's second factor  | `target_user`, `sessions_ended`, `tokens_deleted` |
 | `user.recovery_codes` | Somebody replaced their own recovery codes | `codes_left_before`            |
 | `user.passkey_add` | Somebody registered a passkey of their own     | `passkey` (its name), `sessions_ended`\*\*\*\*, `tokens_deleted`\*\*\*\* |
 | `user.passkey_rename` | Somebody renamed a passkey of their own     | `passkey` (its new name)       |

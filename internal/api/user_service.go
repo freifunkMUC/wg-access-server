@@ -218,10 +218,11 @@ func (d *UserService) ChangePassword(ctx context.Context, request *connect.Reque
 	return connect.NewResponse(&proto.ChangePasswordRes{SessionsEnded: int32(ended)}), nil
 }
 
-// signOutElsewhere ends the other sessions of whoever is asking and revokes
-// their API tokens: what the password alone opened, once the password changed
-// or stopped being enough. The session asking stays - signing somebody out of
-// the page they are on to tell them it worked helps nobody.
+// signOutElsewhere ends the other sessions of a user - whoever is asking, or
+// the person an admin helps - and revokes their API tokens: what the password
+// alone opened, once the password changed or stopped being enough. The session
+// asking stays - signing somebody out of the page they are on to tell them it
+// worked helps nobody.
 //
 // The sessions go first, so that none of them is left to make a token after
 // the tokens are gone. The change itself is done by the time this runs, so a
@@ -356,10 +357,21 @@ func (d *UserService) DisableTwoFactor(ctx context.Context, request *connect.Req
 // ResetTwoFactor takes somebody's second factor away, for an admin helping a
 // person whose phone is gone. Their password then signs them in again, so it
 // is as much trust as handing out a password - and it is recorded as such.
+//
+// An API token cannot do it, for the reason it cannot turn the factor off: a
+// leaked admin token would strip the second factor of anybody and then only
+// need their password.
+//
+// The person's sessions end and their API tokens are revoked, as when they
+// turn the second factor on: what the factor guarded is not trusted any more,
+// and neither is whoever held a session or a token made with it.
 func (d *UserService) ResetTwoFactor(ctx context.Context, request *connect.Request[proto.ResetTwoFactorReq]) (*connect.Response[emptypb.Empty], error) {
 	user, err := authsession.CurrentUser(ctx)
 	if err != nil {
 		return nil, errNotAuthenticated()
+	}
+	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
 	}
 	if !user.Claims.IsAdmin() {
 		return nil, errNotAdmin()
@@ -376,7 +388,15 @@ func (d *UserService) ResetTwoFactor(ctx context.Context, request *connect.Reque
 		return nil, internalError(ctx, err, "failed to remove the second factor")
 	}
 
-	audit.Log(ctx, audit.UserTwoFactorReset, logrus.Fields{"target_user": request.Msg.GetName()})
+	// The admin's own session is not the person's, so this ends all of theirs
+	// - unless the admin reset their own, which keeps the page they are on.
+	ended, deleted := d.signOutElsewhere(ctx, request.Msg.GetName(), "resetting the second factor")
+
+	audit.Log(ctx, audit.UserTwoFactorReset, logrus.Fields{
+		"target_user":    request.Msg.GetName(),
+		"sessions_ended": ended,
+		"tokens_deleted": deleted,
+	})
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }

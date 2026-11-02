@@ -286,7 +286,8 @@ phones and servers rarely agree on the second.
   it away.
 - **An admin can remove it** for somebody whose phone is gone, from the user list under _admin_.
   Their password alone then signs them in again, so it is as much trust as handing out a password -
-  and it is recorded as `user.two_factor_reset`.
+  and it is recorded as `user.two_factor_reset`. It ends every session of that person and revokes
+  their API tokens, and it needs the admin's web session: an API token, even an admin's, cannot do it.
 
 The password step and the code step are two requests. Between them the browser holds a cookie that
 says whose password was right and expires after five minutes; it is not a login, and nothing reads
@@ -415,9 +416,10 @@ token has admin rights - except manage the account itself (see below). It works 
 - **A token cannot create further tokens.** Otherwise a leaked token could outlive its expiry
   through the tokens it created. Creating a token needs a web session.
 - **A token cannot manage the account.** Changing the password, setting up or turning off the second
-  factor, replacing the recovery codes, adding, renaming or removing a passkey and ending sessions
-  are refused with `permission_denied`. Otherwise a leaked token could become the account: set a
-  second factor its owner does not have, or sign them out of the browser they would notice it from.
+  factor, replacing the recovery codes, adding, renaming or removing a passkey, ending sessions and,
+  for an admin's token, removing somebody else's second factor are refused with `permission_denied`.
+  Otherwise a leaked token could become the account: set a second factor its owner does not have, or
+  sign them out of the browser they would notice it from.
   Listing sessions and passkeys still works, it changes nothing.
 - **Changing the password and turning the second factor on revoke every token** of that person. A
   token made with the password alone would otherwise stay a way in without it. They have to be
