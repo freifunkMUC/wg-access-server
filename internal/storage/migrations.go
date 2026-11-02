@@ -143,6 +143,17 @@ var migrations = []migration{
 			return db.Migrator().AlterColumn(&sessionV2{}, "ID")
 		},
 	},
+	{
+		// 0003 added disabled without a default, so every device from before
+		// it has NULL there rather than false. Reading such a device gives
+		// false, but a query for disabled = false does not match it: taking a
+		// user's access away (BlockForOwner) found none of their old devices,
+		// reported success and blocked nothing.
+		id: "0013_device_disabled_not_null",
+		apply: func(db *gorm.DB) error {
+			return db.Exec("UPDATE devices SET disabled = ? WHERE disabled IS NULL", false).Error
+		},
+	},
 }
 
 type migration struct {
