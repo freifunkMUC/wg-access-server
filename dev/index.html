@@ -1259,8 +1259,21 @@ site-to-site link, or a subnet router for a network the clients could not otherw
 <li>The networks become part of the device's WireGuard peer, so the tunnel carries them.</li>
 <li>The kernel gets a route for each of them to the WireGuard interface, the way <code>wg-quick</code>'s
   <code>Table = auto</code> does it. Without that nothing would ever be sent there.</li>
-<li>The firewall rules are extended by them, on top of <code>vpn.allowedIPs</code>.</li>
+<li>The firewall lets the clients reach them, and treats traffic from them as the device's own
+  traffic (below). Members of an <a href="https://www.freie-netze.org/wg-access-server/configuration/#access-policies">access
+  policy</a> reach them
+  only if the policy's <code>allowedIPs</code> cover them, as for any other network.</li>
 </ul>
+<p>Traffic that comes from a network behind a device is subject to the same rules as the device
+itself: client isolation, <code>vpn.allowedIPs</code> or the device owner's <a href="https://www.freie-netze.org/wg-access-server/configuration/#access-policies">access
+policies</a>, and the
+final reject. A host in a routed network can therefore not reach other clients when client
+isolation is on, and not reach anything the device could not reach. Answers to connections that a
+client opened into the network come back through connection tracking, so the clients can still
+reach it.</p>
+<p>Masquerading applies to the VPN network only. Traffic from a routed network leaves the server with
+its own source address, so whatever it talks to beyond the server needs a route back to it through
+the server.</p>
 <p>The device on the other end has to be set up for it as well: it needs to forward between its LAN and
 the tunnel, and its own <code>AllowedIPs</code> must cover the VPN network. Client configurations downloaded
 after the change carry the routed networks in their <code>AllowedIPs</code>; ones downloaded earlier do not, so
