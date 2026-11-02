@@ -1376,7 +1376,8 @@ signed in, and what their identity provider said about them, is kept by the serv
   stops working with it.</li>
 <li><strong>Revoking a user's access</strong> or <strong>deleting a user</strong> ends every session they have, along with their API
   tokens (and, for a deletion, their devices). A revoked user is also refused at the next request of
-  any session that somehow survives, and at sign-in.</li>
+  any session that somehow survives, and at sign-in. The admin user list marks them <strong>Access revoked</strong>
+  until a block on one of their devices is lifted.</li>
 <li>It takes effect <strong>everywhere at once</strong>: a session is read from the storage on every request, so
   there is nothing to tell the other replicas.</li>
 </ul>
