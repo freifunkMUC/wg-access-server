@@ -2,26 +2,39 @@
 
 version: 2
 
+# Minor and patch updates come as one PR per ecosystem; major updates stay separate.
 updates:
   - package-ecosystem: gomod
     directory: /
     schedule: { interval: monthly }
+    groups:
+      go:
+        patterns: ["*"]
+        update-types: [minor, patch]
 
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: [minor, patch]
 
   - package-ecosystem: docker
-    directory: /
+    directories: [/, /proto/]
     schedule: { interval: monthly }
-
-  - package-ecosystem: docker
-    directory: /proto/
-    schedule: { interval: monthly }
+    groups:
+      docker:
+        patterns: ["*"]
+        update-types: [minor, patch]
 
   - package-ecosystem: npm
     directory: /website
     schedule: { interval: monthly }
+    groups:
+      npm:
+        patterns: ["*"]
+        update-types: [minor, patch]
     ignore:
       # typescript-eslint refuses to load under TypeScript 7.0, which would take
       # the website linter down. Lift this once it supports TS >= 7.1:
@@ -32,3 +45,7 @@ updates:
   - package-ecosystem: pip
     directory: /
     schedule: { interval: monthly }
+    groups:
+      pip:
+        patterns: ["*"]
+        update-types: [minor, patch]
