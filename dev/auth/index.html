@@ -480,10 +480,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#where-you-are-signed-in" class="md-nav__link">
+  <a href="#sessions_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where you are signed in
+        Sessions
       
     </span>
   </a>
@@ -917,10 +917,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#where-you-are-signed-in" class="md-nav__link">
+  <a href="#sessions_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where you are signed in
+        Sessions
       
     </span>
   </a>
@@ -1255,7 +1255,7 @@ when they sign in again, as an admin right does today.</p>
 what the provider actually sends.</p>
 <h2 id="changing-your-password">Changing your password<a class="headerlink" href="#changing-your-password" title="Permanent link"> ¶</a></h2>
 <p>With <code>basic</code> or <code>simple</code> auth the password comes from the config file, which only an admin can edit.
-Somebody signed in that way can now set their own instead, under the key icon in the navigation:</p>
+Somebody signed in that way can now set their own instead, under <em>Account settings</em> in the account menu (the round button with your initials), tab <em>Password and two-factor</em>:</p>
 <ul>
 <li>The <strong>config file stays the list of who may sign in.</strong> A password is only ever stored for a user it
   lists, so a stored password can never create an account.</li>
@@ -1286,7 +1286,7 @@ so rather than pretending otherwise.</p>
 <p>A passkey is a credential the browser holds - in a laptop's own authenticator, on a phone, on a
 security key - and it is the better second factor, because it is bound to this site. A page
 pretending to be this one cannot ask for it, and there is nothing a person can be talked into reading
-out over the telephone. Somebody signing in with <code>simple</code> auth can register one under the key icon,
+out over the telephone. Somebody signing in with <code>simple</code> auth can register one under <em>Account settings</em>, <em>Password and two-factor</em>,
 as many as they like: one to carry, one in a drawer.</p>
 <ul>
 <li>A credential id that is already registered is refused, whoever is asking. An authenticator picks
@@ -1322,7 +1322,7 @@ second name - or through a proxy that passes a different <code>Host</code> on - 
 sign-in page will not ask for.</p>
 <h2 id="two-factor-authentication">Two-factor authentication<a class="headerlink" href="#two-factor-authentication" title="Permanent link"> ¶</a></h2>
 <p>Somebody signing in with <code>simple</code> auth can ask for a code from an authenticator app on top of their
-password, under the same key icon. It works anywhere, including over plain HTTP, which is why it is
+password, on the same tab. It works anywhere, including over plain HTTP, which is why it is
 here beside the passkeys. It is TOTP - RFC 6238, six digits, thirty seconds - so every
 authenticator app does it, and the server checks the step before and after the current one, because
 phones and servers rarely agree on the second.</p>
@@ -1342,7 +1342,7 @@ phones and servers rarely agree on the second.</p>
   their hashes are kept, so nothing here can show them again - and they are hashed with SHA-256
   rather than bcrypt, because they are long random strings and ten slow hashes per attempt would be
   a way to hold the server up.</li>
-<li><strong>A fresh set can be asked for at any time</strong>, under the same key icon, and it asks for the
+<li><strong>A fresh set can be asked for at any time</strong>, on the same tab, and it asks for the
   password for the same reason turning it off does. The old codes stop working the moment the new
   ones are made. The authenticator app is not touched - the shared secret stays, so nothing has to
   be scanned again, and a code that has just signed somebody in stays used up. It is recorded as
@@ -1390,8 +1390,8 @@ hash, so whoever reads the database learns which sessions exist, not how to use 
 longer reads - it wants a session id, and there is none. They sign in again and are on the new
 scheme.</p>
 </div>
-<h3 id="where-you-are-signed-in">Where you are signed in<a class="headerlink" href="#where-you-are-signed-in" title="Permanent link"> ¶</a></h3>
-<p>The shield in the navigation lists every browser that is signed in as you: what it said it was,
+<h3 id="sessions_1">Sessions<a class="headerlink" href="#sessions_1" title="Permanent link"> ¶</a></h3>
+<p>The <em>Sessions</em> tab of <em>Account settings</em> (<code>/account/sessions</code>) lists every browser that is signed in as you: what it said it was,
 the address it came from, when it signed in and when it was last used. The one asking is marked
 <strong>This browser</strong>.</p>
 <ul>
@@ -1475,8 +1475,7 @@ UI - the configuration or the identity provider:</p>
 <p>For an identity provider, the user stays signed in with those rights until the session ends. To end
 them sooner, revoke their access in the web UI, and remove them at the provider as well.</p>
 <h2 id="api-tokens">API tokens<a class="headerlink" href="#api-tokens" title="Permanent link"> ¶</a></h2>
-<p>With <code>enableApiTokens: true</code>, users can create tokens on the <em>API tokens</em> page of the web UI (the key
-icon) and use the API from scripts without a browser session:</p>
+<p>With <code>enableApiTokens: true</code>, users can create tokens on the <em>API tokens</em> tab of <em>Account settings</em> (<code>/account/tokens</code>) in the web UI and use the API from scripts without a browser session:</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer wgas_..."</span><span class="w"> </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/json'</span><span class="w"> </span>-d<span class="w"> </span><span class="s1">'{}'</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>https://wg-access-server.example.com/api/proto.Devices/ListDevices
 </code></pre></div>
