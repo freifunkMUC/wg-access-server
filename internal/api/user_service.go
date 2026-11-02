@@ -655,11 +655,12 @@ func errNoSecondFactorHere() error {
 
 func mapUser(u *devices.User) *proto.User {
 	return &proto.User{
-		Name:        u.Name,
-		DisplayName: u.DisplayName,
-		LastLogin:   timeToTimestamp(u.LastLogin),
-		Policies:    u.Policies,
-		TwoFactor:   u.TwoFactor,
+		Name:          u.Name,
+		DisplayName:   u.DisplayName,
+		LastLogin:     timeToTimestamp(u.LastLogin),
+		Policies:      u.Policies,
+		TwoFactor:     u.TwoFactor,
+		AccessRevoked: u.AccessRevoked,
 	}
 }
 

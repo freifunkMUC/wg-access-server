@@ -49,6 +49,9 @@ message User {
   repeated string policies = 4;
   // whether they are asked for a second factor when they sign in
   bool two_factor = 5;
+  // whether an admin revoked their access, which keeps them from signing in
+  // until a block on one of their devices is lifted
+  bool access_revoked = 6;
 }
 
 message ListUsersReq {

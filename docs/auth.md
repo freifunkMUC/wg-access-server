@@ -323,7 +323,8 @@ That is what makes a session something the server can end:
   stops working with it.
 - **Revoking a user's access** or **deleting a user** ends every session they have, along with their API
   tokens (and, for a deletion, their devices). A revoked user is also refused at the next request of
-  any session that somehow survives, and at sign-in.
+  any session that somehow survives, and at sign-in. The admin user list marks them **Access revoked**
+  until a block on one of their devices is lifted.
 - It takes effect **everywhere at once**: a session is read from the storage on every request, so
   there is nothing to tell the other replicas.
 

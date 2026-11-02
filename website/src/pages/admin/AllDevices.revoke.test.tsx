@@ -123,8 +123,8 @@ describe('revoking somebody"s access', () => {
     await waitFor(() => expect(revokeAccess).toHaveBeenCalledWith({ name: 'alice' }));
     // the question has to say that nothing is deleted, or nobody dares press it
     expect(asked.mock.calls[0][0]).toMatch(/Nothing is deleted/);
-    // and that it does not keep them out: a block is the device's, not theirs
-    expect(asked.mock.calls[0][0]).toMatch(/can still sign in/);
+    // and that it keeps them out until a block is lifted
+    expect(asked.mock.calls[0][0]).toMatch(/cannot sign in again/);
     expect(toasted).toHaveBeenCalledWith(
       expect.objectContaining({
         intent: 'success',
@@ -154,6 +154,32 @@ describe('revoking somebody"s access', () => {
     await waitFor(() => expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0));
   });
 
+  it('marks a user whose access was revoked, in words, and says how to undo it', async () => {
+    // the list the server sends after the revocation
+    listUsers.mockResolvedValue({ items: [{ ...alice, accessRevoked: true }] });
+    render(<AllDevices />);
+    await screen.findByText('Access revoked');
+
+    expect(within(userRow()).getByText(/Lift the block on one of their devices/)).toBeTruthy();
+  });
+
+  it('marks nobody whose access is intact', async () => {
+    render(<AllDevices />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Revoke access' })).toBeTruthy());
+
+    expect(screen.queryByText('Access revoked')).toBeNull();
+  });
+
+  it('shows the mark after revoking, without the page being reloaded', async () => {
+    render(<AllDevices />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Revoke access' })).toBeTruthy());
+    listUsers.mockResolvedValue({ items: [{ ...alice, accessRevoked: true }] });
+
+    fireEvent.click(within(userRow()).getByRole('button', { name: 'Revoke access' }));
+
+    await screen.findByText('Access revoked');
+  });
+
   it('says what went wrong instead of claiming success', async () => {
     revokeAccess.mockRejectedValue(new Error('the storage is gone'));
     render(<AllDevices />);
@@ -172,7 +198,16 @@ describe('revoking somebody"s access', () => {
   // halfway through, so it is not offered - the server refuses it as well
   it('does not offer to revoke your own access', async () => {
     listUsers.mockResolvedValue({
-      items: [alice, { name: 'admin', displayName: 'The Admin', policies: [], twoFactor: false } as User.AsObject],
+      items: [
+        alice,
+        {
+          name: 'admin',
+          displayName: 'The Admin',
+          policies: [],
+          twoFactor: false,
+          accessRevoked: false,
+        } as User.AsObject,
+      ],
     });
     render(<AllDevices />);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Revoke access' })).toBeTruthy());

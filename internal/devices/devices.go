@@ -76,6 +76,9 @@ type User struct {
 	// TwoFactor is whether they are asked for a code when they sign in. An
 	// admin sees it so that they know who to reset when a phone is gone.
 	TwoFactor bool
+	// AccessRevoked is whether an admin revoked their access, which keeps
+	// them from signing in until a block on one of their devices is lifted.
+	AccessRevoked bool
 }
 
 // https://lists.zx2c4.com/pipermail/wireguard/2020-December/006222.html
@@ -843,8 +846,9 @@ func (d *DeviceManager) ListUsers() ([]*User, error) {
 	for _, user := range stored {
 		listed := &User{
 			Name: user.Subject, DisplayName: user.Name,
-			Policies:  user.PolicyList(),
-			TwoFactor: user.TwoFactorEnabled(),
+			Policies:      user.PolicyList(),
+			TwoFactor:     user.TwoFactorEnabled(),
+			AccessRevoked: user.Disabled,
 		}
 		// a user an admin disabled before they ever signed in has no login
 		if user.SignedIn() {
