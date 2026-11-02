@@ -452,10 +452,10 @@ func TestNftablesRulesetRejectsBadPolicyNames(t *testing.T) {
 // any policy reached its networks.
 func TestNftablesRulesetSetNamesAreUnique(t *testing.T) {
 	rules := ruleset(t, ForwardingOptions{
-		CIDR:     "10.44.0.0/24",
-		CIDRv6:   "fd48:4c4:7aa9::/64",
-		NAT44:    true,
-		NAT66:    true,
+		CIDR:   "10.44.0.0/24",
+		CIDRv6: "fd48:4c4:7aa9::/64",
+		NAT44:  true,
+		NAT66:  true,
 		Policies: []Policy{
 			{Name: "members", AllowedIPs: []string{"10.0.5.0/24", "2001:db8::/32"}, Members: []string{"10.44.0.2/32"}},
 			{Name: "staff", AllowedIPs: []string{"10.0.6.0/24"}, Members: []string{"10.44.0.3/32"}},
