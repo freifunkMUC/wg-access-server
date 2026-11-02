@@ -1012,6 +1012,14 @@ values would otherwise quietly win.</p>
 <td>Let users create tokens for using the API from scripts, see <a href="../auth/#api-tokens">API tokens</a>. A token keeps working until it expires or is revoked, independent of the web session it was created in.</td>
 </tr>
 <tr>
+<td><code>WG_API_TOKEN_MAX_LIFETIME</code></td>
+<td><code>--api-token-max-lifetime</code></td>
+<td><code>apiTokenMaxLifetime</code></td>
+<td></td>
+<td><code>0</code> (no cap)</td>
+<td>The longest an API token works, counted from its creation, e.g. <code>720h</code>, and at least <code>1m</code>. With a cap, a token has to be created with an expiry within it, and every token - those made before the cap was set too - stops working once it is older than the cap, whatever expiry it was given. See <a href="../auth/#api-tokens">API tokens</a> and <a href="../auth/#how-long-access-outlasts-a-removal">How long access outlasts a removal</a>. The duration format is the go duration string format</td>
+</tr>
+<tr>
 <td><code>WG_FILENAME</code></td>
 <td><code>--filename</code></td>
 <td><code>filename</code></td>
