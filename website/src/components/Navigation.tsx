@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import styled from '@emotion/styled';
+import { observer } from 'mobx-react';
 import { AppState } from '../AppState';
 import { NavLink } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
@@ -13,24 +14,25 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+import Avatar from '@mui/material/Avatar';
+import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
+import Tooltip from '@mui/material/Tooltip';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LoginIcon from '@mui/icons-material/Login';
 import DevicesIcon from '@mui/icons-material/Devices';
-import KeyIcon from '@mui/icons-material/Key';
-import ShieldIcon from '@mui/icons-material/Shield';
-import PasswordIcon from '@mui/icons-material/Password';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { useMediaQuery } from '@mui/material';
 
 // Stile mit `styled` definieren
 const Title = styled(Typography)`
   flex-grow: 1;
+  min-width: 0;
 `;
 
-export default function Navigation() {
+export default observer(function Navigation() {
   // The web UI is only served to signed in users, and the server info only
   // loads with a session - the session cookie itself is HttpOnly and not
   // visible from here.
@@ -39,7 +41,7 @@ export default function Navigation() {
   return (
     <AppBar position="static">
       <Toolbar>
-        <Title variant="h6">
+        <Title variant="h6" noWrap>
           <Link to="/" color="inherit" underline="none" component={NavLink}>
             <VpnKey /> wg-access-server
           </Link>
@@ -49,8 +51,10 @@ export default function Navigation() {
               color="secondary"
               variant="outlined"
               size="small"
-              style={{
-                marginLeft: 20,
+              // the account menu says it as well; the bar has no room for it on a phone
+              sx={{
+                ml: 2.5,
+                display: { xs: 'none', sm: 'inline-flex' },
                 background: AppState.darkMode ? 'transparent' : 'white',
               }}
             />
@@ -67,24 +71,41 @@ export default function Navigation() {
           </Link>
         )}
 
+        <ThemeButton />
+
         {signedIn ? <AccountMenu /> : <SignInButton />}
       </Toolbar>
     </AppBar>
   );
+});
+
+// initialsOf is what the avatar shows: the first letters of the first and the
+// last word of the name, or the first two letters of a single word. Names
+// and subjects are free text, so it works on code points, not bytes.
+export function initialsOf(name: string): string {
+  const words = name.split(/[\s._@-]+/).filter(Boolean);
+  if (words.length === 0) {
+    return '?';
+  }
+  const letters = (word: string) => Array.from(word);
+  const picked =
+    words.length === 1 ? letters(words[0]).slice(0, 2) : [letters(words[0])[0], letters(words[words.length - 1])[0]];
+  return picked.join('').toUpperCase();
 }
 
 // AccountMenu collects everything that is about your own account behind one
-// button. As icons in the bar they were a row of shapes you had to hover one
-// by one to find out what each of them does; a menu says it in words.
+// button: who you are signed in as, the settings, and signing out.
 function AccountMenu() {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const close = () => setAnchorEl(null);
+  const info = AppState.info;
+  const name = info?.userDisplayName || info?.subject || '';
 
   return (
     <>
       <IconButton
-        sx={{ ml: 1 }}
+        sx={{ ml: 1, p: 0.5 }}
         color="inherit"
         title="Your account"
         aria-label="Your account"
@@ -93,7 +114,12 @@ function AccountMenu() {
         aria-expanded={open ? 'true' : undefined}
         onClick={(event) => setAnchorEl(event.currentTarget)}
       >
-        <AccountCircleIcon />
+        <Avatar
+          aria-hidden="true"
+          sx={{ width: 32, height: 32, fontSize: 14, bgcolor: 'secondary.main', color: 'secondary.contrastText' }}
+        >
+          {initialsOf(name)}
+        </Avatar>
       </IconButton>
       <Menu
         id="account-menu"
@@ -103,34 +129,27 @@ function AccountMenu() {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        {AppState.info?.passwordChangeEnabled && (
-          <MenuItem component={NavLink} to="/password" onClick={close}>
-            <ListItemIcon>
-              <PasswordIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Password and two-factor</ListItemText>
-          </MenuItem>
-        )}
-
-        <MenuItem component={NavLink} to="/sessions" onClick={close}>
-          <ListItemIcon>
-            <ShieldIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Where you are signed in</ListItemText>
-        </MenuItem>
-
-        {AppState.info?.apiTokensEnabled && (
-          <MenuItem component={NavLink} to="/tokens" onClick={close}>
-            <ListItemIcon>
-              <KeyIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>API tokens</ListItemText>
-          </MenuItem>
-        )}
+        {/* not an item: there is nothing to click, it only says whose account this is */}
+        <Box sx={{ px: 2, py: 1, maxWidth: 280 }} data-testid="account-header">
+          <Typography variant="subtitle1" noWrap>
+            {name}
+          </Typography>
+          {info?.userProvider && (
+            <Typography variant="body2" color="text.secondary" noWrap>
+              Signed in with {info.userProvider}
+            </Typography>
+          )}
+          {info?.isAdmin && <Chip label="Admin" color="secondary" size="small" sx={{ mt: 0.5 }} />}
+        </Box>
 
         <Divider />
 
-        <DarkModeItem onSwitched={close} />
+        <MenuItem component={NavLink} to="/account" onClick={close}>
+          <ListItemIcon>
+            <SettingsIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Account settings</ListItemText>
+        </MenuItem>
 
         <Divider />
 
@@ -161,7 +180,7 @@ function SignInButton() {
 
 const CUSTOM_DARK_MODE_KEY = 'customDarkMode';
 
-function DarkModeItem(props: { onSwitched: () => void }) {
+const ThemeButton = observer(function ThemeButton() {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 
   useEffect(() => {
@@ -182,16 +201,15 @@ function DarkModeItem(props: { onSwitched: () => void }) {
     } else {
       localStorage.removeItem(CUSTOM_DARK_MODE_KEY);
     }
-
-    props.onSwitched();
   }
 
+  const label = AppState.darkMode ? 'Switch to light mode' : 'Switch to dark mode';
+
   return (
-    <MenuItem onClick={toggleDarkMode}>
-      <ListItemIcon>
-        {AppState.darkMode ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
-      </ListItemIcon>
-      <ListItemText>{AppState.darkMode ? 'Switch to light mode' : 'Switch to dark mode'}</ListItemText>
-    </MenuItem>
+    <Tooltip title={label}>
+      <IconButton sx={{ ml: 1 }} color="inherit" aria-label={label} onClick={toggleDarkMode}>
+        {AppState.darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+      </IconButton>
+    </Tooltip>
   );
-}
+});
