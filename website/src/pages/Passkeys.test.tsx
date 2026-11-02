@@ -119,11 +119,15 @@ describe('passkeys', () => {
     await waitFor(() => expect(list).toHaveBeenCalled());
 
     fireEvent.change(screen.getByLabelText(/^Name/), { target: { value: 'The key on my keyring' } });
+    // the password is needed too
+    expect(screen.getByRole('button', { name: 'Add a passkey' })).toHaveProperty('disabled', true);
+    fireEvent.change(screen.getByLabelText(/^Your password/), { target: { value: 'the-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add a passkey' }));
 
     await waitFor(() => expect(finish).toHaveBeenCalled());
     const sent = finish.mock.calls[0][0];
     expect(sent.name).toBe('The key on my keyring');
+    expect(sent.password).toBe('the-password');
     expect(JSON.parse(sent.credential)).toEqual({
       id: 'made-id',
       rawId: 'AQID',
@@ -143,6 +147,7 @@ describe('passkeys', () => {
     render(<Passkeys />);
     await waitFor(() => expect(list).toHaveBeenCalled());
 
+    fireEvent.change(screen.getByLabelText(/^Your password/), { target: { value: 'the-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add a passkey' }));
 
     await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/cancelled/));

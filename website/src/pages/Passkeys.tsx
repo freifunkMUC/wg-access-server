@@ -28,6 +28,8 @@ import { errorMessage, lastSeen } from '../Util';
 export const Passkeys = observer(function Passkeys() {
   const [passkeys, setPasskeys] = useState<Passkey.AsObject[]>();
   const [name, setName] = useState('');
+  // asked for to add one, as when turning the second factor off
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
   const [working, setWorking] = useState(false);
 
@@ -62,9 +64,10 @@ export const Passkeys = observer(function Passkeys() {
       if (!credential) {
         throw new Error('The browser made no passkey');
       }
-      await grpc.users.finishPasskey({ credential: encodeCredential(credential), name });
+      await grpc.users.finishPasskey({ credential: encodeCredential(credential), name, password });
       toast({ text: 'Passkey added', intent: 'success' });
       setName('');
+      setPassword('');
       await load();
       await refreshInfo();
     } catch (e) {
@@ -187,7 +190,21 @@ export const Passkeys = observer(function Passkeys() {
             helperText="What it is, so you can tell it from the others later"
             slotProps={{ htmlInput: { maxLength: 64 } }}
           />
-          <Button type="submit" variant="contained" disabled={working || !passkeysSupported()} sx={{ mt: 1 }}>
+          <TextField
+            required
+            type="password"
+            label="Your password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            helperText="Asked for so that a browser left signed in cannot add one"
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={working || !password || !passkeysSupported()}
+            sx={{ mt: 1 }}
+          >
             Add a passkey
           </Button>
         </Stack>

@@ -61,7 +61,7 @@ func turnOn(t *testing.T, service *UserService, ctx context.Context) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	confirmed, err := service.ConfirmTwoFactor(ctx, connect.NewRequest(&proto.ConfirmTwoFactorReq{Code: code}))
+	confirmed, err := service.ConfirmTwoFactor(ctx, connect.NewRequest(&proto.ConfirmTwoFactorReq{Code: code, Password: configuredPassword}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestTurningTheSecondFactorOn(t *testing.T) {
 	}
 
 	// a wrong code does not turn it on
-	if _, err := service.ConfirmTwoFactor(ctx, connect.NewRequest(&proto.ConfirmTwoFactorReq{Code: "000000"})); err == nil {
+	if _, err := service.ConfirmTwoFactor(ctx, connect.NewRequest(&proto.ConfirmTwoFactorReq{Code: "000000", Password: configuredPassword})); err == nil {
 		t.Fatal("a wrong code turned the second factor on")
 	} else if code := connect.CodeOf(err); code != connect.CodeInvalidArgument {
 		t.Errorf("code = %s, want %s", code, connect.CodeInvalidArgument)
@@ -101,7 +101,7 @@ func TestTurningTheSecondFactorOn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	confirmed, err := service.ConfirmTwoFactor(ctx, connect.NewRequest(&proto.ConfirmTwoFactorReq{Code: code}))
+	confirmed, err := service.ConfirmTwoFactor(ctx, connect.NewRequest(&proto.ConfirmTwoFactorReq{Code: code, Password: configuredPassword}))
 	if err != nil {
 		t.Fatal(err)
 	}

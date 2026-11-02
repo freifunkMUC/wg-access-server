@@ -146,7 +146,7 @@ func TestATokenCannotManageTheAccount(t *testing.T) {
 			return err
 		}},
 		{"ConfirmTwoFactor", func() error {
-			_, err := a.service.ConfirmTwoFactor(ctx, connect.NewRequest(&proto.ConfirmTwoFactorReq{Code: code}))
+			_, err := a.service.ConfirmTwoFactor(ctx, connect.NewRequest(&proto.ConfirmTwoFactorReq{Code: code, Password: configuredPassword}))
 			return err
 		}},
 		{"DisableTwoFactor", func() error {

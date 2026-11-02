@@ -1074,6 +1074,7 @@ export class StartTwoFactorRes extends jspb.Message {
 export declare namespace ConfirmTwoFactorReq {
 	export type AsObject = {
 		code: string,
+		password: string,
 	}
 }
 
@@ -1096,6 +1097,13 @@ export class ConfirmTwoFactorReq extends jspb.Message {
 		(jspb.Message as any).setProto3StringField(this, 1, value);
 	}
 
+	getPassword(): string {return jspb.Message.getFieldWithDefault(this, 2, "");
+	}
+
+	setPassword(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 2, value);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		ConfirmTwoFactorReq.serializeBinaryToWriter(this, writer);
@@ -1106,6 +1114,7 @@ export class ConfirmTwoFactorReq extends jspb.Message {
 		let f: any;
 		return {
 			code: this.getCode(),
+			password: this.getPassword(),
 		};
 	}
 
@@ -1113,6 +1122,10 @@ export class ConfirmTwoFactorReq extends jspb.Message {
 		const field1 = message.getCode();
 		if (field1.length > 0) {
 			writer.writeString(1, field1);
+		}
+		const field2 = message.getPassword();
+		if (field2.length > 0) {
+			writer.writeString(2, field2);
 		}
 	}
 
@@ -1132,6 +1145,10 @@ export class ConfirmTwoFactorReq extends jspb.Message {
 			case 1:
 				const field1 = reader.readString()
 				message.setCode(field1);
+				break;
+			case 2:
+				const field2 = reader.readString()
+				message.setPassword(field2);
 				break;
 			default:
 				reader.skipField();
@@ -1891,6 +1908,7 @@ export declare namespace FinishPasskeyReq {
 	export type AsObject = {
 		credential: string,
 		name: string,
+		password: string,
 	}
 }
 
@@ -1920,6 +1938,13 @@ export class FinishPasskeyReq extends jspb.Message {
 		(jspb.Message as any).setProto3StringField(this, 2, value);
 	}
 
+	getPassword(): string {return jspb.Message.getFieldWithDefault(this, 3, "");
+	}
+
+	setPassword(value: string): void {
+		(jspb.Message as any).setProto3StringField(this, 3, value);
+	}
+
 	serializeBinary(): Uint8Array {
 		const writer = new jspb.BinaryWriter();
 		FinishPasskeyReq.serializeBinaryToWriter(this, writer);
@@ -1931,6 +1956,7 @@ export class FinishPasskeyReq extends jspb.Message {
 		return {
 			credential: this.getCredential(),
 			name: this.getName(),
+			password: this.getPassword(),
 		};
 	}
 
@@ -1942,6 +1968,10 @@ export class FinishPasskeyReq extends jspb.Message {
 		const field2 = message.getName();
 		if (field2.length > 0) {
 			writer.writeString(2, field2);
+		}
+		const field3 = message.getPassword();
+		if (field3.length > 0) {
+			writer.writeString(3, field3);
 		}
 	}
 
@@ -1965,6 +1995,10 @@ export class FinishPasskeyReq extends jspb.Message {
 			case 2:
 				const field2 = reader.readString()
 				message.setName(field2);
+				break;
+			case 3:
+				const field3 = reader.readString()
+				message.setPassword(field3);
 				break;
 			default:
 				reader.skipField();
@@ -2407,6 +2441,7 @@ function ConfirmTwoFactorReqFromObject(obj: ConfirmTwoFactorReq.AsObject | undef
 	}
 	const message = new ConfirmTwoFactorReq();
 	message.setCode(obj.code);
+	message.setPassword(obj.password);
 	return message;
 }
 
@@ -2512,6 +2547,7 @@ function FinishPasskeyReqFromObject(obj: FinishPasskeyReq.AsObject | undefined):
 	const message = new FinishPasskeyReq();
 	message.setCredential(obj.credential);
 	message.setName(obj.name);
+	message.setPassword(obj.password);
 	return message;
 }
 
