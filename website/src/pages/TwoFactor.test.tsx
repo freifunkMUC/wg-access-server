@@ -96,9 +96,12 @@ describe('two-factor authentication', () => {
     await screen.findByTestId('qr');
 
     fireEvent.change(screen.getByLabelText(/Code from the app/), { target: { value: '123456' } });
+    // the password is needed too
+    expect(screen.getByRole('button', { name: 'Turn it on' })).toHaveProperty('disabled', true);
+    fireEvent.change(screen.getByLabelText(/Your password/), { target: { value: 'the-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Turn it on' }));
 
-    await waitFor(() => expect(confirm).toHaveBeenCalledWith({ code: '123456' }));
+    await waitFor(() => expect(confirm).toHaveBeenCalledWith({ code: '123456', password: 'the-password' }));
     const codes = await screen.findByTestId('recovery-codes');
     expect(codes.textContent).toContain('AAAA-BBBB');
     expect(codes.textContent).toContain('CCCC-DDDD');
@@ -122,6 +125,7 @@ describe('two-factor authentication', () => {
     await screen.findByTestId('qr');
 
     fireEvent.change(screen.getByLabelText(/Code from the app/), { target: { value: '000000' } });
+    fireEvent.change(screen.getByLabelText(/Your password/), { target: { value: 'the-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Turn it on' }));
 
     await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/not right/));

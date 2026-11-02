@@ -80,7 +80,7 @@ func TestTurningCodesOnEndsWhatThePasswordAloneOpened(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.service.ConfirmTwoFactor(here, connect.NewRequest(&proto.ConfirmTwoFactorReq{Code: code})); err != nil {
+	if _, err := a.service.ConfirmTwoFactor(here, connect.NewRequest(&proto.ConfirmTwoFactorReq{Code: code, Password: configuredPassword})); err != nil {
 		t.Fatal(err)
 	}
 
@@ -131,6 +131,18 @@ func TestTheFirstPasskeyEndsWhatThePasswordAloneOpened(t *testing.T) {
 // registerPasskey does what a browser does with a passkey that needs no
 // attestation: make a key, and sign the challenge into a new credential.
 func registerPasskey(t *testing.T, service *UserService, ctx context.Context) {
+	t.Helper()
+	credential := passkeyCredential(t, service, ctx)
+	if _, err := service.FinishPasskey(ctx, connect.NewRequest(&proto.FinishPasskeyReq{
+		Name: "laptop", Credential: credential, Password: configuredPassword,
+	})); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// passkeyCredential begins a registration and returns the credential a
+// browser would answer it with, for the caller to finish - or to be refused.
+func passkeyCredential(t *testing.T, service *UserService, ctx context.Context) string {
 	t.Helper()
 	begin, err := service.BeginPasskey(ctx, connect.NewRequest(&proto.BeginPasskeyReq{}))
 	if err != nil {
@@ -204,9 +216,5 @@ func registerPasskey(t *testing.T, service *UserService, ctx context.Context) {
 		t.Fatal(err)
 	}
 
-	if _, err := service.FinishPasskey(ctx, connect.NewRequest(&proto.FinishPasskeyReq{
-		Name: "laptop", Credential: string(credential),
-	})); err != nil {
-		t.Fatal(err)
-	}
+	return string(credential)
 }

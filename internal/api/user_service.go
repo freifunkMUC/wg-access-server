@@ -247,6 +247,27 @@ func (d *UserService) signOutElsewhere(ctx context.Context, subject string, afte
 	return ended, deleted
 }
 
+// verifyPassword asks for the password of whoever is asking, before something
+// is done that a session alone must not be able to do.
+func (d *UserService) verifyPassword(ctx context.Context, subject string, password string) error {
+	if d.Passwords == nil {
+		return connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("this account's password is not kept here"))
+	}
+	if err := d.Passwords.Verify(subject, password); err != nil {
+		switch {
+		case errors.Is(err, users.ErrTooManyAttempts):
+			return errTooManyWrongPasswords()
+		case errors.Is(err, users.ErrWrongPassword):
+			return connect.NewError(connect.CodePermissionDenied, errors.New("that is not your password"))
+		case errors.Is(err, users.ErrNoPasswordHere):
+			return connect.NewError(connect.CodeFailedPrecondition, err)
+		}
+		return internalError(ctx, err, "failed to check the password")
+	}
+	return nil
+}
+
 // twoFactorFor returns the second factor of whoever is asking, or the reason
 // they have none to speak of.
 func (d *UserService) twoFactorFor(ctx context.Context) (*authsession.Identity, error) {
@@ -299,10 +320,15 @@ func (d *UserService) StartTwoFactor(ctx context.Context, _ *connect.Request[pro
 //
 // Whoever turns it on wants the password to be not enough, so the other
 // sessions end and the API tokens are revoked: they were opened with the
-// password alone.
+// password alone. It asks for the password, so that a session somebody else
+// holds cannot turn it on and lock the owner out.
 func (d *UserService) ConfirmTwoFactor(ctx context.Context, request *connect.Request[proto.ConfirmTwoFactorReq]) (*connect.Response[proto.ConfirmTwoFactorRes], error) {
 	user, err := d.twoFactorFor(ctx)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := d.verifyPassword(ctx, user.Subject, request.Msg.GetPassword()); err != nil {
 		return nil, err
 	}
 
@@ -479,13 +505,20 @@ func (d *UserService) BeginPasskey(ctx context.Context, _ *connect.Request[proto
 
 // FinishPasskey stores what the browser made. The first passkey ends the other
 // sessions and revokes the API tokens, as turning on the code from an app
-// does: from now on the password alone is not enough.
+// does: from now on the password alone is not enough. It asks for the password
+// for the same reason that does.
 func (d *UserService) FinishPasskey(ctx context.Context, request *connect.Request[proto.FinishPasskeyReq]) (*connect.Response[proto.Passkey], error) {
 	user, err := d.passkeysFor(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if err := refuseAPIToken(ctx); err != nil {
+		return nil, err
+	}
+
+	// Before the challenge is used up: a wrong password leaves the
+	// registration as it was.
+	if err := d.verifyPassword(ctx, user.Subject, request.Msg.GetPassword()); err != nil {
 		return nil, err
 	}
 

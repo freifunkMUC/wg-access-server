@@ -23,6 +23,8 @@ export const TwoFactor = observer(function TwoFactor() {
   const [setup, setSetup] = useState<{ secret: string; uri: string }>();
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
+  // asked for to finish the setup, as when turning it off
+  const [enrolPassword, setEnrolPassword] = useState('');
   // a field of its own, so that the password typed to get new codes cannot
   // end up submitted by the button that turns the second factor off
   const [codesPassword, setCodesPassword] = useState('');
@@ -60,10 +62,11 @@ export const TwoFactor = observer(function TwoFactor() {
     setError(undefined);
     setWorking(true);
     try {
-      const res = await grpc.users.confirmTwoFactor({ code });
+      const res = await grpc.users.confirmTwoFactor({ code, password: enrolPassword });
       setRecovery(res.recoveryCodes);
       setSetup(undefined);
       setCode('');
+      setEnrolPassword('');
       toast({ text: 'Two-factor authentication is on', intent: 'success' });
       await refreshInfo();
     } catch (e) {
@@ -153,8 +156,9 @@ export const TwoFactor = observer(function TwoFactor() {
       {setup && (
         <form onSubmit={confirm}>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            Scan this with your authenticator app, then type the code it shows to finish. Nothing is asked of you until
-            you do. Finishing signs out every other browser you are signed in with and revokes your API tokens.
+            Scan this with your authenticator app, then type the code it shows and your password to finish. Nothing is
+            asked of you until you do. Finishing signs out every other browser you are signed in with and revokes your
+            API tokens.
           </Typography>
           <QRCode content={setup.uri} />
           <Typography variant="body2" sx={{ mt: 2 }}>
@@ -171,10 +175,30 @@ export const TwoFactor = observer(function TwoFactor() {
               onChange={(e) => setCode(e.target.value)}
               slotProps={{ htmlInput: { inputMode: 'numeric', autoComplete: 'one-time-code', maxLength: 6 } }}
             />
-            <Button type="submit" variant="contained" disabled={working || code.length < 6} sx={{ mt: 1 }}>
+            <TextField
+              required
+              type="password"
+              label="Your password"
+              autoComplete="current-password"
+              value={enrolPassword}
+              onChange={(e) => setEnrolPassword(e.target.value)}
+            />
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={working || code.length < 6 || !enrolPassword}
+              sx={{ mt: 1 }}
+            >
               Turn it on
             </Button>
-            <Button disabled={working} onClick={() => setSetup(undefined)} sx={{ mt: 1 }}>
+            <Button
+              disabled={working}
+              onClick={() => {
+                setSetup(undefined);
+                setEnrolPassword('');
+              }}
+              sx={{ mt: 1 }}
+            >
               Cancel
             </Button>
           </Stack>

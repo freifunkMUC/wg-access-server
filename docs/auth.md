@@ -235,6 +235,8 @@ as many as they like: one to carry, one in a drawer.
 - **Registering the first one ends every other session** of that person and revokes their API
   tokens, as turning on the code from an app does: a passkey makes the password alone no longer
   enough. Further passkeys leave both alone.
+- **Registering one asks for the password**, as turning the second factor off does: a browser left
+  signed in, or a stolen session, would otherwise be enough to add one and lock the owner out.
 - Removing the last one hands the account back to the password alone, and the question says so.
 - **A passkey can be renamed.** The name is the person's own label, and a drawer key that moved to a
   keyring should not have to be registered again to say so. Only the name changes: the credential
@@ -267,6 +269,9 @@ phones and servers rarely agree on the second.
 
 - **Setting it up asks for a code before it counts.** Until that code arrives, the secret is stored
   but nothing is asked of anybody: a QR code somebody walked away from locks nobody out.
+- **Turning it on asks for the password** along with the code, as turning it off does. A session
+  alone is not enough: a browser left signed in, or a stolen session, could otherwise turn it on,
+  end the owner's sessions and lock them out.
 - **Turning it on ends every other session and revokes the API tokens** of that person. They were
   opened with the password alone, which is exactly what is no longer meant to be enough. The
   browser it was turned on in stays signed in.

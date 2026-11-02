@@ -85,6 +85,9 @@ message StartTwoFactorRes {
 
 message ConfirmTwoFactorReq {
   string code = 1;
+  // Turning it on ends the other sessions, so a session alone must not be able
+  // to: it is asked for as when turning it off.
+  string password = 2;
 }
 
 // The recovery codes, shown once. What the server keeps cannot produce them
@@ -141,6 +144,8 @@ message FinishPasskeyReq {
   // what the browser made, as JSON
   string credential = 1;
   string name = 2;
+  // asked for for the same reason as when confirming the code from an app
+  string password = 3;
 }
 
 // Only the name changes. The credential is the authenticator's, and nothing

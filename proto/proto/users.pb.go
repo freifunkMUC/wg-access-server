@@ -416,8 +416,11 @@ func (x *StartTwoFactorRes) GetUri() string {
 }
 
 type ConfirmTwoFactorReq struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Code  string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	// Turning it on ends the other sessions, so a session alone must not be able
+	// to: it is asked for as when turning it off.
+	Password      string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -455,6 +458,13 @@ func (*ConfirmTwoFactorReq) Descriptor() ([]byte, []int) {
 func (x *ConfirmTwoFactorReq) GetCode() string {
 	if x != nil {
 		return x.Code
+	}
+	return ""
+}
+
+func (x *ConfirmTwoFactorReq) GetPassword() string {
+	if x != nil {
+		return x.Password
 	}
 	return ""
 }
@@ -921,8 +931,10 @@ func (x *BeginPasskeyRes) GetOptions() string {
 type FinishPasskeyReq struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// what the browser made, as JSON
-	Credential    string `protobuf:"bytes,1,opt,name=credential,proto3" json:"credential,omitempty"`
-	Name          string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Credential string `protobuf:"bytes,1,opt,name=credential,proto3" json:"credential,omitempty"`
+	Name       string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// asked for for the same reason as when confirming the code from an app
+	Password      string `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -967,6 +979,13 @@ func (x *FinishPasskeyReq) GetCredential() string {
 func (x *FinishPasskeyReq) GetName() string {
 	if x != nil {
 		return x.Name
+	}
+	return ""
+}
+
+func (x *FinishPasskeyReq) GetPassword() string {
+	if x != nil {
+		return x.Password
 	}
 	return ""
 }
@@ -1201,9 +1220,10 @@ const file_users_proto_rawDesc = "" +
 	"\x11StartTwoFactorReq\"=\n" +
 	"\x11StartTwoFactorRes\x12\x16\n" +
 	"\x06secret\x18\x01 \x01(\tR\x06secret\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\")\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\"E\n" +
 	"\x13ConfirmTwoFactorReq\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\tR\x04code\"<\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"<\n" +
 	"\x13ConfirmTwoFactorRes\x12%\n" +
 	"\x0erecovery_codes\x18\x01 \x03(\tR\rrecoveryCodes\"1\n" +
 	"\x13DisableTwoFactorReq\x12\x1a\n" +
@@ -1226,12 +1246,13 @@ const file_users_proto_rawDesc = "" +
 	"\x05items\x18\x01 \x03(\v2\x0e.proto.PasskeyR\x05items\"\x11\n" +
 	"\x0fBeginPasskeyReq\"+\n" +
 	"\x0fBeginPasskeyRes\x12\x18\n" +
-	"\aoptions\x18\x01 \x01(\tR\aoptions\"F\n" +
+	"\aoptions\x18\x01 \x01(\tR\aoptions\"b\n" +
 	"\x10FinishPasskeyReq\x12\x1e\n" +
 	"\n" +
 	"credential\x18\x01 \x01(\tR\n" +
 	"credential\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"6\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
+	"\bpassword\x18\x03 \x01(\tR\bpassword\"6\n" +
 	"\x10RenamePasskeyReq\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"\"\n" +
