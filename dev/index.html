@@ -1244,11 +1244,20 @@ usable for somebody who is only away for a while, or for a suspicion that turns 
 refused: it would block your own devices and sign you out halfway through. It is an admin action,
 recorded in the <a href="https://www.freie-netze.org/wg-access-server/audit/">audit log</a> as <code>user.revoke</code>
 with what it took.</p>
-<p>What it does <strong>not</strong> do is stop them from signing in again. If their identity provider still lets
-them in, they get a new session, and with it they can delete a blocked device and add a new one: a
-block belongs to the device, not to the person. Deleting the user here does not stop that either.
-What keeps them out is the sign-in: removing them at their identity provider, from the <code>users</code> of
-basic or simple auth, or from what <code>accessClaim</code> or the GitHub organizations, teams and users allow.</p>
+<p>It also <strong>keeps them from signing in again</strong>, whichever provider lets them in: the server remembers
+that their access was revoked, refuses the sign-in, and refuses any session or API token of theirs
+that is still around. Lifting the block on one of their devices (under <em>admin</em> → <em>Devices</em>) is what
+gives the sign-in back. This is what stops them from deleting a blocked device and adding a new one.
+It is a record kept here, in the server's database; it does not replace removing them at their
+identity provider.</p>
+<p><strong>Deleting the user does not do this.</strong> It forgets them, including that their access was revoked, so
+whoever the provider still lets in signs in again as a new user. Revoke first and delete only when the
+person is gone from the provider as well.</p>
+<p>What keeps somebody out for good is the sign-in: removing them at their identity provider, from the
+<code>users</code> of basic or simple auth, or from what <code>accessClaim</code> or the GitHub organizations, teams and
+users allow. For an identity provider, removing them there does not end a session they already have:
+that lasts until <code>sessionStore.maxAge</code> (30 days by default), and an API token until it expires - see
+<a href="https://www.freie-netze.org/wg-access-server/auth/#how-long-access-outlasts-a-removal">How long access outlasts a removal</a>.</p>
 <h2 id="networks-behind-a-device">Networks behind a device<a class="headerlink" href="#networks-behind-a-device" title="Permanent link"> ¶</a></h2>
 <p>A device is usually one computer or one phone. It can also be the router of a whole site: an admin
 assigns the networks that live behind it under <em>admin</em> → <em>Networks</em>, and the server then sends

@@ -518,6 +518,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#how-long-access-outlasts-a-removal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How long access outlasts a removal
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -944,6 +955,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#how-long-access-outlasts-a-removal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How long access outlasts a removal
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1096,12 +1118,15 @@ config file (config.yaml).</p>
 <span class="w">    </span><span class="c1"># if not present. Need to be set when running in HA setup (more than one replica)</span>
 <span class="w">    </span><span class="nt">secret</span><span class="p">:</span><span class="w"> </span><span class="s">"&lt;session</span><span class="nv"> </span><span class="s">store</span><span class="nv"> </span><span class="s">secret&gt;"</span>
 <span class="w">    </span><span class="c1"># How long a web session stays valid, as a duration such as "24h".</span>
-<span class="w">    </span><span class="c1"># Defaults to 720h (30 days). The claims of a session - whether the user</span>
-<span class="w">    </span><span class="c1"># is an admin and whether they still have access - are taken from the</span>
-<span class="w">    </span><span class="c1"># identity provider at login and are not re-checked afterwards, and there</span>
-<span class="w">    </span><span class="c1"># is no server-side session store to invalidate. This value is therefore</span>
-<span class="w">    </span><span class="c1"># also how long it takes for access revoked at the provider to take</span>
-<span class="w">    </span><span class="c1"># effect, so shorten it if that matters to you.</span>
+<span class="w">    </span><span class="c1"># Defaults to 720h (30 days). Sessions are kept in the server's storage,</span>
+<span class="w">    </span><span class="c1"># but the identity of a session - its claims, such as whether the user is</span>
+<span class="w">    </span><span class="c1"># an admin or has the `accessClaim` - is the one from sign-in and is not</span>
+<span class="w">    </span><span class="c1"># asked of the identity provider again. A session ends when its user is</span>
+<span class="w">    </span><span class="c1"># deleted or has their access revoked in the web UI, when they sign out,</span>
+<span class="w">    </span><span class="c1"># and when this time has passed. This value is therefore also how long it</span>
+<span class="w">    </span><span class="c1"># takes for access revoked or reduced at the provider to take effect, so</span>
+<span class="w">    </span><span class="c1"># shorten it if that matters to you. See "How long access outlasts a</span>
+<span class="w">    </span><span class="c1"># removal" below.</span>
 <span class="w">    </span><span class="nt">maxAge</span><span class="p">:</span><span class="w"> </span><span class="s">"720h"</span>
 <span class="w">    </span><span class="c1"># Mark the session cookie as Secure so browsers only send it over HTTPS.</span>
 <span class="w">    </span><span class="c1"># Defaults to false, because the web UI is also served over plain HTTP on</span>
@@ -1349,7 +1374,9 @@ signed in, and what their identity provider said about them, is kept by the serv
 <ul>
 <li><strong>Signing out</strong> ends it, rather than only dropping the cookie. A cookie that was copied elsewhere
   stops working with it.</li>
-<li><strong>Deleting a user</strong> ends every session they have, along with their devices and their API tokens.</li>
+<li><strong>Revoking a user's access</strong> or <strong>deleting a user</strong> ends every session they have, along with their API
+  tokens (and, for a deletion, their devices). A revoked user is also refused at the next request of
+  any session that somehow survives, and at sign-in.</li>
 <li>It takes effect <strong>everywhere at once</strong>: a session is read from the storage on every request, so
   there is nothing to tell the other replicas.</li>
 </ul>
@@ -1394,6 +1421,7 @@ their identity provider knows, and only at the moment they sign in.</p>
 <li>The admin page shows when somebody last signed in, and it lists people who have signed in but have
   not added a device yet.</li>
 <li>Deleting a user removes that row along with their devices and their API tokens.</li>
+<li>The row also records that an admin revoked somebody's access, which is what keeps them from signing in.</li>
 </ul>
 <p>Name and email address were already stored with every device, so nothing is kept that was not kept
 before - except for a person who has no device at all.</p>
@@ -1411,6 +1439,41 @@ a warning in the log naming both providers.</p>
   who signed in through it somebody of another provider. Keep the name. Deleting a user in the web
   UI frees their identifier, along with their devices and their API tokens.</li>
 </ul>
+<h3 id="how-long-access-outlasts-a-removal">How long access outlasts a removal<a class="headerlink" href="#how-long-access-outlasts-a-removal" title="Permanent link"> ¶</a></h3>
+<p>Revoking a user in the web UI ends their sessions and tokens at once and records that their access
+was revoked: they are refused at sign-in, and on every request of a session or token that is still
+around, until an admin lifts a block on one of their devices. Deleting a user ends their sessions and
+tokens too, but forgets that record along with the user, so whoever the provider still lets in signs in
+again as a new user. What reaches a session or an API token that already exists from <em>outside</em> the web
+UI - the configuration or the identity provider:</p>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Web session</th>
+<th>API token</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Removed from <code>simple.users</code>/<code>basic.users</code></td>
+<td>Refused at the next request after the server was restarted with the new configuration</td>
+<td>Same</td>
+</tr>
+<tr>
+<td>Admin rights taken away: <code>adminUsername</code> changed (Simple/Basic)</td>
+<td>At the next request after the server was restarted with the new value</td>
+<td>Same</td>
+</tr>
+<tr>
+<td>Demoted, removed from a group or <code>accessClaim</code> withdrawn at an OIDC provider, GitHub organization or team</td>
+<td>Stays valid until <code>sessionStore.maxAge</code>, with the claims it had at sign-in (<code>accessClaim</code> is checked against those)</td>
+<td>Stays valid until it expires, with the claims of the session that created it</td>
+</tr>
+</tbody>
+</table>
+<p>For an identity provider, the user stays signed in with those rights until the session ends. To end
+them sooner, revoke their access in the web UI, and remove them at the provider as well.</p>
 <h2 id="api-tokens">API tokens<a class="headerlink" href="#api-tokens" title="Permanent link"> ¶</a></h2>
 <p>With <code>enableApiTokens: true</code>, users can create tokens on the <em>API tokens</em> page of the web UI (the key
 icon) and use the API from scripts without a browser session:</p>
@@ -1431,8 +1494,8 @@ token has admin rights - except manage the account itself (see below). It works 
   the configuration requires an <code>accessClaim</code> its identity does not have.</li>
 <li><strong>Changes at the identity provider do not reach a token.</strong> The claims of an OIDC user are those
   from the login the token was created in - just like a web session, only that a token can live
-  longer. To take access away from somebody at once, delete the user in the web UI, which revokes
-  their tokens, or revoke the tokens under <em>All tokens</em>.</li>
+  longer. To take access away from somebody at once, revoke their access or delete the user in the web UI,
+  or revoke the tokens under <em>All tokens</em>.</li>
 <li><strong>Lifetime:</strong> a token expires after 30 days, 90 days, a year or never, as chosen when creating it.
   Users can revoke their own tokens, admins every token (listed under <em>All tokens</em>). Deleting a user
   revokes their tokens too. A revoked or expired token stops working immediately, on every replica.</li>
@@ -1481,8 +1544,10 @@ an <code>oidc</code> configuration.</p>
   a rename. Accounts of a GitHub Enterprise Server are kept apart from github.com ones.</li>
 <li>The primary email address is shown in the web UI if GitHub verified it.</li>
 <li>As with every provider, membership is checked when signing in. Removing somebody from the
-  organization takes effect when their web session ends (<code>sessionStore.maxAge</code>). Deleting the user in
-  the web UI removes their devices and API tokens and ends their sessions at once.</li>
+  organization takes effect when their web session ends (<code>sessionStore.maxAge</code>), and their API tokens
+  keep working until they expire. Revoking their access in the web UI ends their sessions and tokens at
+  once and keeps them from signing in again; deleting the user removes their devices and tokens too,
+  but they can sign in again while GitHub still lets them in.</li>
 </ul>
 <h2 id="login-throttling">Login throttling<a class="headerlink" href="#login-throttling" title="Permanent link"> ¶</a></h2>
 <p>Failed logins to the Simple Auth and Basic Auth backends are slowed down: after a wrong password the
