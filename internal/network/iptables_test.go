@@ -1,8 +1,10 @@
 package network
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 
@@ -127,4 +129,80 @@ func rules(t *testing.T, save string, table string) []string {
 		}
 	}
 	return found
+}
+
+// The rules are built again whenever a routed network or a policy member
+// changes. At no point during that may the chain be without its rejects: a
+// packet that arrives in between would be forwarded to a network it may not
+// reach, or to another client despite the isolation.
+func TestIPTablesRebuildKeepsTheRejects(t *testing.T) {
+	if !netnsTest(t, "iptables", "ip6tables") {
+		return
+	}
+
+	options := ForwardingOptions{
+		Firewall: FirewallIPTables, GatewayIface: "eth0", CIDR: "10.44.0.0/24",
+		NAT44: true, ClientIsolation: true,
+	}
+	routes := func(n int) []string {
+		allowed := []string{"192.168.1.0/24"}
+		for i := range n {
+			allowed = append(allowed, fmt.Sprintf("10.%d.0.0/16", 100+i))
+		}
+		return allowed
+	}
+	options.AllowedIPs = routes(20)
+	require.NoError(t, ConfigureForwarding(options))
+
+	done := make(chan error)
+	go func() {
+		for i := range 30 {
+			options.AllowedIPs = routes(20 + i%2)
+			if err := ConfigureForwarding(options); err != nil {
+				done <- err
+				return
+			}
+		}
+		done <- nil
+	}()
+
+	isolation := "-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -d 10.44.0.0/24 -j REJECT --reject-with icmp-port-unreachable"
+	final := "-A WG_ACCESS_SERVER_FORWARD -s 10.44.0.0/24 -j REJECT --reject-with icmp-port-unreachable"
+	snapshots, open := 0, 0
+	for {
+		select {
+		case err := <-done:
+			require.NoError(t, err)
+			require.Positive(t, snapshots)
+			assert.Zero(t, open, "%d of %d snapshots during the rebuilds lacked a reject", open, snapshots)
+			return
+		default:
+		}
+		found := rules(t, "iptables-save", "filter")
+		snapshots++
+		if !slices.Contains(found, isolation) || !slices.Contains(found, final) {
+			open++
+		}
+	}
+}
+
+// A rebuild that fails changes nothing: the rules of before stay in force
+// instead of a chain that is half built or empty.
+func TestIPTablesFailedRebuildKeepsTheRules(t *testing.T) {
+	if !netnsTest(t, "iptables", "ip6tables") {
+		return
+	}
+
+	options := ForwardingOptions{
+		Firewall: FirewallIPTables, GatewayIface: "eth0", CIDR: "10.44.0.0/24",
+		NAT44: true, AllowedIPs: []string{"192.168.1.0/24"},
+	}
+	require.NoError(t, ConfigureForwarding(options))
+	before := rules(t, "iptables-save", "filter")
+
+	options.AllowedIPs = []string{"10.9.0.0/16"}
+	options.GatewayIface = "eth0\n-A WG_ACCESS_SERVER_FORWARD -j ACCEPT"
+	require.Error(t, ConfigureForwarding(options))
+
+	assert.Equal(t, before, rules(t, "iptables-save", "filter"))
 }
