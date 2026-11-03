@@ -75,6 +75,9 @@ jobs:
             type=ref,event=branch
             type=ref,event=tag
             type=sha,prefix=sha-
+          # A pre-release tag (v1.2.2-rc.1) must not move latest; auto would.
+          flavor: |
+            latest=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
           labels: |
             org.opencontainers.image.authors=${{ env.AUTHOR }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
