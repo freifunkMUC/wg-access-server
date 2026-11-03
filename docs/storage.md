@@ -37,7 +37,7 @@ Example connection string:
     (`text` instead of `varchar(255)`, `integer` instead of `bigint`). SQLite treats them
     the same, but it cannot change a column type in place, so the first start after the
     upgrade rebuilds the `devices` table once. The data is carried over, and later starts
-    leave the table alone. PostgreSQL and MySQL schemas are unchanged.
+    leave the table alone. The PostgreSQL schema is unchanged; for MySQL see below.
 
 ### PostgreSQL
 
@@ -81,6 +81,15 @@ talks to all of them through [this golang driver](https://github.com/go-sql-driv
 Example connection string:
 
 - `mysql://user:password@localhost:3306/database?tls=false`
+
+!!! note "MySQL: list columns become text"
+
+    MySQL stores a plain string column as `varchar(255)`. Three columns hold lists that can be
+    longer: the recovery codes of a second factor (649 characters), the networks behind a device
+    and a user's policies; with `varchar(255)` turning on a second factor failed. Migration
+    `0015_long_text_columns` changes `users.policies`, `users.totp_recovery` and
+    `devices.routes` to `text` on the first start. MySQL rewrites both tables for it, which
+    takes a moment on large installations.
 
 !!! warning "Upgrading an older MySQL installation"
 
