@@ -1023,7 +1023,7 @@ large number of users &amp; devices.</p>
 (<code>text</code> instead of <code>varchar(255)</code>, <code>integer</code> instead of <code>bigint</code>). SQLite treats them
 the same, but it cannot change a column type in place, so the first start after the
 upgrade rebuilds the <code>devices</code> table once. The data is carried over, and later starts
-leave the table alone. PostgreSQL and MySQL schemas are unchanged.</p>
+leave the table alone. The PostgreSQL schema is unchanged; for MySQL see below.</p>
 </div>
 <h3 id="postgresql">PostgreSQL<a class="headerlink" href="#postgresql" title="Permanent link"> ¶</a></h3>
 <p>This backend requires an external Postgres database to be deployed. Every release is tested against
@@ -1059,6 +1059,15 @@ talks to all of them through <a href="https://github.com/go-sql-driver/mysql">th
 <ul>
 <li><code>mysql://user:password@localhost:3306/database?tls=false</code></li>
 </ul>
+<div class="admonition note">
+<p class="admonition-title">MySQL: list columns become text</p>
+<p>MySQL stores a plain string column as <code>varchar(255)</code>. Three columns hold lists that can be
+longer: the recovery codes of a second factor (649 characters), the networks behind a device
+and a user's policies; with <code>varchar(255)</code> turning on a second factor failed. Migration
+<code>0015_long_text_columns</code> changes <code>users.policies</code>, <code>users.totp_recovery</code> and
+<code>devices.routes</code> to <code>text</code> on the first start. MySQL rewrites both tables for it, which
+takes a moment on large installations.</p>
+</div>
 <div class="admonition warning">
 <p class="admonition-title">Upgrading an older MySQL installation</p>
 <p>Up to and including v1.2.0 the schema migration failed silently on MySQL, which left the
