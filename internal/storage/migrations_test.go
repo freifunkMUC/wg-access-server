@@ -394,3 +394,53 @@ func appliedMigrations(t *testing.T, db *gorm.DB) []string {
 	}
 	return ids
 }
+
+// Lists kept in one string outgrow MySQL's varchar(255): the recovery codes
+// of a second factor are 649 characters. After the upgrade they fit on every
+// backend, next to the rows that were there before.
+func TestLongListsFitAfterUpgrade(t *testing.T) {
+	for backend, uri := range freshDatabases(t) {
+		t.Run(backend, func(t *testing.T) {
+			old := openRaw(t, uri)
+			if err := old.AutoMigrate(&schemaMigration{}); err != nil {
+				t.Fatal(err)
+			}
+			for _, m := range migrations {
+				if m.id == "0015_long_text_columns" {
+					break
+				}
+				if err := m.apply(old); err != nil {
+					t.Fatal(err)
+				}
+				if err := old.Create(&schemaMigration{ID: m.id, AppliedAt: time.Now()}).Error; err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := old.Create(&userV7{Subject: "alice", Provider: "simple", LastLogin: time.Now()}).Error; err != nil {
+				t.Fatal(err)
+			}
+			if err := old.Create(&deviceV3{Owner: "alice", Name: "laptop", PublicKey: "key", CreatedAt: time.Now()}).Error; err != nil {
+				t.Fatal(err)
+			}
+
+			s := openStorage(t, uri)
+
+			long := strings.TrimSuffix(strings.Repeat(strings.Repeat("a", 64)+",", 10), ",")
+			if err := s.db.Model(&User{}).Where("subject = ?", "alice").
+				Updates(map[string]any{"totp_recovery": long, "policies": long}).Error; err != nil {
+				t.Fatalf("a long user column does not fit: %v", err)
+			}
+			if err := s.db.Model(&Device{}).Where("owner = ? AND name = ?", "alice", "laptop").
+				Update("routes", long).Error; err != nil {
+				t.Fatalf("a long route list does not fit: %v", err)
+			}
+			user, err := s.GetUser("alice")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if user.TotpRecovery != long || user.Policies != long {
+				t.Error("a long user column was cut")
+			}
+		})
+	}
+}

@@ -165,6 +165,27 @@ var migrations = []migration{
 			return db.AutoMigrate(&userV7{})
 		},
 	},
+	{
+		// Lists kept in one string: the recovery codes of the second factor
+		// (ten hashes, 649 characters), the networks behind a device (up to
+		// 25) and the policies of a user. MySQL makes a plain string a
+		// varchar(255), so turning the second factor on failed there with
+		// "Data too long" and long route lists could not be stored. Postgres
+		// and SQLite already have text.
+		id: "0015_long_text_columns",
+		apply: func(db *gorm.DB) error {
+			// As in 0012: AlterColumn, and SQLite is skipped.
+			if db.Name() == "sqlite" {
+				return nil
+			}
+			for _, field := range []string{"Policies", "TotpRecovery"} {
+				if err := db.Migrator().AlterColumn(&userV8{}, field); err != nil {
+					return err
+				}
+			}
+			return db.Migrator().AlterColumn(&deviceV4{}, "Routes")
+		},
+	},
 }
 
 type migration struct {
@@ -316,6 +337,30 @@ func (deviceV3) TableName() string {
 	return "devices"
 }
 
+// deviceV4 is the devices table as 0015_long_text_columns left it.
+type deviceV4 struct {
+	Owner             string `gorm:"type:varchar(100);primaryKey"`
+	OwnerName         string
+	OwnerEmail        string
+	OwnerProvider     string
+	Name              string `gorm:"type:varchar(100);primaryKey"`
+	PublicKey         string `gorm:"uniqueIndex:uix_devices_public_key"`
+	PresharedKey      string `gorm:"type:varchar(100)"`
+	Address           string
+	CreatedAt         time.Time `gorm:"column:created_at"`
+	Disabled          bool
+	ExpiresAt         *time.Time
+	Routes            string `gorm:"type:text"`
+	LastHandshakeTime *time.Time
+	ReceiveBytes      int64
+	TransmitBytes     int64
+	Endpoint          string
+}
+
+func (deviceV4) TableName() string {
+	return "devices"
+}
+
 // apiTokenV1 is the api_tokens table as 0002_api_tokens created it.
 type apiTokenV1 struct {
 	ID         string `gorm:"type:varchar(32);primaryKey"`
@@ -457,6 +502,29 @@ type userV7 struct {
 }
 
 func (userV7) TableName() string {
+	return "users"
+}
+
+// userV8 is the users table as 0015_long_text_columns left it.
+type userV8 struct {
+	Subject                string `gorm:"type:varchar(100);primaryKey"`
+	Provider               string
+	Name                   string
+	Email                  string
+	Policies               string `gorm:"type:text"`
+	LastLogin              time.Time
+	PasswordHash           string
+	PasswordFrom           string
+	TotpSecret             string
+	TotpEnabledAt          *time.Time
+	TotpRecovery           string `gorm:"type:text"`
+	TotpLastStep           int64
+	WebauthnChallenge      string
+	WebauthnChallengeUntil *time.Time
+	Disabled               bool `gorm:"not null;default:false"`
+}
+
+func (userV8) TableName() string {
 	return "users"
 }
 
