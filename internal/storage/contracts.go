@@ -145,7 +145,7 @@ type User struct {
 	// Policies are the names of the access policies their identity provider
 	// put them in at the last login, comma-separated. Empty means the devices
 	// of this user may reach what vpn.allowedIPs says.
-	Policies string `json:"policies"`
+	Policies string `json:"policies" gorm:"type:text"`
 	// LastLogin is when they last signed in, which is also how old everything
 	// else here is.
 	LastLogin time.Time `json:"last_login"`
@@ -168,7 +168,7 @@ type User struct {
 	// password they never leave the server.
 	TotpSecret    string     `json:"-"`
 	TotpEnabledAt *time.Time `json:"-"`
-	TotpRecovery  string     `json:"-"`
+	TotpRecovery  string     `json:"-" gorm:"type:text"`
 	TotpLastStep  int64      `json:"-"`
 
 	// Disabled is set when an admin revoked this person's access: they are
@@ -298,7 +298,7 @@ type Device struct {
 	// the server accepts that traffic from it and sends traffic for those
 	// networks to it. Only an admin may set them: a device that could claim a
 	// network would be claiming everybody's traffic to it.
-	Routes string `json:"routes"`
+	Routes string `json:"routes" gorm:"type:text"`
 
 	/**
 	 * Metadata fields below.
