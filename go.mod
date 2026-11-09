@@ -1,6 +1,6 @@
 module github.com/freifunkMUC/wg-access-server
 
-go 1.27.3
+go 1.26.0
 
 require (
 	connectrpc.com/connect v1.21.1
