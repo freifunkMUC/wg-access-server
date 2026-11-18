@@ -1,0 +1,276 @@
+name: Daily rebuild
+
+# Rebuilds the images of master and of the latest release every day without
+# cache, but publishes one only if the published image has pending Alpine
+# package upgrades or was built from another base image than the Dockerfile
+# pins now. Otherwise the digests of the published tags stay as they are. A
+# rebuild adds an unchanged <version>-rN tag (master-rN for master, v1.2.3-rN
+# for a release); the moving tags (master, v1.2.3, latest) follow. The base
+# images are pinned by their current digest for the build (the Dockerfile
+# names them by tag); the release is built from its own tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Rebuild and publish even if nothing changed
+        required: false
+        type: boolean
+        default: false
+  schedule:
+    # Not at minute 0: GitHub delays or drops scheduled runs at the start of
+    # the hour.
+    - cron: "29 4 * * *"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: read
+
+# Two runs probing the same -rN would overwrite each other's tag.
+concurrency:
+  group: rebuild
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    name: rebuild (${{ matrix.target }})
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    # The groups of build.yml's publishes of master and of release tags: they
+    # queue behind each other.
+    concurrency:
+      group: ${{ matrix.target == 'release' && 'publish-releases' || 'publish-refs/heads/master' }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [branch, release]
+    permissions:
+      contents: read
+      # to pull and push the image
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      # The scripts come from master, the source from master or the release
+      # tag (older tags do not have the scripts).
+      - name: Checkout the workflow
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: ci
+          fetch-depth: 0
+
+      - name: Select the source
+        id: src
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          if [ "$TARGET" = release ]; then
+            # a git error fails the step; only "no matching tag" is allowed
+            tags=$(git -C ci tag --list 'v*' --sort=-v:refname)
+            ref=$(grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' <<< "$tags" | head -n1 || true)
+            if [ -z "$ref" ]; then
+              echo "No release tag" >&2
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            version=$ref
+          else
+            ref=master
+            version=master
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout the source
+        if: steps.src.outputs.skip != 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.src.outputs.ref }}
+          path: src
+
+      - name: Login to GitHub Container Registry
+        if: steps.src.outputs.skip != 'true'
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit of the source
+        id: sha
+        if: steps.src.outputs.skip != 'true'
+        run: echo "sha=$(git -C src rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Base image
+        id: base
+        if: steps.src.outputs.skip != 'true'
+        run: |
+          ci/.github/base-image.sh --pin src/Dockerfile >/dev/null
+          ci/.github/base-image.sh src/Dockerfile >> "$GITHUB_OUTPUT"
+
+      - name: Decide
+        id: decide
+        if: steps.src.outputs.skip != 'true'
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          VERSION: ${{ steps.src.outputs.version }}
+          FORCE: ${{ inputs.force }}
+          BASE_DIGEST: ${{ steps.base.outputs.base_digest }}
+        run: ci/.github/should-rebuild.sh "${IMAGE,,}:$VERSION" "$BASE_DIGEST" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Retrieve author data
+        if: steps.decide.outputs.push == 'true'
+        run: |
+          AUTHOR=$(curl -fsSL "https://api.github.com/users/${{ github.repository_owner }}" | jq -r '.name')
+          echo "AUTHOR=$AUTHOR" >> "$GITHUB_ENV"
+
+      - name: Set up QEMU
+        if: steps.decide.outputs.push == 'true'
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        if: steps.decide.outputs.push == 'true'
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          buildkitd-config: ci/.github/buildkitd.toml
+
+      # No cache, here and in the push below: a cached "apk add" layer would
+      # carry the old packages.
+      - name: Build the image for this machine
+        if: steps.decide.outputs.push == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: src
+          platforms: linux/amd64
+          push: false
+          load: true
+          no-cache: true
+          tags: rebuild:test
+          build-args: |
+            VERSION=${{ steps.src.outputs.version }}
+            COMMIT=${{ steps.sha.outputs.sha }}
+
+      - name: Scan the image with Trivy
+        if: steps.decide.outputs.push == 'true'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: rebuild:test
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      # A merge to master publishes while this run builds: do not move master
+      # back to an older commit. The next run starts from the new one.
+      - name: Still the head of the source
+        id: head
+        if: steps.decide.outputs.push == 'true'
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          if [ "$TARGET" = branch ] && [ "$(git -C src ls-remote origin refs/heads/master | cut -f1)" != "$(git -C src rev-parse HEAD)" ]; then
+            echo "master moved on; not publishing" >&2
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A release published while this run builds must not lose "latest" to
+      # an older one: fail rather than push.
+      - name: Still the latest release
+        if: steps.head.outputs.current == 'true' && matrix.target == 'release'
+        env:
+          VERSION: ${{ steps.src.outputs.version }}
+        run: |
+          remote=$(git -C src ls-remote --tags --refs origin 'refs/tags/v*')
+          latest=$(grep -oE '[^/]+$' <<< "$remote" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+          if [ "$latest" != "v$VERSION" ]; then
+            echo "Latest release is now ${latest:-unknown}, not v$VERSION" >&2
+            exit 1
+          fi
+
+      # The first unused <version>-rN, found by asking the registry. Only a
+      # "not found" answer means the tag is free; any other error fails the
+      # job rather than risk overwriting an immutable tag.
+      - name: Rebuild number and tags
+        id: tags
+        if: steps.head.outputs.current == 'true'
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ steps.src.outputs.version }}
+        run: |
+          IMAGE="${IMAGE,,}"  # registry names are lowercase
+          n=1
+          while true; do
+            if out=$(docker buildx imagetools inspect "$IMAGE:$VERSION-r$n" 2>&1); then
+              n=$((n + 1))
+            elif grep -qiE 'not found|manifest unknown' <<< "$out"; then
+              break
+            else
+              echo "Cannot probe $IMAGE:$VERSION-r$n: $out" >&2
+              exit 1
+            fi
+          done
+          {
+            echo "spec<<EOF"
+            echo "type=raw,value=$VERSION"
+            echo "type=raw,value=$VERSION-r$n"
+            if [ "$TARGET" = release ]; then
+              echo "type=raw,value=latest"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # The moving tags follow every rebuild; <version>-rN stays.
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        if: steps.head.outputs.current == 'true'
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: ${{ steps.tags.outputs.spec }}
+          labels: |
+            org.opencontainers.image.authors=${{ env.AUTHOR }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.sha.outputs.sha }}
+            org.opencontainers.image.base.name=${{ steps.base.outputs.base_name }}
+            org.opencontainers.image.base.digest=${{ steps.base.outputs.base_digest }}
+
+      - name: Build and push every published platform
+        id: push
+        if: steps.head.outputs.current == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: src
+          platforms: linux/amd64,linux/arm64/v8,linux/arm/v7,linux/ppc64le,linux/s390x
+          push: true
+          no-cache: true
+          build-args: |
+            VERSION=${{ steps.src.outputs.version }}
+            COMMIT=${{ steps.sha.outputs.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
+
+      - name: Image name
+        id: image
+        if: steps.head.outputs.current == 'true'
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: echo "name=${IMAGE,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Attest build provenance
+        if: steps.head.outputs.current == 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
