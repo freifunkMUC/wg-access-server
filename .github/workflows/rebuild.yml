@@ -2,8 +2,8 @@ name: Daily rebuild
 
 # Rebuilds the images of master and of the latest release every day without
 # cache, but publishes one only if the published image has pending Alpine
-# package upgrades or was built from another base image than the Dockerfile
-# pins now. Otherwise the digests of the published tags stay as they are. A
+# package upgrades that the fresh build has fewer of, or was built from another
+# base image than the Dockerfile pins now. Otherwise the digests of the published tags stay as they are. A
 # rebuild adds an unchanged <version>-rN tag (master-rN for master, v1.2.3-rN
 # for a release); the moving tags (master, v1.2.3, latest) follow. The base
 # images are pinned by their current digest for the build (the Dockerfile
@@ -156,8 +156,29 @@ jobs:
             VERSION=${{ steps.src.outputs.version }}
             COMMIT=${{ steps.sha.outputs.sha }}
 
-      - name: Scan the image with Trivy
+      # The Dockerfile does not upgrade packages itself, so a fresh build has
+      # the same pending upgrades as the published image while Alpine is ahead
+      # of the base image. Publishing then would add a tag every day without a
+      # change: publish for pending upgrades only if the fresh build has fewer.
+      - name: Compare pending upgrades
+        id: fresh
         if: steps.decide.outputs.push == 'true'
+        env:
+          PENDING_ONLY: ${{ steps.decide.outputs.pending_only }}
+        run: |
+          publish=true
+          if [ -n "$PENDING_ONLY" ]; then
+            fresh=$(ci/.github/pending-upgrades.sh rebuild:test)
+            echo "Pending upgrades: published $PENDING_ONLY, fresh build $fresh"
+            if [ "$fresh" -ge "$PENDING_ONLY" ]; then
+              echo "Not fewer; not publishing"
+              publish=false
+            fi
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+
+      - name: Scan the image with Trivy
+        if: steps.fresh.outputs.publish == 'true'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: rebuild:test
@@ -170,7 +191,7 @@ jobs:
       # back to an older commit. The next run starts from the new one.
       - name: Still the head of the source
         id: head
-        if: steps.decide.outputs.push == 'true'
+        if: steps.fresh.outputs.publish == 'true'
         env:
           TARGET: ${{ matrix.target }}
         run: |
