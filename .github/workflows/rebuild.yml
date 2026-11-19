@@ -140,8 +140,9 @@ jobs:
         with:
           buildkitd-config: ci/.github/buildkitd.toml
 
-      # No cache, here and in the push below: a cached "apk add" layer would
-      # carry the old packages.
+      # No cache for the check; the publish reuses its layers (amd64) from a
+      # per-run scope, the other platforms are built fresh. The compare is a
+      # pre-check on amd64; the published image is at least as fresh.
       - name: Build the image for this machine
         if: steps.decide.outputs.push == 'true'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -151,6 +152,7 @@ jobs:
           push: false
           load: true
           no-cache: true
+          cache-to: type=gha,mode=max,scope=rebuild-${{ matrix.target }}-${{ github.run_id }}
           tags: rebuild:test
           build-args: |
             VERSION=${{ steps.src.outputs.version }}
@@ -272,7 +274,7 @@ jobs:
           context: src
           platforms: linux/amd64,linux/arm64/v8,linux/arm/v7,linux/ppc64le,linux/s390x
           push: true
-          no-cache: true
+          cache-from: type=gha,scope=rebuild-${{ matrix.target }}-${{ github.run_id }}
           build-args: |
             VERSION=${{ steps.src.outputs.version }}
             COMMIT=${{ steps.sha.outputs.sha }}
