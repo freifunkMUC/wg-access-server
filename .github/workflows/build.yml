@@ -2,7 +2,7 @@ name: Docker image
 
 # Builds the image for every pull request, and publishes it from master and
 # from release tags. One workflow for both, so that what is published is what
-# was built and scanned here.
+# was built and scanned here. rebuild.yml rebuilds both every day.
 on:
   workflow_dispatch:
   push:
@@ -42,6 +42,12 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    # Shared with rebuild.yml: two publishes of one ref must not overtake each
+    # other. Release tags share the group of the release rebuild; pull
+    # requests get a group of their own.
+    concurrency:
+      group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.run_id) || (startsWith(github.ref, 'refs/tags/') && 'publish-releases' || format('publish-{0}', github.ref)) }}
+      cancel-in-progress: false
     permissions:
       contents: read
       # to push the image
@@ -68,6 +74,14 @@ jobs:
           AUTHOR=$(curl -sSL "${{ github.event.repository.owner.url }}" | jq -r '.name')
           echo "AUTHOR=$AUTHOR" >> "$GITHUB_ENV"
 
+      # the base images, pinned by their current digest for this build; the
+      # labels below tell the daily rebuild what the image was built from
+      - name: Base image
+        id: base
+        run: |
+          .github/base-image.sh --pin >/dev/null
+          .github/base-image.sh >> "$GITHUB_OUTPUT"
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
@@ -83,6 +97,8 @@ jobs:
           labels: |
             org.opencontainers.image.authors=${{ env.AUTHOR }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.base.name=${{ steps.base.outputs.base_name }}
+            org.opencontainers.image.base.digest=${{ steps.base.outputs.base_digest }}
 
       # for the scan below; the multi-platform build cannot be loaded into the
       # local docker, and its layers come from this build's cache
@@ -139,7 +155,8 @@ jobs:
           build-args: |
             VERSION=${{ github.head_ref || github.ref_name }}
             COMMIT=${{ github.sha }}
-          provenance: false
+          provenance: mode=max
+          sbom: true
 
       - name: Image name
         id: image
